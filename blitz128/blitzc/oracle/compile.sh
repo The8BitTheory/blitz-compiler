@@ -20,7 +20,7 @@ x
 EOF
 export LD_LIBRARY_PATH=$VICE/tools/usr/lib/x86_64-linux-gnu
 timeout ${TMO:-170} $VICE/vice-3.9/src/x128 -directory $VICE/inst/share/vice -warp -sounddev dummy \
-  -drive8type 1581 -8 $W/w.d81 -moncommands $W/st.mon -limitcycles 900000000 \
+  -drive8type 1581 -8 $W/w.d81 -moncommands $W/st.mon -limitcycles ${CYCLES:-900000000} \
   -keybuf "load\"blitz!.128\",8\nrun\n$PRE${MENU}prog\n" > $W/vice.log 2>&1 || true
 python3 $HERE/scr.py $W/scr.bin > $OUT/screen.txt
 for f in c z d p; do $C1541 -attach $W/w.d81 -read "$f/prog" $OUT/$f.prg >/dev/null 2>&1 || rm -f $OUT/$f.prg; done

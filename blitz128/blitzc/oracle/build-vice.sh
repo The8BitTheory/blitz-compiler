@@ -3,6 +3,7 @@
 # Needs: gcc, g++, make, pkg-config, apt-get download (for flex/bison/xa65/dos2unix debs).
 set -e
 VICE=${VICE:-$HOME/vice}; mkdir -p $VICE/debs $VICE/tools; cd $VICE/debs
+apt-get download flex bison m4 libfl2 libfl-dev dos2unix xa65 2>/dev/null || { apt-get update -qq 2>/dev/null; true; }
 apt-get download flex bison m4 libfl2 libfl-dev dos2unix xa65
 for d in *.deb; do dpkg -x $d ../tools; done
 cd $VICE; [ -f v.tgz ] || curl -sL -o v.tgz "https://sourceforge.net/projects/vice-emu/files/releases/vice-3.9.tar.gz/download"

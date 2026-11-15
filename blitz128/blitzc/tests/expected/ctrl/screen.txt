@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         000016
+pass2      ( mode:1/1)
+ 300       program: prog
+
+?illegal command in 60
+?illegal command in 300
+errors: 2      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

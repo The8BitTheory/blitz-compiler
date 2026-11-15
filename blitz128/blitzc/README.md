@@ -24,3 +24,27 @@ Format-Notizen:
 - Sprungziele: 2 Bytes Hi/Lo, roh XOR Schlüssel 3/4. IF-Skip `1F nn` ist relativ.
 - `Z/` enthält nicht alle Zeilen (Zeilen mit DO am Programmanfang fehlen), noch klären.
 - Programme mit Grafikbefehlen werden als `$4001`-Variante erzeugt (Header bei `$6C41`).
+
+## JS-Portierung (Stand 15.11.2026)
+
+`js/` enthält den Compiler als eigenständiges Programm für Node und Browser. **Alle 24 Testprogramme sind byte-identisch zum Original (C/ und Z/)**, darunter CRAWL, alle LIVE-Quellen der D81 (bis 56 KB Quelltext, 45 KB C/), Fehlerfälle, Direktiven, `$4001`-Variante, 80 Gleitkommakonstanten.
+
+```
+node js/cli.js prog.prg out/                      # zufällige Schlüssel wie das Original
+node js/cli.js prog.prg out/ --like ref/c.prg     # Schlüssel+Füllbytes aus einer Original-C/-Datei
+node js/test.js                                   # alle tests/expected nachbauen und vergleichen
+bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
+```
+Browser: `js/index.html` über einen lokalen Webserver öffnen. API: `compile(srcPrg, blitzPrg, {name, keys, pad, basicRom})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
+
+Aufbau:
+- `tools/bc2js.py` übersetzt den **Bytecode des Compilers** (nicht das Pseudo-BASIC) nach `js/compiler.gen.js`: ein `case` pro Sprungziel, Label = Originaladresse. Damit entfallen die Anzeigefehler von `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): alle Arrays sind eindimensional, FOR/GET/READ/INPUT nehmen die zuletzt geladene Variable als Referenz, `X58` = `IF x THEN RETURN`, POKE/OPEN mit umgekehrter Argumentfolge.
+- `js/rt.js`: BASIC-Primitiven, 1581-Simulation (Kanäle, Befehlskanal, Scratch, Status), Tastatur (Menü `1`, Programmname), DATA-Tabelle, native Fassungen der Maschinencode-Helfer: `SYS 288/291` Tokenizer, `SYS 5872` Zeile lesen, `SYS 5960/5985` Byte lesen/schreiben (Schlüssel bei `$1769`), `SYS 6012` Suche in Integer-Array, `SYS 5816` Speicherblock schreiben.
+- Die Runtime in C/ kommt aus BLITZ!.128 selbst (Image 1 mit den zur Laufzeit gepatchten Compiler-Schlüsseln, Image 2 ab `$A065` plus 10 Bytes RAM-Muster `00 00 00 FF FF FF FF 00 00 00`).
+
+Befunde aus der Portierung:
+- Zufall: RND(0) wird nur für die 6 Schlüssel (Reihenfolge W1,W3,W4,W5,W6,W2), für J% (0–9 Füllbytes hinter dem Header) und die Füllbytes selbst gezogen. `keysOf()` liest alles aus einer C/-Datei zurück.
+- `$1D00` in C/ ist der Puffer, den VAL (String-Kopie ohne Endnull, max. 160 Bytes) und INPUT# (mit Endnull) benutzen. Er enthält die letzte Statuszeile `00, OK,00,00` und ggf. Reste einer langen Konstante.
+- Gleitkommakonstanten: VAL ist eine Blitz-eigene Routine (`$4314`), die Ziffern 16-bittig sammelt und dann Routinen im C128-BASIC-ROM ruft (`$8B17`, `$8DB8`, `$8D67`). Für Bitgenauigkeit führt `js/cpu6502.js` genau diesen Code aus, mit dem BASIC-ROM hi 318019-04 (`--rom`, `BLITZ_BASICROM` oder VICE-Installation). Ohne ROM rechnet ein BigInt-Modell (MUL10/DIV10 mit Rundungsbyte); im Test weichen dann 2 von 84 Konstanten im letzten Bit ab.
+- Orakel: große Quellen brauchen mehr Frames, z. B. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
+- `Z/` ist ein BASIC-Programm (Ladeadresse `$0401`): je Zeile `04 08`, Adresse als Zeilennummer, Text `= nnn `.
