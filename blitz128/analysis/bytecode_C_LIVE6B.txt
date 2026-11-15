@@ -1,0 +1,420 @@
+46d7      1  GOSUB40000                                       | 06 1f f5 05 3b f6  ; GOSUB $62fb
+46dd      2  ?                                                | 9f 9d 9c ad 9e 79 ac df 01
+46e6      4  ?                                                | ad e4 ba 53 a8 ac 1c 0a ef 2f 20 ef 2f 22 06 36 a6 01
+46f8     20  GC(0)=6:GC(1)=0:GC(2)=0:GC(3)=1400               | ac aa f8 1b ad ac f8 1b ae ac f8 1b af bb 19 64 f8 1b
+470a     21  GOSUB30000                                       | 06 29 c9  ; GOSUB $54c7
+470d     50  GOSUB10000:GOSUB11000                            | 06 31 9a 06 30 4d  ; GOSUB $4c94
+4713     90  TI$="000000":GS=1:GT=0:K=0                       | f2 21 21 21 21 21 21 4a ad d8 ac d9 ac da
+4721    100  <versions differ>                                | 9b 5a 9b f4 1e 4e 3a 22
+4729    110  GOSUB200                                         | 06 3a 4d  ; GOSUB $4743
+472c    120  <versions differ>                                | b0 94 18 03 15 9a ad 1b da 05 3a 2f
+4738    130  GOSUB2000                                        | 06 37 3b  ; GOSUB $4a35
+473b    140  GOSUB5000                                        | 06 36 a6  ; GOSUB $4ba8
+473e    150  <versions differ>                                | ac da 05 3a 2f
+4743    200  IFI$="+"THENGS=GS+1:IFGS>5THENGS=5               | 9b f5 3a 1e 03 0c 98 ad 1b d8 98 a9 1d 03 1b a9 d8 05 3a 65
+4757    201  IFI$="-"THENGS=GS-1:IFGS<0THENGS=0               | 9b f5 3c 1e 03 0c 98 ad 14 d8 98 ac 18 03 1b ac d8 05 3a 65
+476b    204  ?                                                | 95 07 0a 3a 8d 3a 97 3a b8 3a b0 3a e0 35 46 35 9a 35 b6 35 f8 34 37
+4782    205  RETURN                                           | 01
+4783    250  IFI$="1"THEN11500                                | 9b f5 20 1e 4e 30 8b
+478a    251  IFI$="0"THEN12100                                | 9b f5 21 1e 4e 2c 86
+4791    252  IFI$="Q"THENEND                                  | 9b f5 40 1e 03 1f 53
+4798    299  RETURN                                           | 01
+4799    300  IFI$="1"THEN11600                                | 9b f5 20 1e 4e 30 e3
+47a0    301  IFI$="2"THEN11700                                | 9b f5 23 1e 4e 33 5f
+47a7    302  IFI$="3"THEN12000                                | 9b f5 22 1e 4e 2c 3d
+47ae    309  ?                                                | 9b f5 4e 1e 4e 30 4d
+47b5    349  RETURN                                           | 01
+47b6    350  IFI$="_"THEN11500                                | 9b f5 4e 1e 4e 30 8b
+47bd    399  RETURN                                           | 01
+47be    400  IFI$="_"THEN11500                                | 9b f5 4e 1e 4e 30 8b
+47c5    402  RS=ASC(I$)-48                                    | 9b 2e ba 2c 14 d6
+47cb    404  <versions differ>                                | 96 ac 1d 03 17 96 97 a8 b8 15 1a 4e 32 aa
+47d9    406  WS=ASC(I$)-64                                    | 9b 2e ba 5c 14 d0
+47df    408  <versions differ>                                | 90 ac 1d 03 17 90 97 ad b8 15 1a 4e 2d de
+47ed    449  RETURN                                           | 01
+47ee    450  IFI$="_"THEN11700                                | 9b f5 4e 1e 4e 33 5f
+47f5    452  WS=ASC(I$)-48:                                   | 9b 2e ba 2c 14 d0
+47fb    454  <versions differ>                                | 90 ac 1d 03 3d 90 97 ad b8 15 1a 03 05 97 90 ad 14 b8 17 ae 97 96 ac b8 13 f8 11 06 34 40 06 34 8c 05 33 5f
+481f    461  <versions differ>                                | ac d1 97 ad b8 15 ad 14 91 0d
+4829    462  <versions differ>                                | 97 91 b8 17 ae b8 11 97 96 ac b8 13 1e 03 16 97 91 b8 17 ae ac f8 11
+4840    463  NEXT                                             | 0f
+4841    465  BEND:GOSUB1700:GOTO11700                         | 06 34 40 05 33 5f  ; GOSUB $494e
+4847    499  RETURN                                           | 01
+4848    500  IFI$="_"THENGOSUB1700:GOTO11700                  | 9b f5 4e 1e 03 14 06 34 40 05 33 5f
+4854    502  RS=ASC(I$)-48                                    | 9b 2e ba 2c 14 d6
+485a    504  <versions differ>                                | 96 ac 1d 03 3d 96 97 a8 b8 15 1a 03 05 97 90 ad 14 b8 17 ae 97 96 ac b8 13 f8 11 06 34 40 06 34 8c 05 33 5f
+487e    505  <versions differ>                                | 96 ac 1e 03 0e 97 90 ad 14 b8 17 ae ac f8 11 06 34 40 05 33 5f
+4893    549  RETURN                                           | 01
+4894    550  IFI$="_"THEN11500                                | 9b f5 4e 1e 4e 30 8b
+489b    551  ?                                                | 92 33 ac 1d 03 04 9b 2e ba 2c 14 d1 91 ac 1d 03 11 91 92 33 1a 03 1b 91 d3 05 29 35
+48b7    599  RETURN                                           | 01
+48b8    600  IFI$="_"THEN11000                                | 9b f5 4e 1e 4e 30 4d
+48bf    601  I=ASC(I$)-64:IFI>=1THENIFI<=7THENIFMS<>ITHENMS=I | 9b 2e ba 5c 14 d1 91 ad 1f 03 0d 91 ab 1a 03 10 8c 91 19 03 1b 91 cc 05 2c ff
+48d9    602  IFLEN(CC$)>0THENI=ASC(I$)-48:IFI>0THENIFI<=LEN(C | 92 33 ac 1d 03 04 9b 2e ba 2c 14 d1 91 ac 1d 03 11 91 92 33 1a 03 1b 91 d3 05 29 35
+48f5    649  RETURN                                           | 01
+48f6    650  IFI$="_"THEN12000                                | 9b f5 4e 1e 03 15 97 07 1a 2c 3d 2c 86
+4903    651  ?                                                | 9b f5 47 1e 4e 29 35
+490a    652  J=ASC(MID$(CC$,CI,1))                            | 9b 2e ba 2c 14 d1
+4910    653  ?                                                | 91 ac 1d 03 11 91 ae 1a 03 14 97 91 19 4e 34 2d
+4920    654  <versions differ>                                | 05 34 36
+4923    655  ?                                                | 92 93 ad 2a 2e cd
+4929    656  I=ASC(I$)-64                                     | ad 8d ac 91 f8 0d f4 d2
+4931    657  ?                                                | 97 07 1a 2c 3d 2c 86
+4938    699  RETURN                                           | 01
+4939    700  IFI$="_"THEN12100                                | 9b f5 4e 1e 03 15 97 07 1a 2c 3d 2c 86
+4946    702  J=ASC(MID$(CC$,CI,1))                            | 9b f5 47 1e 4e 2e 88
+494d    749  RETURN                                           | 01
+494e   1900  ?                                                | ad d1 97 a8 b8 15 91 0d 97 91 ad ac f8 13 0f
+495d   1901  ?                                                | ac d1 97 ad b8 15 ad 14 91 0d 97 91 b8 17 ae b8 11 ce 8e ac 1d 03 12 97 8e ad 97 8e ad b8 13 ad 1b f8 13
+4980   1902  ?                                                | 0f 01
+4982   1910  ?                                                | 97 96 ac b8 13 cf 97 90 ad 14 b8 17 c8
+498f   1911  ?                                                | 8f ac b8 0f c9 8f ad b8 0f ca 8f ae b8 0f cb 8f af b8 0f c4 8f a8 b8 0f c5 ad 12 c6
+49ab   1912  ?                                                | ac d3 97 ae b8 15 ad 14 93 0d
+49b5   1913  ?                                                | 97 93 ac b8 09 8a 1e 03 1b 93 c7 05 34 d0
+49c3   1914  ?                                                | 97 93 ac b8 09 8b 1e 03 1b 93 c0 05 34 d0
+49d1   1915  ?                                                | 97 93 ac b8 09 89 1e 03 1a ac c1 93 c2
+49de   1916  ?                                                | 0f
+49df   1918  ?                                                | 86 ac 1f 4e 37 0e
+49e5   1920  ?                                                | ac d3 97 af b8 15 ad 14 93 0d
+49ef   1922  ?                                                | 97 93 ac b8 0b 89 1e 03 15 ad c1 93 c2 05 37 0e
+49ff   1924  ?                                                | 0f
+4a00   1925  ?                                                | 90 ad 14 ac 8f ac b8 0f f8 05 90 ad 14 ad 84 f8 05 90 ad 14 ae 85 f8 05
+4a18   1926  ?                                                | 90 ad 14 af 87 f8 05 90 ad 14 a8 80 f8 05 90 ad 14 a9 81 f8 05 90 ad 14 aa 82 f8 05
+4a34   1930  ?                                                | 01
+4a35   2000  TI$="000000"                                     | f2 21 21 21 21 21 21 4a
+4a3d   2005  IFGS=0THENRETURN                                 | 98 ac 1e 44
+4a41   2010  GC(1)=GC(1)+GS:IFGC(1)>=60THENGC(1)=GC(1)-60:GC( | ad ad b8 1b 98 1b f8 1b ad b8 1b ba 20 1f 03 0f ad ad b8 1b ba 20 14 f8 1b ac ac b8 1b ad 1b f8 1b
+4a62   2011  IFGC(0)>=23THENGC(0)=6:GC(1)=0:GC(2)=GC(2)+1     | ac b8 1b eb 1f 03 0e ac aa f8 1b ad ac f8 1b ae ae b8 1b ad 1b f8 1b
+4a79   2012  IFGC(2)>3THENGC(2)=0:GC(3)=GC(3)+1               | ae b8 1b af 1d 03 12 ae ac f8 1b af af b8 1b ad 1b f8 1b
+4a8c   2013  IFGC(0)=6THENIFGC(1)=0THENGOSUB10000:GOSUB11000  | ac b8 1b aa 1e 03 13 ad b8 1b ac 1e 03 14 06 31 9a 06 30 4d
+4aa0   2100  R=0:X0=0:X1=0:X2=0:Q1=0:Q2=0:S1=0:S2=0:PT=0:I1=0 | ac cf ac c9 ac c2 ac c7 ac c0 ac c4 ac c5 ac c3 ac fc 3c ac c1 ac ca ac cb
+4ab9   2101  <versions differ>                                | ad fc 3d ad bc 3d 0d
+4ac0   2102  <versions differ>                                | ac d0 bc 3d ad b8 15 ad 14 90 0d
+4acb   2104  ?                                                | bc 3d 90 b8 17 c8 88 ac 1e 4e 36 ab
+4ad7   2106  <versions differ>                                | 88 ae b8 11 cf 8f ac 1e 4e 36 ab
+4ae2   2112  X1=PQ(WS,3):X2=PQ(WS,4):PT=PQ(WS,5):X0=PQ(WS,6)  | 90 ac b8 05 c9 90 ad b8 05 c4 90 ae b8 05 c5 90 af b8 05 c7 90 a8 b8 05 c0 90 a9 b8 05 c1 90 aa b8 05 c2
+4b05   2113  <versions differ>                                | bc 3d 87 ad b8 09 c3
+4b0c   2114  ?                                                | bc 3d 80 ad b8 09 fc 3c
+4b14   2115  <versions differ>                                | 81 ac 1e 03 10 bc 3d 82 ad b8 09 c6 05 36 24
+4b23   2116  <versions differ>                                | bc 3d 82 ad b8 0b c6
+4b2a   2130  <versions differ>                                | 83 84 1f 03 38 bc 3c 85 1f 03 02 86 bc 3d a9 b8 15 18 03 09 bc 3d 8f ae bc 3d 8f ae b8 13 8f a9 b8 0f 98 15 1b f8 13
+4b51   2132  <versions differ>                                | bc 3d 8f ae b8 13 bb 3b 0c 18 4e 36 ab
+4b5e   2134  <versions differ>                                | bc 3d 8f ae ac f8 13
+4b65   2136  <versions differ>                                | bc 3d 87 ad bc 3d 87 ad b8 09 ad 14 f8 09 bc 3d 80 ad bc 3d 80 ad b8 09 ad 14 f8 09
+4b81   2138  <versions differ>                                | 81 ac 1e 03 0f bc 3d 82 ad bc 3d 82 ad b8 09 ad 1b f8 09 05 36 ab
+4b97   2139  <versions differ>                                | bc 3d 82 ad bc 3d 82 ad b8 0b ad 1b f8 0b
+4ba5   2149  NEXT:NEXT                                        | 0f 0f
+4ba7   4999  RETURN                                           | 01
+4ba8   5000  CHAR1,72,3,"GS="+STR$(GS),0                      | ba 54 dc af dd f7 56 42 2c 98 2c 1b de 06 3b d3
+4bb8   5010  CHAR1,0,0,"KAPAZITAET"+STR$(K)+"  "              | f6 02 5a 20 9a 22
+4bbe   5020  GC$=STR$(GC(0))                                  | ac b8 1b 2c fc 3e
+4bc4   5021  IFGC(0)>9THENGC$=MID$(GC$,2)                     | ac b8 1b a5 1d 03 16 bc 3e ae ba e3 2a fc 3e
+4bd3   5022  IFGC(1)<10THENGC$=GC$+":0"+MID$(STR$(GC(1)),2):G | ad b8 1b a6 18 03 0a bc 3e f6 2b 21 1b ad b8 1b 2c ae ba e3 2a 1b fc 3e 05 36 f0
+4bee   5023  GC$=GC$+":"+MID$(STR$(GC(1)),2)                  | bc 3e f5 2b 1b ad b8 1b 2c ae ba e3 2a 1b fc 3e
+4bfe   5024  CHAR1,72,1,GC$,0                                 | ba 54 dc ad dd bc 3e de 06 3b d3
+4c09   5030  ONCSGOTO5100,5200,5300,5400,5500,5600,5700,5800, | 95 07 0a 31 2f 31 2c 31 2d 31 2a 31 85 31 82 31 83 31 9f 31 9c 31 9d
+4c20   5099  RETURN                                           | 01
+4c21   5100  RETURN                                           | 01
+4c22   5200  RETURN                                           | 01
+4c23   5300  RETURN                                           | 01
+4c24   5400  <versions differ>                                | ad d1 97 a8 b8 15 91 0d
+4c2c   5402  <versions differ>                                | 97 91 ae b8 13 ba 78 16 3d 2c de ba 54 9e 33 24 1c eb 1b dc a4 91 1b dd 06 3b d3
+4c47   5404  NEXT                                             | 0f
+4c48   5406  <versions differ>                                | ac d1 97 ae b8 15 ad 14 91 0d
+4c52   5408  <versions differ>                                | 97 91 ad b8 09 2c de e5 9e 33 24 1c eb 1b dc a5 91 1b dd 06 3b d3
+4c68   5410  NEXT                                             | 0f
+4c69   5412  <versions differ>                                | ac d1 97 af b8 15 ad 14 91 0d
+4c73   5414  <versions differ>                                | 97 91 ad b8 0b 2c de e5 9e 33 24 1c eb 1b dc ed 91 1b dd 06 3b d3
+4c89   5416  NEXT                                             | 0f
+4c8a   5499  RETURN                                           | 01
+4c8b   5500  RETURN                                           | 01
+4c8c   5600  RETURN                                           | 01
+4c8d   5700  GOSUB5406                                        | 06 31 46  ; GOSUB $4c48
+4c90   5799  RETURN                                           | 01
+4c91   5800  RETURN                                           | 01
+4c92   5900  RETURN                                           | 01
+4c93   6000  RETURN                                           | 01
+4c94  10000  C$="BUERGER LARS VON D.                       "+ | fb 36 53 44 54 43 56 54 43 31 5d 50 43 42 31 47 5e 5f 31 55 3f 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 ae b8 1b b8 07 1b f1 31 50 3f 55 3f 1b af b8 1b 2c 1b f1 31 27 31 50 41 1b de
+4cda  10010  PRINTCHR$(147);                                  | ba 8f 2f 20
+4cde  10011  PRINT"{cf}"UI$(2)"{d0}   {d5}"LEFT$(UI$(1),5)"{c | f5 de 20 ae b8 01 20 f1 c1 31 31 31 c4 20 ad b8 01 a9 28 20 f5 d8 22
+4cf5  10012  PRINT"{b4}"C$"{a7}{a6}  {c2}     {c2}"           | f5 a5 20 9e 20 fb 17 b6 b7 31 31 d3 31 31 31 31 31 d3 22
+4d08  10013  PRINT"{cc}"UI$(3)"{ba}{a6}  {ca}"LEFT$(UI$(1),5) | f5 dd 20 af b8 01 20 f1 ab b7 31 31 db 20 ad b8 01 a9 28 20 f5 da 22
+4d1f  10014  PRINT" "UI$(4)                                   | f5 31 20 a8 b8 01 22
+4d26  10015  RETURN                                           | 01
+4d27  10105  ?                                                | ba 5a 9e 33 14 ae 16 dc a9 dd
+4d31  10106  ?                                                | 06 3b d3 9d ad 1b dd ac b8 01 9e 33 28 de 06 3b d3 01  ; GOSUB $46dd
+4d43  11000  CS=1:BG=0:GOSUB9000                              | ad d5 ac d7 06 3b e8
+4d4a  11020  C$="STADT":GOSUB9010                             | f1 42 45 50 55 45 de 06 30 29
+4d54  11030  CHAR1,0,11,"0){a0}ZUM MARKTPLATZ"                | ac dc a6 dd fb 0d 21 38 b1 4b 44 5c 31 5c 50 43 5a 45 41 5d 50 45 4b de 06 3b d3
+4d6f  11040  CHAR1,0,12,"1) BRAUEREI"                         | ac dc a0 dd fb 17 20 38 31 53 43 50 44 54 43 54 58 de 06 3b d3
+4d84  11050  RETURN                                           | 01
+4d85  11500  CS=2:BG=1:GOSUB9000                              | ae d5 ad d7 06 3b e8
+4d8c  11520  C$="BAUEREI":GOSUB9010                           | fb 14 53 43 50 44 54 43 54 58 de 06 30 29
+4d9a  11540  PRINT:PRINT"{11}1) PERSONALBUCH"                 | 23 fb 0c 00 20 38 31 41 54 43 42 5e 5f 50 5d 53 44 52 59 22
+4dae  11550  PRINT"2) PRODUKTION"                             | fb 11 23 38 31 41 43 5e 55 44 5a 45 58 5e 5f 22
+4dbe  11551  PRINT"3) KARREN VERSCHICKEN"                     | fb 09 22 38 31 5a 50 43 43 54 5f 31 47 54 43 42 52 59 58 52 5a 54 5f 22
+4dd6  11560  CHAR1,0,24,"_){a0}ZUR STADT"                     | ac dc e4 dd fb 10 4e 38 b1 4b 44 43 31 42 45 50 55 45 de 06 3b d3
+4dec  11570  RETURN                                           | 01
+4ded  11600  CS=3:GOSUB9000                                   | af d5 06 3b e8
+4df2  11620  C$="PERSONALBUCH":GOSUB9010                      | fb 10 41 54 43 42 5e 5f 50 5d 53 44 52 59 de 06 30 29
+4e04  11630  <versions differ>                                | ad d1 ad ac b8 15 91 0d
+4e0c  11632  <versions differ>                                | a9 dc a5 91 1b dd 91 2c f5 38 1b 91 ac b8 11 b8 03 1b de 06 3b d3
+4e22  11634  <versions differ>                                | e2 dc 91 ad b8 11 b8 3d de 06 3b d3
+4e2e  11635  NEXT                                             | 0f
+4e2f  11660  CHAR1,0,24,"_){a0}PERSONALBUCH SCHLIESSEN"       | ac dc e4 dd fb 06 4e 38 b1 41 54 43 42 5e 5f 50 5d 53 44 52 59 31 42 52 59 5d 58 54 42 42 54 5f de
+4e50  11670  RETURN                                           | 01
+4e51  11700  CS=4:GOSUB9000                                   | a8 d5 06 3b e8
+4e56  11720  C$="PRODUKTION":GOSUB9010                        | fb 16 41 43 5e 55 44 5a 45 58 5e 5f de 06 30 29
+4e66  11730  GOSUB11780                                       | 06 32 30  ; GOSUB $4f3e
+4e69  11740  CX=40:CY=7:C$="PRODUKTE":GOSUB9015               | ba 34 dc ab dd fb 14 41 43 5e 55 44 5a 45 54 de 06 30 3f
+4e7c  11742  <versions differ>                                | ad d1 97 a8 b8 15 91 0d f5 03 91 2c ad 29 1b f6 83 2b 1b 97 91 ac b8 13 ac b8 0f b8 3f 1b de
+4e9b  11743  <versions differ>                                | 9e f6 31 3c 1b 97 91 ad b8 13 2c 1b fb 15 31 50 43 53 54 58 45 54 43 1b de
+4eb4  11744  CHAR1,40,8+I,C$,0                                | ba 34 dc a4 91 1b dd 06 3b d3
+4ebe  11745  ?                                                | ba 51 dc f5 34 de 06 3b d3
+4ec7  11746  NEXT                                             | 0f
+4ec8  11750  CX=40:CY=18:C$="ARBEITER":GOSUB9015              | ba 34 dc ee dd fb 14 50 43 53 54 58 45 54 43 de 06 30 3f
+4edb  11751  <versions differ>                                | ac d1 97 ad b8 15 ad 14 91 0d
+4ee5  11752  <versions differ>                                | 97 91 b8 17 fc 38 bc 38 ac b8 11 fc 39
+4ef2  11753  <versions differ>                                | f5 03 ba 5d 91 1b 2f 1b f6 83 2b 1b bc 39 b8 03 1b f7 31 3c 31 1b bc 38 ae b8 11 ac b8 0f b8 3f 1b de
+4f14  11754  ?                                                | e8 91 1b dd 06 3b d3
+4f1b  11755  NEXT                                             | 0f
+4f1c  11760  CHAR1,0,24,"_){a0}PRODUKTION VERLASSEN"          | ac dc e4 dd fb 0b 4e 38 b1 41 43 5e 55 44 5a 45 58 5e 5f 31 47 54 43 5d 50 42 42 54 5f de 06 3b d3
+4f3d  11770  RETURN                                           | 01
+4f3e  11780  CX=5:CY=7:C$="LAGER ROHSTOFFE":GOSUB9015         | a9 dc ab dd fb 13 5d 50 56 54 43 31 43 5e 59 42 45 5e 57 57 54 de 06 30 3f
+4f57  11781  <versions differ>                                | ac d1 97 ae b8 15 ad 14 91 0d
+4f61  11782  <versions differ>                                | a5 91 1b dd 97 91 ac b8 09 b8 3f de 06 3b d3
+4f70  11784  CX=5:CY=15:C$="LAGER PRODUKTE":GOSUB9015         | 0f
+4f71  11785  <versions differ>                                | a9 dc a3 dd fb 12 5d 50 56 54 43 31 41 43 5e 55 44 5a 45 54 de 06 30 3f
+4f89  11786  <versions differ>                                | ac d1 97 af b8 15 ad 14 91 0d
+4f93  11787  NEXT                                             | ed 91 1b dd 97 91 ac b8 0b b8 3f de 06 3b d3
+4fa2  11788  ?                                                | 0f
+4fa3  11789  RETURN                                           | 01
+4fa4  11800  CS=5                                             | a9 d5
+4fa6  11810  GOSUB11890                                       | 06 2d 11  ; GOSUB $501f
+4fa9  11816  <versions differ>                                | fb 16 46 54 43 31 42 5e 5d 5d 31 03 97 96 ac b8 13 ac b8 0f b8 3f 1b fb 12 83 31 41 43 5e 55 44 4b 58 54 43 54 5f 2e 1b de ab dc a6 dd 06 3b d3
+4fd9  11817  <versions differ>                                | ac d1 97 ad b8 15 91 0d 91 ac 1d 03 3c 97 91 ad 14 b8 17 fc 38 bc 38 ac b8 11 fc 39 91 ae b8 11 97 96 ac b8 13 1e 3e df 05 2d 07
+5004  11818  ?                                                | ac fc 39 ac df
+5009  11819  C$=RIGHT$(STR$(I),1)+":"+TW$(IP):CHAR1,7,12+I,C$ | 91 2c ad 29 f5 2b 1b bc 39 b8 03 1b de a0 91 1b dd 06 3b d3 0f
+501e  11820  RETURN                                           | 01
+501f  11890  CHAR1,5,9,"{d5}{c3}{c3}{c3}{c3}{c3}{c3}{c3}{c3}{ | a9 dc a5 dd f5 c4 ad b8 01 1b f5 d8 1b de 06 3b d3
+5030  11891  FORI=0TO6:CHAR1,5,10+I,"{c2}                     | ac d1 aa 91 0d a6 91 1b dd fb 20 d3 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 d3 de 06 3b d3 0f
+507c  11892  CHAR1,5,17,"{c2} _) ABBRECHEN                    | ed dd fb 20 d3 31 4e 38 31 50 53 53 43 54 52 59 54 5f 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 d3 de 06 3b d3
+50c0  11893  CHAR1,5,18,"{ca}{c3}{c3}{c3}{c3}{c3}{c3}{c3}{c3} | ee dd f5 db ad b8 01 1b f5 da 1b de 06 3b d3
+50cf  11894  RETURN                                           | 01
+50d0  11900  CS=6                                             | aa d5
+50d2  11910  GOSUB11890                                       | 06 2d 11  ; GOSUB $501f
+50d5  11916  <versions differ>                                | fb 16 46 50 42 31 42 5e 5d 5d 31 03 97 90 ad 14 b8 17 b8 03 1b fb 12 83 31 41 43 5e 55 44 4b 58 54 43 54 5f 2e 1b de ab dc a6 dd 06 3b d3
+5103  11918  <versions differ>                                | ac d1 97 a8 b8 15 91 0d 90 ae b8 11 97 91 ac b8 13 1e 3e df
+5117  11919  <versions differ>                                | 91 2c ad 29 f5 2b 1b 97 91 ac b8 13 ac b8 0f b8 3f 1b de a0 91 1b dd 06 3b d3 0f
+5132  11920  RETURN                                           | 01
+5133  12000  CS=7:GOSUB9000                                   | ab d5 06 3b e8
+5138  12010  C$="VERLADEN & TRANSPORTIEREN":GOSUB9010         | fb 05 47 54 43 5d 50 55 54 5f 31 37 31 45 43 50 5f 42 41 5e 43 45 58 54 43 54 5f de 06 30 29
+5157  12020  GOSUB11780                                       | 06 32 30  ; GOSUB $4f3e
+515a  12030  GOSUB29800:GOSUB29900                            | ba 2d dc ab dd f2 5a 50 43 43 54 5f de 06 30 3f a5 dd 06 2f cd
+516f  12089  CHAR1,0,24,"_){a0}VERLASSEN"                     | ac dc e4 dd fb 10 4e 38 b1 47 54 43 5d 50 42 42 54 5f de 06 3b d3
+5185  12099  RETURN                                           | 05 31 83
+5188  12100  IFBG=0THENR(0)=-1:R(1)=-1:R(2)=-1:GOTO12110      | a4 d5 ae d7 8c ac 1e 03 18 ad cc
+5193  12110  CS=8:BG=2:IFMS=0THENMS=1                         | 06 3b e8 8c ad b8 39 de 06 30 29  ; GOSUB $46e6
+519e  12111  ?                                                | ad dc a5 dd fb 3a 46 50 43 54 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 5a 50 44 57 31 31 31 47 54 43 5a 31 5c 54 5f 56 54 de 06 30 3f
+51ce  12112  ?                                                | e5 dc a4 dd f1 41 43 54 58 42 de 06 3b d3
+51dc  12115  ?                                                | ba 2d dc a4 dd f2 5a 50 43 43 54 5f de 06 30 3f a6 dd 06 2f cd
+51f1  12120  IFNOTR(0)THEN12130                               | 8c ad b8 39 de 06 30 29
+51f9  12122  PRINT"{1d}{1d}{1d}{1d}{d5}{c4}{c4}{c4}{c4}{c4}{c | ba 5c dc ad d1 ab 91 0d a4 91 1b dd 91 ba 5c 1b 2f f6 38 31 1b 91 ac b8 39 1b de 91 8c 1e 3e df 06 3b d3 0f
+521d  12130  IFR(2)THENGOSUB29800                             | ad e9 ba 3a a7 ad 1c 0a
+5225  12131  ?                                                | b0 fc 3a ad d1 8c ae b8 39 33 91 0d 8c ae b8 39 91 ad 2a 2e cd
+523a  12133  ?                                                | 91 ba 5b 1b 2f f6 38 31 1b 8d b8 3f ed 28 1b de 9e f5 89 1b a9 b8 01 9e 33 24 1d 0f 28 1b f5 81 1b de 9e 22
+525e  12134  ?                                                | f5 80 20 8d ae b8 3b 2c de e9 9e 33 24 1c eb 1b 5d 9e 22
+5271  12135  ?                                                | f5 80 20 8d af b8 3b 2c de e0 9e 33 24 1c eb 1b 5d 9e 22
+5284  12136  ?                                                | f5 80 20 8d a8 b8 3b 2c de ba 3d 9e 33 24 1c eb 1b 5d 9e 22
+5298  12137  ?                                                | 0f ef 2f 20 ef 2f 22
+529f  12138  ?                                                | e6 dc e4 dd b0 bc 3a 14 2c de 06 3b d3
+52ac  12140  IFNOTR(1)THEN12160                               | ac dc e4 dd fb 10 4e 38 b1 4b 44 43 31 42 45 50 55 45 de 06 3b d3
+52c2  12199  RETURN                                           | 01
+52c3  12200  CS=9:C=ASC(MID$(CC$,CI,1))                       | ad cd f4 d2 ad d1 af 91 0d ad 91 ac b8 0d 97 19 4e 2e 8a
+52d6  12201  WINDOW40,8,79,22,1                               | ba 34 dc f5 c4 ad b8 01 aa 28 1b f3 a2 5a 50 43 43 54 5f 1b 8d 2c 1b f5 ba 1b ad b8 01 a9 28 1b f5 d8 1b de 06 3b d3 9d ad 1b dd 8d ad 1b cd
+5305  12204  PRINT"{c2}"LEFT$(UI$(6),38)"{c2}"                | ad cd ad 91 ae b8 0d 8d 0d ba 34 dc 91 8d ac b8 35 ac 1e 4e 2e 5d
+531b  12206  <versions differ>                                | f5 d6 91 8d ac b8 35 b8 3f ed 28 1b de 9e f5 89 1b a9 b8 01 9e 33 24 1d 06 28 1b f5 81 1b de 06 3b d3
+533d  12207  <versions differ>                                | 91 8d ad b8 35 2c f5 d9 1b de ba 27 9e 33 24 1c eb 1b dc 05 2e 6f
+5353  12208  PRINT"{c2}   V) KARREN VERSENDEN"LEFT$(UI$(6),16 | f6 d6 89 a9 b8 01 e9 28 1b f6 81 d9 1b de
+5361  12209  PRINT"{c2}   _)ABBRECHEN   "LEFT$(UI$(6),21)"{c2 | 06 3b d3 9d ad 1b dd  ; GOSUB $46dd
+5368  12210  PRINT"{ca}"LEFT$(UI$(1),38)"{cb}";               | 0f
+5369  12212  GOSUB29930                                       | 92 91 2f 1b d2 ba 34 dc f5 db ad b8 01 e9 28 1b f5 da 1b de 06 3b d3 9d ad 1b dd
+5384  12214  ?                                                | 0f 01
+5386  12220  <versions differ>                                | a5 d5
+5388  12222  CHAR1,3,17                                       | ad ef ba 52 a5 ba 3b 1c 0a f5 c4 20 ad b8 01 ba 3a 28 20 f5 d8 22
+539e  12224  PRINTCHR$(64+I+J)"{98}:{90}{11}{9d}{9d}";        | ac d1 aa 91 0d f5 d3 20 aa b8 01 ba 3a 28 20 f5 d3 22 0f
+53b1  12226  RETURN                                           | fb 3f d3 31 4e 38 50 53 53 43 54 52 59 54 5f 31 31 31 31 31 47 38 56 44 54 45 54 43 31 47 54 43 5d 50 55 54 5f 20 aa b8 01 a8 28 20 f5 d3 22
+53e0  12228  ?                                                | f5 db 20 ad b8 01 ba 3a 28 20 f5 da 22
+53ed  12230  ?                                                | fb 3c 02 00 0c 46 5e 59 58 5f 31 42 5e 5d 5d 31 55 54 43 31 5a 50 43 43 54 5f 31 57 50 59 43 54 5f 2e 22
+5410  12232  ?                                                | ad d1 ae 91 0d
+5415  12234  ?                                                | 91 2c ad 29 f5 2b 1b 91 b8 37 1b de
+5421  12236  ?                                                | 97 91 1e 03 16 f5 89 9e 1b f5 81 1b de
+542e  12238  ?                                                | f5 0c 20 9e 22
+5433  12240  ?                                                | 0f
+5434  12241  ?                                                | ef 2f 20 ef 2f 22
+543a  12242  ?                                                | 01
+543b  12250  ?                                                | a6 d5
+543d  12252  ?                                                | ad ef ba 52 a5 ba 3b 1c 0a f5 c4 20 ad b8 01 ba 3a 28 20 f5 d8 22
+5453  12254  ?                                                | ac d1 aa 91 0d f5 d3 20 aa b8 01 ba 3a 28 20 f5 d3 22 0f
+5466  12256  ?                                                | fb 38 d3 31 4e 38 50 53 53 43 54 52 59 54 5f 31 31 31 31 31 47 38 5a 50 43 43 54 5f 31 47 54 43 42 54 5f 55 54 5f 20 aa b8 01 af 28 20 f5 d3 22
+5496  12258  ?                                                | f5 db 20 ad b8 01 ba 3a 28 20 f5 da 22
+54a3  12260  ?                                                | fb 06 02 00 0c 5a 50 43 43 54 5f 31 53 54 5d 50 55 54 5f 3e 54 5f 45 5d 50 55 54 5f 22
+54c0  12299  ?                                                | ef 2f 20 ef 2f 22 01
+54c7  30000  TW$(0)="NIEMAND"                                 | ae 0c 1d 48 cb 1c 03 ac f3 5f 58 54 5c 50 5f 55 f8 03
+54d9  30001  TW$(1)="DUSELFRIED"                              | ad fb 16 55 44 42 54 5d 57 43 58 54 55 f8 03
+54e8  30002  TW$(2)="FRIEDLINDE"                              | ae fb 16 57 43 58 54 55 5d 58 5f 55 54 f8 03
+54f7  30010  DIMTR$(2):TR$(0)=""                              | ae 0c 1d 48 ce 1c 3d ac f4 f8 3d
+5502  30011  TR$(1)="LEHRLING"                                | ad fb 14 5d 54 59 43 5d 58 5f 56 f8 3d
+550f  30012  TR$(2)="GESELLE"                                 | ae f3 56 54 42 54 5d 5d 54 f8 3d
+551a  30020  <versions differ>                                | ba 4d 0c 1d 48 db 1c 3f ba 4d a8 0c 1e 5b 58 1c 3b
+552b  30021  <versions differ>                                | ac f2 5f 58 52 59 45 42 f8 3f ac ac ac f8 3b
+553a  30022  <versions differ>                                | ad fb 13 53 44 52 59 54 5f 59 5e 5d 4b 53 43 54 45 45 f8 3f ad ac ad f8 3b ad ad e8 f8 3b
+5558  30023  <versions differ>                                | ae fb 15 54 55 54 5d 42 45 54 58 5f f8 3f ae ac ad f8 3b ae ad ba 8f f8 3b
+5571  30024  <versions differ>                                | af fb 13 54 58 52 59 54 5f 59 5e 5d 4b 53 43 54 45 45 f8 3f af ac ad f8 3b af ad ba 29 f8 3b
+5590  30025  <versions differ>                                | a8 f1 54 58 42 54 5f f8 3f a8 ac ad f8 3b a8 ad e8 f8 3b
+55a3  30026  TG$(5)="FLEDERMAUSBLUT"                          | a9 fb 12 57 5d 54 55 54 43 5c 50 44 42 53 5d 44 45 f8 3f
+55b6  30027  <versions differ>                                | aa f2 56 54 43 42 45 54 f8 3f aa ac aa f8 3b aa ad e8 f8 3b
+55ca  30028  <versions differ>                                | ab f0 56 5e 5d 55 f8 3f ab ac ad f8 3b ab ad ba 5d f8 3b
+55dd  30029  <versions differ>                                | a4 fb 10 56 43 50 5f 58 45 40 44 50 55 54 43 f8 3f a4 ac ad f8 3b a4 ad ec f8 3b
+55f8  30030  TG$(9)="JASMIN"                                  | a5 f2 5b 50 42 5c 58 5f f8 3f
+5602  30031  <versions differ>                                | a6 fb 0c 5a 58 54 57 54 43 5f 59 5e 5d 4b 53 43 54 45 45 f8 3f a6 ac ad f8 3b a6 ad a2 f8 3b
+5621  30032  TG$(11)="KROETENAUGE"                            | a7 fb 17 5a 43 5e 54 45 54 5f 50 44 56 54 f8 3f
+5631  30033  TG$(12)="LAVENDEL"                               | a0 fb 14 5d 50 47 54 5f 55 54 5d f8 3f
+563e  30034  <versions differ>                                | a1 f3 5c 5e 42 52 59 44 42 f8 3f a1 ac aa f8 3b
+564e  30035  <versions differ>                                | a2 f2 43 5e 56 56 54 5f f8 3f a2 ac aa f8 3b a2 ad e2 f8 3b
+5662  30036  <versions differ>                                | a3 fb 12 42 52 59 58 54 57 54 43 41 5d 50 45 45 54 f8 3f a3 ac ad f8 3b a3 ad ba 7e f8 3b
+5680  30037  <versions differ>                                | ec f2 42 58 5d 53 54 43 f8 3f ec ac ad f8 3b ec ad ba 3a f8 3b
+5695  30038  TG$(17)="SPINNENBEIN"                            | ed fb 17 42 41 58 5f 5f 54 5f 53 54 58 5f f8 3f
+56a5  30039  TG$(18)="WILDROSE"                               | ee fb 14 46 58 5d 55 43 5e 42 54 f8 3f
+56b2  30040  <versions differ>                                | ef fb 17 4b 58 54 56 54 5d 42 45 54 58 5f f8 3f ef ac ad f8 3b ef ad a0 f8 3b
+56cc  30043  <versions differ>                                | e8 fb 14 53 54 42 52 59 5d 50 56 f8 3f e8 ac ae f8 3b e8 ad ba 75 f8 3b
+56e4  30044  <versions differ>                                | e9 f1 57 50 43 53 54 f8 3f e9 ac a8 f8 3b e9 ad ba 6a f8 3b
+56f8  30045  <versions differ>                                | ea fb 16 59 5e 5d 4b 4b 50 41 57 54 5f f8 3f ea ac ae f8 3b ea ad ba 70 f8 3b
+5712  30046  <versions differ>                                | eb f2 41 50 41 58 54 43 f8 3f eb ac a9 f8 3b eb ad ba 78 f8 3b
+5727  30047  <versions differ>                                | e4 f3 41 5e 5d 58 45 44 43 f8 3f e4 ac a8 f8 3b e4 ad ba 67 f8 3b
+573d  30048  <versions differ>                                | e5 fb 11 42 52 59 5d 54 58 57 4b 58 54 56 54 5d f8 3f e5 ac af f8 3b e5 ad ba 7f f8 3b
+575a  30049  <versions differ>                                | e6 fb 15 46 54 58 5f 56 54 58 42 45 f8 3f e6 ac af f8 3b e6 ad a1 f8 3b
+5772  30051  TG$(27)="ARMBRUST"                               | e7 fb 14 50 43 5c 53 43 44 42 45 f8 3f
+577f  30052  <versions differ>                                | e0 fb 11 50 44 42 55 50 44 54 43 45 43 50 5f 5a f8 3f e0 ac a8 f8 3b e0 ad ba b2 f8 3b
+579c  30053  <versions differ>                                | e1 fb 11 53 43 58 54 57 31 50 44 42 31 43 5e 5c f8 3f e1 ac a9 f8 3b
+57b3  30054  <versions differ>                                | e2 fb 08 53 5d 44 5c 54 31 55 54 43 31 4b 46 58 54 45 43 50 52 59 45 f8 3f e2 ac a8 f8 3b e2 ad ba ba f8 3b
+57d7  30055  <versions differ>                                | e3 f1 53 5e 5c 53 54 f8 3f e3 ac a8 f8 3b e3 ad bb 1d 71 f8 3b
+57ec  30056  <versions differ>                                | ba 3c fb 13 55 50 43 45 50 56 5f 50 5f 42 31 55 44 57 45 f8 3f ba 3c ac a8 f8 3b
+5807  30057  TG$(33)="DIAMANT"                                | ba 3d f3 55 58 50 5c 50 5f 45 f8 3f
+5813  30058  TG$(34)="DOLCH"                                  | ba 3e f1 55 5e 5d 52 59 f8 3f
+581d  30059  <versions differ>                                | ba 3f fb 15 55 44 54 5f 5f 53 58 54 43 f8 3f ba 3f ac af f8 3b ba 3f ad bb 1d 92 f8 3b
+583a  30060  <versions differ>                                | ba 38 fb 0b 54 5d 58 49 58 54 43 31 55 54 42 31 55 43 3f 31 57 50 44 42 45 44 42 f8 3f ba 38 ac a8 f8 3b
+585d  30061  <versions differ>                                | ba 39 fb 08 57 50 59 5f 54 5f 53 43 50 54 44 31 41 58 5d 42 54 5f 54 43 f8 3f ba 39 ac af f8 3b ba 39 ad ad f8 3b
+5883  30062  <versions differ>                                | ba 3a f3 56 54 55 58 52 59 45 f8 3f ba 3a ac a9 f8 3b ba 3a ad ba e6 f8 3b
+589c  30063  <versions differ>                                | ba 3b fb 14 56 54 59 42 45 5e 52 5a f8 3f ba 3b ac ae f8 3b ba 3b ad ba 8b f8 3b
+58b7  30064  <versions differ>                                | ba 34 fb 15 56 58 57 45 55 5e 5d 52 59 f8 3f ba 34 ac a8 f8 3b ba 34 ad bb 1d 64 f8 3b
+58d4  30065  TG$(41)="GLUECKSSTEIN"                           | ba 35 fb 10 56 5d 44 54 52 5a 42 42 45 54 58 5f f8 3f
+58e6  30066  TG$(42)="GOLDKETTE"                              | ba 36 fb 15 56 5e 5d 55 5a 54 45 45 54 f8 3f
+58f5  30067  <versions differ>                                | ba 37 fb 10 56 43 5e 42 42 42 52 59 46 54 43 45 f8 3f ba 37 ac ae f8 3b
+590d  30068  TG$(44)="GUERTEL DER METAPHYSIK"                 | ba 30 fb 0a 56 44 54 43 45 54 5d 31 55 54 43 31 5c 54 45 50 41 59 48 42 58 5a f8 3f
+5929  30069  TG$(45)="HANDWERKSURKUNDE"                       | ba 31 fb 0c 59 50 5f 55 46 54 43 5a 42 44 43 5a 44 5f 55 54 f8 3f
+593f  30070  TG$(46)="HASSTIRADE"                             | ba 32 fb 16 59 50 42 42 45 58 43 50 55 54 f8 3f
+594f  30071  TG$(47)="HEILIGENDUFT"                           | ba 33 fb 10 59 54 58 5d 58 56 54 5f 55 44 57 45 f8 3f
+5961  30072  <versions differ>                                | ba 2c f0 5a 50 5c 5c f8 3f ba 2c ac ae f8 3b
+5970  30073  <versions differ>                                | ba 2d fb 13 5a 5e 54 43 5f 54 43 5c 50 59 5d 4b 54 58 45 f8 3f ba 2d ac af f8 3b ba 2d ad ba 90 f8 3b
+5992  30074  TG$(50)="KRAEUTERSCHNAPS"                        | ba 2e fb 13 5a 43 50 54 44 45 54 43 42 52 59 5f 50 41 42 f8 3f
+59a7  30075  <versions differ>                                | ba 2f fb 12 5a 43 5e 54 45 54 5f 42 52 59 5d 54 58 5c f8 3f ba 2f ac a8 f8 3b
+59c1  30076  <versions differ>                                | ba 28 fb 17 5c 5e 42 52 59 44 42 55 44 57 45 f8 3f ba 28 ac a8 f8 3b
+59d8  30077  <versions differ>                                | ba 29 f3 41 58 42 45 5e 5d 54 f8 3f ba 29 ac ae f8 3b
+59ea  30078  <versions differ>                                | ba 2a f2 43 50 41 58 54 43 f8 3f ba 2a ac ae f8 3b ba 2a ad bb 1d 4c f8 3b
+5a03  30079  TG$(55)="SCHAEDELBRAND"                          | ba 2b fb 11 42 52 59 50 54 55 54 5d 53 43 50 5f 55 f8 3f
+5a16  30080  TG$(56)="SCHATTENDOLCH"                          | ba 24 fb 11 42 52 59 50 45 45 54 5f 55 5e 5d 52 59 f8 3f
+5a29  30081  <versions differ>                                | ba 25 fb 11 42 52 59 58 54 57 54 43 45 50 57 54 5d f8 3f ba 25 ac af f8 3b
+5a42  30082  <versions differ>                                | ba 26 fb 10 42 52 59 5d 54 58 57 42 45 54 58 5f f8 3f ba 26 ac af f8 3b
+5a5a  30083  <versions differ>                                | ba 27 fb 17 42 52 59 44 45 4b 5a 43 54 44 4b f8 3f ba 27 ac ae f8 3b ba 27 ad bb 1d 83 f8 3b
+5a79  30084  <versions differ>                                | ba 20 fb 17 42 58 5d 53 54 43 5a 54 45 45 54 f8 3f ba 20 ac ae f8 3b
+5a90  30085  <versions differ>                                | ba 21 fb 16 42 58 5d 53 54 43 43 58 5f 56 f8 3f ba 21 ac ae f8 3b ba 21 ad ba 83 f8 3b
+5aad  30086  TG$(62)="STAB DES EDELMANNS"                     | ba 22 fb 0e 42 45 50 53 31 55 54 42 31 54 55 54 5d 5c 50 5f 5f 42 f8 3f
+5ac5  30087  <versions differ>                                | ba 23 fb 15 42 45 50 43 5a 53 58 54 43 f8 3f ba 23 ac af f8 3b
+5ada  30088  <versions differ>                                | ba 5c fb 10 42 45 54 58 5f 5a 43 54 58 42 54 5d f8 3f ba 5c ac af f8 3b ba 5c ad bb 1d 26 f8 3b
+5afa  30089  <versions differ>                                | ba 5d fb 17 42 45 54 58 5f 42 5e 5d 55 50 45 f8 3f ba 5d ac af f8 3b
+5b11  30090  TG$(66)="TOPF-GRANATE"                           | ba 5e fb 10 45 5e 41 57 3c 56 43 50 5f 50 45 54 f8 3f
+5b23  30091  <versions differ>                                | ba 5f fb 13 44 54 53 54 43 31 45 50 5d 54 5f 45 54 31 58 f8 3f ba 5f ac a9 f8 3b ba 5f ad bb 1d 24 f8 3b
+5b46  30092  <versions differ>                                | ba 58 fb 0c 44 54 53 54 43 31 45 50 5d 54 5f 45 54 31 58 58 f8 3f ba 58 ac a9 f8 3b
+5b62  30093  TG$(69)="UNKENDUNK"                              | ba 59 fb 15 44 5f 5a 54 5f 55 44 5f 5a f8 3f
+5b71  30094  <versions differ>                                | ba 5a f1 46 5e 5d 5d 54 f8 3f ba 5a ac aa f8 3b ba 5a ad ee f8 3b
+5b87  30095  <versions differ>                                | ba 5b f0 45 44 52 59 f8 3f ba 5b ac aa f8 3b ba 5b ad ba 7e f8 3b
+5b9d  30096  <versions differ>                                | ba 54 fb 10 46 50 43 5c 54 31 42 5e 52 5a 54 5f f8 3f ba 54 ac aa f8 3b ba 54 ad ba 74 f8 3b
+5bbc  30097  <versions differ>                                | ba 55 fb 16 46 5e 5d 5d 44 5c 59 50 5f 56 f8 3f ba 55 ac aa f8 3b ba 55 ad bb 1d 3c f8 3b
+5bda  30098  <versions differ>                                | ba 56 fb 16 54 5a 45 5e 41 5d 50 42 5c 50 f8 3f ba 56 ac ab f8 3b ba 56 ad ba 74 f8 3b
+5bf7  30099  <versions differ>                                | ba 57 fb 12 5a 5f 5e 52 59 54 5f 50 43 5c 43 54 58 57 f8 3f ba 57 ac ab f8 3b ba 57 ad ba 43 f8 3b
+5c18  30100  <versions differ>                                | ba 50 fb 11 42 52 59 50 54 55 54 5d 5a 54 43 4b 54 f8 3f ba 50 ac ab f8 3b ba 50 ad bb 1d 20 f8 3b
+5c39  30101  <versions differ>                                | ba 51 f1 5d 54 55 54 43 f8 3f ba 51 ac ab f8 3b ba 51 ad ba 74 f8 3b
+5c50  30102  <versions differ>                                | ba 52 f2 57 5d 5e 54 45 54 f8 3f ba 52 ac ab f8 3b ba 52 ad ba 43 f8 3b
+5c68  30103  <versions differ>                                | ba 53 fb 16 46 54 58 55 54 5f 43 44 45 54 f8 3f ba 53 ac ab f8 3b ba 53 ad bb 1d 31 f8 3b
+5c86  30104  <versions differ>                                | ba 4c fb 16 46 50 57 57 54 5f 43 5e 52 5a f8 3f ba 4c ac aa f8 3b
+5c9c  30105  <versions differ>                                | ba 4d fb 15 5d 54 55 54 43 46 50 5c 42 f8 3f ba 4d ac aa f8 3b
+5cb1  30106  PRINT"DER MARKTPLATZ FUELLT SICH..."             | fb 01 55 54 43 31 5c 50 43 5a 45 41 5d 50 45 4b 31 57 44 54 5d 5d 45 31 42 58 52 59 3f 3f 3f 22
+5cd1  30107  <versions differ>                                | ad d1 ba 4d 91 0d 91 ac b8 3b cd 8d ae 8d ae b8 39 91 2f 1b f8 39 91 a8 a6 f8 3b 8d ad 1b cd 0f
+5cf1  30108  ?                                                | fb 39 50 5d 5d 54 42 31 56 54 5d 55 31 55 54 43 31 46 54 5d 45 31 46 58 43 55 31 53 54 43 54 52 59 5f 54 45 3f 3f 3f 22
+5d19  30109  ?                                                | ad d1 ba 4d 91 0d 91 ad b8 3b b4 9c 1c 1c 1c 1c 1b cd 91 ae 8d b4 9d 10 d0 d0 d1 15 3d f8 3b 91 af 8d b4 9c 7a 7a 7a 7a 15 3d f8 3b 0f
+5d46  30110  MC$(1,0)="ROHSTOFFE   ":MC$(1,1)="     RUDIS ROH | ad ac fb 15 43 5e 59 42 45 5e 57 57 54 f8 39 ad ad fb 02 31 31 31 31 31 43 44 55 58 42 31 43 5e 59 42 45 5e 57 57 31 43 50 5c 41 54 31 31 31 31 31 f8 39
+5d79  30111  MC$(2,0)="HOLZ & EISEN":MC$(2,1)="         HOLZ  | ae ac fb 10 59 5e 5d 4b 31 37 31 54 58 42 54 5f f8 39 ae ad fb 02 31 31 31 31 31 31 31 31 31 59 5e 5d 4b 31 37 b1 54 58 42 54 5f 31 31 31 31 31 31 31 31 31 f8 39
+5daf  30112  MC$(3,0)="STEIN & BIER":MC$(3,1)="SCHWERER STEIN | af ac fb 10 42 45 54 58 5f 31 37 31 53 58 54 43 f8 39 af ad fb 02 42 52 59 46 54 43 54 43 31 42 45 54 58 5f 31 3a 31 47 5e 5d 5d 54 43 31 59 44 5c 41 54 5f f8 39
+5de5  30113  MC$(4,0)="DUFT & KRAUT":MC$(4,1)="  DUFTEND' KRA | a8 ac fb 10 55 44 57 45 31 37 31 5a 43 50 44 45 f8 39 a8 ad fb 02 31 31 55 44 57 45 54 5f 55 36 31 5a 43 50 54 44 45 54 43 31 3a 31 41 59 58 5e 5d 54 5f 31 f8 39
+5e1b  30114  MC$(5,0)="BUECHER     ":MC$(5,1)="       BODOS B | a9 ac f3 53 44 54 52 59 54 43 f8 39 a9 ad fb 02 31 31 31 31 31 31 31 53 5e 55 5e 42 31 53 44 54 52 59 54 43 3c 53 44 55 54 31 31 31 31 31 f8 39
+5e4b  30115  MC$(6,0)="IMPORTE     ":MC$(6,1)="     IMPORTWAR | aa ac f3 58 5c 41 5e 43 45 54 f8 39 aa ad fb 02 31 31 31 31 31 58 5c 41 5e 43 45 46 50 43 54 5f 31 58 5f 56 5e 5d 58 5f 55 54 31 31 31 31 f8 39
+5e7b  30116  MC$(7,0)="MYSTISCHES  ":MC$(7,1)="  MYSTISCH' ZE | ab ac fb 16 5c 48 42 45 58 42 52 59 54 42 f8 39 ab ad fb 02 31 31 5c 48 42 45 58 42 52 59 36 31 4b 54 44 56 31 3a 31 4b 50 44 53 54 43 46 54 43 5a 31 f8 39
+5eaf  30121  UI$(0)="{a3}{a3}{a3}{a3}{a3}{a3}{a3}{a3}{a3}{a3} | ac fb 20 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 b2 f8 01
+5ef0  30122  UI$(1)="{c3}{c3}{c3}{c3}{c3}{c3}{c3}{c3}{c3}{c3} | ad fb 26 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 d2 f8 01
+5f2f  30123  UI$(2)="{b7}{b7}{b7}{b7}{b7}{b7}{b7}{b7}{b7}{b7} | ae fb 5e a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 a6 f8 01
+5f76  30124  UI$(3)="{af}{af}{af}{af}{af}{af}{af}{af}{af}{af} | af fb 5e be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be be f8 01
+5fbd  30125  UI$(4)="{a6}{a6}{a6}{a6}{a6}{a6}{a6}{a6}{a6}{a6} | a8 fb 58 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 b7 f8 01
+6006  30126  UI$(5)="........................................ | a9 fb 34 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f 3f f8 01
+6033  30127  UI$(6)="                                         | aa fb 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 f8 01
+6065  30200  DIMTS$(3):TS$(0)="FRUEHLING":TS$(1)="   SOMMER": | af 0c 1d 48 cf 1c 07 ac fb 15 57 43 44 54 59 5d 58 5f 56 f8 07 ad fb 15 31 31 31 42 5e 5c 5c 54 43 f8 07 ae fb 15 31 31 31 59 54 43 53 42 45 f8 07 af fb 15 31 31 31 46 58 5f 45 54 43 f8 07
+60a4  31000  <versions differ>                                | ae ae 0c 1e 4b 57 1c 11
+60ac  31001  <versions differ>                                | ad ac ad f8 11
+60b1  31002  <versions differ>                                | ad ad ad f8 11
+60b6  31003  <versions differ>                                | ad ae ac f8 11
+60bb  31004  <versions differ>                                | ae ac ae f8 11
+60c0  31005  <versions differ>                                | ae ad ae f8 11
+60c5  31006  <versions differ>                                | ae ae ac f8 11
+60ca  31110  <versions differ>                                | ad a9 0c 1e 5e 5b 1c 15 ae 0c 1d 5e db 1c 37 ad fb 14 53 43 50 44 54 43 54 58 f8 37 ae fb 16 5c 50 43 5a 45 41 5d 50 45 4b f8 37
+60f5  31111  <versions differ>                                | ad ac ae f8 15
+60fa  31112  <versions differ>                                | ad ad ae f8 15
+60ff  31113  <versions differ>                                | ad ae af f8 15
+6104  31114  <versions differ>                                | ad af ae f8 15
+6109  31115  <versions differ>                                | ad a8 af f8 15
+610e  31116  <versions differ>                                | ad a9 e8 f8 15
+6113  31120  <versions differ>                                | ad ad 0c 1e 5e 4b 1c 17
+611b  31121  <versions differ>                                | ad ac ad f8 17
+6120  31122  <versions differ>                                | ad ad ae f8 17
+6125  31200  <versions differ>                                | ad ab ad 0c 1f 4f 4e 1c 09
+612e  31201  <versions differ>                                | ad ac ac aa f8 09 ad ac ad a6 f8 09
+613a  31202  <versions differ>                                | ad ad ac a2 f8 09 ad ad ad a6 f8 09
+6146  31203  <versions differ>                                | ad ae ac e6 f8 09 ad ae ad ac f8 09
+6152  31210  <versions differ>                                | ad ab ad 0c 1f 4f 4c 1c 0b
+615b  31211  <versions differ>                                | ad ac ac ba 3f f8 0b ad ac ad ac f8 0b
+6168  31212  <versions differ>                                | ad ad ac ba 2d f8 0b ad ad ad ac f8 0b
+6175  31300  <versions differ>                                | ba 2d a9 0c 1e 4e 4c 1c 0f ac ac ac f8 0f
+6183  31301  <versions differ>                                | ad ac e6 f8 0f ad ad a2 f8 0f ad ae aa f8 0f ad af ad f8 0f ad a8 ad f8 0f ad a9 ba 73 f8 0f
+61a2  31302  <versions differ>                                | ae ac ba 3f f8 0f ae ad aa f8 0f ae ae e6 f8 0f ae af ad f8 0f ae a8 ad f8 0f ae a9 ba 4f f8 0f
+61c2  31303  <versions differ>                                | af ac ba 2d f8 0f af ad aa f8 0f af ae a2 f8 0f af af ad f8 0f af a8 ad f8 0f af a9 ba 36 f8 0f
+61e2  31410  <versions differ>                                | ad af ae 0c 1f 5e 4e 1c 13
+61eb  31411  <versions differ>                                | ad ad ac ad f8 13 ad ad ad ac f8 13 ad ad ae ac f8 13
+61fd  31412  <versions differ>                                | ad ae ac ae f8 13 ad ae ad ac f8 13 ad ae ae ac f8 13
+620f  31413  <versions differ>                                | ad af ac af f8 13 ad af ad ac f8 13 ad af ae ac f8 13
+6221  31500  <versions differ>                                | ad af ae 0c 1f 5f 48 1c 0d
+622a  31501  <versions differ>                                | ad ad ac ad f8 0d ad ad ad e8 f8 0d ad ad ae ad f8 0d
+623c  31502  <versions differ>                                | ad ae ac ae f8 0d ad ae ad e2 f8 0d ad ae ae ae f8 0d
+624e  31503  <versions differ>                                | ad af ac ad f8 0d ad af ad ba 2e f8 0d ad af ae af f8 0d
+6261  31600  <versions differ>                                | af af ae 0c 1f 5f 4f 1c 35
+626a  31601  <versions differ>                                | ad ad ac aa f8 35 ad ad ad ae f8 35 ad ad ae ac f8 35
+627c  31602  <versions differ>                                | ae ad ac a2 f8 35 ae ad ad a8 f8 35 ae ad ae ac f8 35
+628e  31603  <versions differ>                                | ae ae ac ba 39 f8 35 ae ae ad aa f8 35 ae ae ae ac f8 35
+62a1  31604  <versions differ>                                | af ad ac ba 38 f8 35 af ad ad a4 f8 35 af ad ae ac f8 35
+62b4  31605  <versions differ>                                | af ae ac ac f8 35 af ae ad ac f8 35 af ae ae ac f8 35
+62c6  31606  <versions differ>                                | af af ac e2 f8 35 af af ad a0 f8 35 af af ae ac f8 35
+62d8  39990  DEFFNNP(C)=4-C                                   | 2b eb 1c 3d 1d 17 a8 bc 35 14 25
+62e3  39991  DEFFNCD(C)=35-C                                  | 2b 0f 1d 3d 1d 10 ba 3a bc 35 14 25
+62ef  39992  DEFFNCC(C)=18-C                                  | 2b 06 1d 3d 1d 17 e9 bc 35 14 25
+62fa  39999  RETURN                                           | 01
+62fb  40002  DIMGC(3),PQ(1,6),MC$(7,2),W(3,3)                 | af 0c 1d 5b 5f 1c 1b ad aa 0c 1e 4c 4d 1c 05 ab ae 0c 1e 51 df 1c 39
+6312  40010  ?                                                | a9 1c 3a a9 ad 40 aa aa 40 1c 36 ba 20 d4
+6320  40099  RETURN                                           | 01

@@ -1,0 +1,85 @@
+(C:$c25e) trace store 27ff
+TRACE: 1  C:$27ff  (Trace store)
+(C:$c25e) command 1 "r"
+Setting checkpoint 1 command to: r
+(C:$c25e) x
+#1 (Trace store 27ff)   76/$04c,  21/$15
+.C:02b8  91 AE       STA ($AE),Y    - A:49 X:00 Y:00 SP:f0 ..-B.I.C 1462096713
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;02ba 49 00 00 f0 2f 73 00110101 076 021 1462096713
+#1 (Trace store 27ff)  213/$0d5,  62/$3e
+.C:7db1  91 5A       STA ($5A),Y    - A:00 X:02 Y:D0 SP:f4 N.-..... 1468414961
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;7db3 00 02 d0 f4 2f 73 10100000 213 062 1468414961
+(C:$c260) del
+Deleting all checkpoints
+(C:$c260) x
+(C:$c260) watch store 27ff
+WATCH: 1  C:$27ff  (Stop on store)
+(C:$c260) command 1 "r"
+Setting checkpoint 1 command to: r
+(C:$c260) x
+#1 (Stop on store 27ff)  144/$090,  53/$35
+.C:02b8  91 AE       STA ($AE),Y    - A:49 X:00 Y:00 SP:f1 ..-B.I.C   13552109
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;02ba 49 00 00 f1 2f 73 00110101 144 053   13552109
+(C:$02ba) pc-10
+ERROR -- Wrong syntax:
+  pc-10
+    ^
+(C:$02ba) d pc-10
+ERROR -- Unexpected token:
+  d pc-10
+    ^
+(C:$02ba) d 02a0 02d0
+.C:02a0  00          BRK
+.C:02a1  00          BRK
+.C:02a2  AD 00 FF    LDA $FF00
+.C:02a5  8E 00 FF    STX $FF00
+.C:02a8  AA          TAX
+.C:02a9  B1 BB       LDA ($BB),Y
+.C:02ab  8E 00 FF    STX $FF00
+.C:02ae  60          RTS
+.C:02af  48          PHA
+.C:02b0  AD 00 FF    LDA $FF00
+.C:02b3  8E 00 FF    STX $FF00
+.C:02b6  AA          TAX
+.C:02b7  68          PLA
+.C:02b8  91 AE       STA ($AE),Y
+.C:02ba  8E 00 FF    STX $FF00
+.C:02bd  60          RTS
+.C:02be  48          PHA
+.C:02bf  AD 00 FF    LDA $FF00
+.C:02c2  8E 00 FF    STX $FF00
+.C:02c5  AA          TAX
+.C:02c6  68          PLA
+.C:02c7  D1 FF       CMP ($FF),Y
+.C:02c9  8E 00 FF    STX $FF00
+.C:02cc  60          RTS
+.C:02cd  20 E3 02    JSR $02E3
+.C:02d0  85 06       STA $06
+(C:$02d2) m ae af
+>C:00ae  ff 27                      ÿ'
+(C:$00b0) del 1
+(C:$00b0) watch store 27ff
+WATCH: 1  C:$27ff  (Stop on store)
+(C:$00b0) bk
+WATCH: 1  C:$27ff  (Stop on store)
+(C:$00b0) cont 1 A == 5a
+ERROR -- Wrong syntax:
+  cont 1 A == 5a
+       ^
+(C:$00b0) cond 1 A == 5a
+ERROR -- Checkpoint number expected:
+  cond 1 A == 5a
+         ^
+(C:$00b0) condition 1 A == $5a
+ERROR -- Checkpoint number expected:
+  condition 1 A == $5a
+              ^
+(C:$00b0) cond 1 if A == 5a
+Setting checkpoint 1 condition to: A == $5a
+(C:$00b0) x

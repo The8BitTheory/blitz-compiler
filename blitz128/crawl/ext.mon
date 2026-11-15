@@ -1,0 +1,9 @@
+log on
+logname "C:\Users\martin\git\blitz128\crawl\ext_trace.log"
+bank ram
+m 0300 030f
+trace store 0308 030b
+trace load 0308 030b
+command 1 "r"
+command 2 "r"
+x

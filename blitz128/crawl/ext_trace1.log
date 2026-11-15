@@ -1,0 +1,344 @@
+>C:0300  00 00 ff ff  ff ff 00 00  00 00 ff ff  ff ff 00 00   ÿÿÿÿÿÿÿÿ
+TRACE: 1  C:$0308-$030b  (Trace store)
+TRACE: 2  C:$0308-$030b  (Trace load)
+Setting checkpoint 1 command to: r
+Setting checkpoint 2 command to: r
+#1 (Trace store 030b)  115/$073,  56/$38
+.C:4256  9D 00 03    STA $0300,X    - A:78 X:0B Y:80 SP:fd ..-....C    1009757
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 78 0b 80 fd 2f 73 00100001 115 056    1009757
+#1 (Trace store 030a)  116/$074,   7/$07
+.C:4256  9D 00 03    STA $0300,X    - A:DA X:0A Y:80 SP:fd N.-....C    1009771
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 da 0a 80 fd 2f 73 10100001 116 007    1009771
+#1 (Trace store 0309)  116/$074,  21/$15
+.C:4256  9D 00 03    STA $0300,X    - A:4A X:09 Y:80 SP:fd ..-....C    1009785
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 4a 09 80 fd 2f 73 00100001 116 021    1009785
+#1 (Trace store 0308)  116/$074,  35/$23
+.C:4256  9D 00 03    STA $0300,X    - A:A2 X:08 Y:80 SP:fd N.-....C    1009799
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 a2 08 80 fd 2f 73 10100001 116 035    1009799
+#2 (Trace  load 030a)  173/$0ad,  42/$2a
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C   54261501
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 173 042   54261501
+#2 (Trace  load 030b)  173/$0ad,  42/$2a
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C   54261501
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 173 042   54261501
+>C:0300  00 00 ff ff  ff ff 00 00  00 00 ff ff  ff ff 00 00   ÿÿÿÿÿÿÿÿ
+TRACE: 1  C:$0308-$030b  (Trace store)
+TRACE: 2  C:$0308-$030b  (Trace load)
+Setting checkpoint 1 command to: r
+Setting checkpoint 2 command to: r
+#1 (Trace store 030b)  115/$073,  56/$38
+.C:4256  9D 00 03    STA $0300,X    - A:78 X:0B Y:80 SP:fd ..-....C    1009757
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 78 0b 80 fd 2f 73 00100001 115 056    1009757
+#1 (Trace store 030a)  116/$074,   7/$07
+.C:4256  9D 00 03    STA $0300,X    - A:DA X:0A Y:80 SP:fd N.-....C    1009771
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 da 0a 80 fd 2f 73 10100001 116 007    1009771
+#1 (Trace store 0309)  116/$074,  21/$15
+.C:4256  9D 00 03    STA $0300,X    - A:4A X:09 Y:80 SP:fd ..-....C    1009785
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 4a 09 80 fd 2f 73 00100001 116 021    1009785
+#1 (Trace store 0308)  116/$074,  35/$23
+.C:4256  9D 00 03    STA $0300,X    - A:A2 X:08 Y:80 SP:fd N.-....C    1009799
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 a2 08 80 fd 2f 73 10100001 116 035    1009799
+#2 (Trace  load 030a)  176/$0b0,  11/$0b
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C   10271531
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 176 011   10271531
+#2 (Trace  load 030b)  176/$0b0,  11/$0b
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C   10271531
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 176 011   10271531
+#2 (Trace  load 030a)   67/$043,   2/$02 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EE Y:00 SP:ec N.-....C   58913255
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ee 00 ec 2f 73 10100001 067 002 1   58913255
+#2 (Trace  load 030b)   67/$043,   2/$02 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EE Y:00 SP:ec N.-....C   58913255
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ee 00 ec 2f 73 10100001 067 002 1   58913255
+#2 (Trace  load 030a)  154/$09a,  56/$38 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:ED Y:00 SP:eb N.-B...C   96540374
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ed 00 eb 2f 73 10110001 154 056 0   96540374
+#2 (Trace  load 030b)  154/$09a,  56/$38 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:ED Y:00 SP:eb N.-B...C   96540374
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ed 00 eb 2f 73 10110001 154 056 0   96540374
+#2 (Trace  load 030a)   18/$012,  26/$1a 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  102094424
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 018 026 0  102094424
+#2 (Trace  load 030b)   18/$012,  26/$1a 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  102094424
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 018 026 0  102094424
+#2 (Trace  load 030a)   21/$015,  10/$0a 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  102094597
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 021 010 1  102094597
+#2 (Trace  load 030b)   21/$015,  10/$0a 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  102094597
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 021 010 1  102094597
+#2 (Trace  load 0308)  286/$11e,  50/$32 1
+.C:4a9f  6C 08 03    JMP ($0308)    - A:04 X:FA Y:04 SP:fa ..-.....  105275948
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 04 fa 04 fa 2f 73 00100000 286 050 1  105275948
+#2 (Trace  load 0309)  286/$11e,  50/$32 1
+.C:4a9f  6C 08 03    JMP ($0308)    - A:04 X:FA Y:04 SP:fa ..-.....  105275948
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 04 fa 04 fa 2f 73 00100000 286 050 1  105275948
+#2 (Trace  load 030a)  288/$120,  57/$39 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105276081
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 288 057 1  105276081
+#2 (Trace  load 030b)  288/$120,  57/$39 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105276081
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 288 057 1  105276081
+#2 (Trace  load 030a)  301/$12d,  32/$20 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105276875
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 301 032 0  105276875
+#2 (Trace  load 030b)  301/$12d,  32/$20 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105276875
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 301 032 0  105276875
+#2 (Trace  load 030a)  304/$130,  20/$14 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  105277052
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 304 020 1  105277052
+#2 (Trace  load 030b)  304/$130,  20/$14 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  105277052
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 304 020 1  105277052
+#2 (Trace  load 0308)   31/$01f,  57/$39 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:3A X:FA Y:00 SP:fa ..-...ZC  105279546
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 3a fa 00 fa 2f 73 00100011 031 057 0  105279546
+#2 (Trace  load 0309)   31/$01f,  57/$39 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:3A X:FA Y:00 SP:fa ..-...ZC  105279546
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 3a fa 00 fa 2f 73 00100011 031 057 0  105279546
+#2 (Trace  load 030a)   34/$022,  24/$18 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105279702
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 034 024 1  105279702
+#2 (Trace  load 030b)   34/$022,  24/$18 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105279702
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 034 024 1  105279702
+#2 (Trace  load 0308)   44/$02c,  29/$1d 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:3A X:FA Y:00 SP:fa ..-...ZC  105280337
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 3a fa 00 fa 2f 73 00100011 044 029 0  105280337
+#2 (Trace  load 0309)   44/$02c,  29/$1d 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:3A X:FA Y:00 SP:fa ..-...ZC  105280337
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 3a fa 00 fa 2f 73 00100011 044 029 0  105280337
+#2 (Trace  load 030a)   46/$02e,  30/$1e 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105280464
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 046 030 1  105280464
+#2 (Trace  load 030b)   46/$02e,  30/$1e 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C  105280464
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 046 030 1  105280464
+#2 (Trace  load 030a)   49/$031,  19/$13 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  105280642
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 049 019 0  105280642
+#2 (Trace  load 030b)   49/$031,  19/$13 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C  105280642
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 049 019 0  105280642
+#2 (Trace  load 030a)   74/$04a,  34/$22 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:7B X:E5 Y:00 SP:e3 N.-....C  105282232
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 7b e5 00 e3 2f 73 10100001 074 034 0  105282232
+#2 (Trace  load 030b)   74/$04a,  34/$22 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:7B X:E5 Y:00 SP:e3 N.-....C  105282232
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 7b e5 00 e3 2f 73 10100001 074 034 0  105282232
+#2 (Trace  load 030a)  114/$072,   2/$02 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:79 X:E5 Y:00 SP:e3 N.-....C  105284720
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 79 e5 00 e3 2f 73 10100001 114 002 0  105284720
+#2 (Trace  load 030b)  114/$072,   2/$02 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:79 X:E5 Y:00 SP:e3 N.-....C  105284720
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 79 e5 00 e3 2f 73 10100001 114 002 0  105284720
+(C:$c260) m 0300 030f
+>C:0300  3f 4d c6 4d  d1 ee 51 51  a2 4a da 78  3e 13 70 13   ?MÆMÑîQQ¢JÚx>p
+(C:$0310) log off
+>C:0300  00 00 ff ff  ff ff 00 00  00 00 ff ff  ff ff 00 00   ÿÿÿÿÿÿÿÿ
+TRACE: 1  C:$0308-$030b  (Trace store)
+TRACE: 2  C:$0308-$030b  (Trace load)
+Setting checkpoint 1 command to: r
+Setting checkpoint 2 command to: r
+#1 (Trace store 030b)  115/$073,  56/$38
+.C:4256  9D 00 03    STA $0300,X    - A:78 X:0B Y:80 SP:fd ..-....C    1009757
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 78 0b 80 fd 2f 73 00100001 115 056    1009757
+#1 (Trace store 030a)  116/$074,   7/$07
+.C:4256  9D 00 03    STA $0300,X    - A:DA X:0A Y:80 SP:fd N.-....C    1009771
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 da 0a 80 fd 2f 73 10100001 116 007    1009771
+#1 (Trace store 0309)  116/$074,  21/$15
+.C:4256  9D 00 03    STA $0300,X    - A:4A X:09 Y:80 SP:fd ..-....C    1009785
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 4a 09 80 fd 2f 73 00100001 116 021    1009785
+#1 (Trace store 0308)  116/$074,  35/$23
+.C:4256  9D 00 03    STA $0300,X    - A:A2 X:08 Y:80 SP:fd N.-....C    1009799
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 a2 08 80 fd 2f 73 10100001 116 035    1009799
+#2 (Trace  load 030a)  160/$0a0,   7/$07
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C    6850375
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 160 007    6850375
+#2 (Trace  load 030b)  160/$0a0,   7/$07
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C    6850375
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 160 007    6850375
+>C:0300  00 00 ff ff  ff ff 00 00  00 00 ff ff  ff ff 08 00   ÿÿÿÿÿÿÿÿ
+TRACE: 1  C:$0308-$030b  (Trace store)
+TRACE: 2  C:$0308-$030b  (Trace load)
+Setting checkpoint 1 command to: r
+Setting checkpoint 2 command to: r
+#1 (Trace store 030b)  115/$073,  56/$38
+.C:4256  9D 00 03    STA $0300,X    - A:78 X:0B Y:80 SP:fd ..-....C    1009757
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 78 0b 80 fd 2f 73 00100001 115 056    1009757
+#1 (Trace store 030a)  116/$074,   7/$07
+.C:4256  9D 00 03    STA $0300,X    - A:DA X:0A Y:80 SP:fd N.-....C    1009771
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 da 0a 80 fd 2f 73 10100001 116 007    1009771
+#1 (Trace store 0309)  116/$074,  21/$15
+.C:4256  9D 00 03    STA $0300,X    - A:4A X:09 Y:80 SP:fd ..-....C    1009785
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 4a 09 80 fd 2f 73 00100001 116 021    1009785
+#1 (Trace store 0308)  116/$074,  35/$23
+.C:4256  9D 00 03    STA $0300,X    - A:A2 X:08 Y:80 SP:fd N.-....C    1009799
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4259 a2 08 80 fd 2f 73 10100001 116 035    1009799
+#2 (Trace  load 030a)  310/$136,   8/$08 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C    9041642
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 310 008 0    9041642
+#2 (Trace  load 030b)  310/$136,   8/$08 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EC Y:00 SP:ea N.-....C    9041642
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 ec 00 ea 2f 73 10100001 310 008 0    9041642
+#2 (Trace  load 030a)    0/$000,  40/$28 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EB Y:00 SP:e9 N.-....C   16864888
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 eb 00 e9 2f 73 10100001 000 040 0   16864888
+#2 (Trace  load 030b)    0/$000,  40/$28 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:EB Y:00 SP:e9 N.-....C   16864888
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 eb 00 e9 2f 73 10100001 000 040 0   16864888
+#2 (Trace  load 0308)  122/$07a,  42/$2a 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:04 X:FA Y:04 SP:fa ..-.....   29963472
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 04 fa 04 fa 2f 73 00100000 122 042 0   29963472
+#2 (Trace  load 0309)  122/$07a,  42/$2a 0
+.C:4a9f  6C 08 03    JMP ($0308)    - A:04 X:FA Y:04 SP:fa ..-.....   29963472
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;4aa2 04 fa 04 fa 2f 73 00100000 122 042 0   29963472
+#2 (Trace  load 030a)  124/$07c,  49/$31 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C   29963605
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 124 049 0   29963605
+#2 (Trace  load 030b)  124/$07c,  49/$31 0
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C   29963605
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 124 049 0   29963605
+#2 (Trace  load 030a)  137/$089,  23/$17 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C   29964398
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 137 023 1   29964398
+#2 (Trace  load 030b)  137/$089,  23/$17 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:F1 Y:00 SP:ef N.-....C   29964398
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 f1 00 ef 2f 73 10100001 137 023 1   29964398
+#2 (Trace  load 030a)  140/$08c,   9/$09 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C   29964573
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 140 009 1   29964573
+#2 (Trace  load 030b)  140/$08c,   9/$09 1
+.C:78d7  6C 0A 03    JMP ($030A)    - A:00 X:E9 Y:00 SP:e7 N.-....C   29964573
+Executing: r
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;78da 00 e9 00 e7 2f 73 10100001 140 009 1   29964573
+#2 (T
