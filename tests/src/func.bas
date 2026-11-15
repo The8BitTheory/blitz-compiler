@@ -1,0 +1,10 @@
+10 a=sgn(b):a=int(b):a=abs(b):a=usr(b):a=fre(0):a=pos(0)
+20 a=sqr(b):a=rnd(1):a=log(b):a=exp(b):a=cos(b):a=sin(b)
+30 a=tan(b):a=atn(b):a=peek(b):a=len(b$):a=val(b$):a=asc(b$)
+40 a$=str$(b):a$=chr$(b):a$=left$(b$,2):a$=right$(b$,c):a$=mid$(b$,2,3):a$=mid$(b$,2)
+50 a=dec(b$):a$=hex$(b):a$=err$(b):a=instr(b$,c$):a=instr(b$,c$,2)
+60 a=joy(1):a=pot(1):a=pen(0):a=bump(1):a=rgr(0):a=rclr(1)
+70 a=rspcolor(1):a=rsppos(1,2):a=rsprite(1,2):a=rwindow(0):a=pointer(b)
+80 a=fn f(b)
+90 def fn f(x)=x*2
+100 a=xor(b,c)
