@@ -1,0 +1,9 @@
+D81 disk image recognised: /sessions/rcw-0185hqvayf775ij1bj5ehzbh/tmp/tmp.pXiSa3fdnj/w.d81, 80 tracks.
+Unit 8 drive 0: D81 disk image attached: /sessions/rcw-0185hqvayf775ij1bj5ehzbh/tmp/tmp.pXiSa3fdnj/w.d81.
+0 "work            " 01 3d
+178  "blitz!.128"       prg 
+3    "prog"             prg 
+1    "z/prog"           prg 
+47   "c/prog"           prg 
+2931 blocks free.
+Unit 8 drive 0: D81 disk image detached: /sessions/rcw-0185hqvayf775ij1bj5ehzbh/tmp/tmp.pXiSa3fdnj/w.d81.
