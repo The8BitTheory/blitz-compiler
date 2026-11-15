@@ -1,12 +1,9 @@
 // node js/test.js  - rebuild every tests/expected/<name> with the reference keys and compare byte by byte
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { findBasicRom } from './rom.js';
 import { compile, keysOf } from './blitzc.js';
 const here = new URL('..', import.meta.url).pathname;
 const blitz = readFileSync(here + '../blitz!.128.prg');
 let fail = 0;
-const basicRom = findBasicRom();
-if (!basicRom) console.log('note: no C128 BASIC ROM found, float constants use the approximation');
 const only = process.argv[2];
 for (const t of readdirSync(here + 'tests/expected').sort()) {
   if (only && t !== only) continue;
@@ -17,7 +14,7 @@ for (const t of readdirSync(here + 'tests/expected').sort()) {
   const ec = readFileSync(ex + 'c.prg'); const ez = existsSync(ex + 'z.prg') ? readFileSync(ex + 'z.prg') : null;
   const { keys, pad } = keysOf(ec);
   let r;
-  try { r = compile(src, blitz, { keys, pad, basicRom, ...mode }); }
+  try { r = compile(src, blitz, { keys, pad, ...mode }); }
   catch (e) { console.log('FAIL', t, 'exception', e.message); fail++; continue; }
   const cmp = (a, b, what) => {
     if (!a || !b) return `${what}: missing (${!!a}/${!!b})`;

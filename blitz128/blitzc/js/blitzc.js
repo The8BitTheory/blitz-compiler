@@ -52,7 +52,7 @@ export function compile(source, blitz, opts = {}) {
   const rt = new Runtime(blitz, {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
-    rnd, maxSteps: opts.maxSteps, basicRom: opts.basicRom,
+    rnd, maxSteps: opts.maxSteps,
   });
   rt.init(VARS);
   run(rt);

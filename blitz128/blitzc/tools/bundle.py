@@ -6,7 +6,7 @@ def mod(n):
     s = open(os.path.join(J, n)).read()
     s = re.sub(r'^import .*?;\s*$', '', s, flags=re.M)
     return re.sub(r'^export ', '', s, flags=re.M)
-code = '\n'.join(mod(n) for n in ['cpu6502.js', 'rt.js', 'compiler.gen.js', 'blitzc.js'])
+code = '\n'.join(mod(n) for n in ['cbmfloat.js', 'rt.js', 'compiler.gen.js', 'blitzc.js'])
 page = open(os.path.join(J, 'index.html')).read()
 page = page.replace("import { compile, keysOf } from './blitzc.js';\n", '')
 page = page.replace('<script type="module">', '<script type="module">\n' + code.replace('</script', '<\\/script') + '\n', 1)

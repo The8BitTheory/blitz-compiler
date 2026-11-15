@@ -20,8 +20,6 @@ Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code
 
 <label>BLITZ!.128 (Original-Compiler, liefert die Runtime)</label>
 <input type="file" id="blitz">
-<label>C128 BASIC-ROM hi, 318019-04 <small>(optional, für bitgenaue Gleitkommakonstanten)</small></label>
-<input type="file" id="rom">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
 <label>Optionen</label>
@@ -35,124 +33,313 @@ Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code
 <p class="files" id="files"></p>
 <pre id="screen"></pre>
 <script type="module">
-// Minimal NMOS 6502 core (documented opcodes, binary mode only).
-// Used for one thing: running the Blitz runtime's own VAL/FIN routine ($4314)
-// together with the C128 BASIC math ROM, so float constants come out bit-exact.
-class CPU6502 {
-  constructor(read, write) { this.r = read; this.w = write; this.a = this.x = this.y = 0; this.s = 0xff; this.p = 0x24; this.pc = 0; }
-  get C() { return this.p & 1; }
-  nz(v) { v &= 255; this.p = (this.p & 0x7d) | (v & 0x80) | (v ? 0 : 2); return v; }
-  push(v) { this.w(0x100 | this.s, v & 255); this.s = (this.s - 1) & 255; }
-  pop() { this.s = (this.s + 1) & 255; return this.r(0x100 | this.s); }
-  rw(a) { return this.r(a) | this.r((a + 1) & 0xffff) << 8; }
-  adc(v) {
-    const c = this.C, r = this.a + v + c;
-    this.p = (this.p & 0x3c) | (r > 255 ? 1 : 0) | ((~(this.a ^ v) & (this.a ^ r) & 0x80) ? 0x40 : 0);
-    this.a = this.nz(r);
-  }
-  cmp(reg, v) { const r = reg - v; this.p = (this.p & 0x7c) | (r >= 0 ? 1 : 0); this.nz(r); }
-  // run subroutine at addr until it returns; returns step count
-  call(addr, maxSteps = 1e6) {
-    this.push(0xff); this.push(0xfd); this.pc = addr;     // returns to $FFFE
-    for (let n = 0; n < maxSteps; n++) { if (this.pc === 0xfffe) return n; this.step(); }
-    throw new Error('6502: step limit');
-  }
-  step() {
-    const r = this.r, op = r(this.pc), pc1 = (this.pc + 1) & 0xffff;
-    const b1 = () => r(pc1), w1 = () => r(pc1) | r((pc1 + 1) & 0xffff) << 8;
-    // addressing: returns effective address
-    const ea = {
-      zp: () => b1(), zpx: () => (b1() + this.x) & 255, zpy: () => (b1() + this.y) & 255,
-      abs: () => w1(), abx: () => (w1() + this.x) & 0xffff, aby: () => (w1() + this.y) & 0xffff,
-      izx: () => { const z = (b1() + this.x) & 255; return r(z) | r((z + 1) & 255) << 8; },
-      izy: () => { const z = b1(); return ((r(z) | r((z + 1) & 255) << 8) + this.y) & 0xffff; },
-    };
-    const LEN = { imm: 2, zp: 2, zpx: 2, zpy: 2, abs: 3, abx: 3, aby: 3, izx: 2, izy: 2, imp: 1, acc: 1 };
-    const d = OPS[op]; if (!d) throw new Error('6502: illegal opcode ' + op.toString(16) + ' at ' + this.pc.toString(16));
-    const [mn, mode] = d;
-    const val = () => mode === 'imm' ? b1() : r(ea[mode]());
-    let next = (this.pc + (LEN[mode] || 2)) & 0xffff;
-    const rmw = f => { if (mode === 'acc') this.a = f(this.a); else { const a = ea[mode](); this.w(a, f(r(a))); } };
-    const br = cond => { if (cond) { const o = b1(); next = (next + (o < 128 ? o : o - 256)) & 0xffff; } };
-    switch (mn) {
-      case 'LDA': this.a = this.nz(val()); break;
-      case 'LDX': this.x = this.nz(val()); break;
-      case 'LDY': this.y = this.nz(val()); break;
-      case 'STA': this.w(ea[mode](), this.a); break;
-      case 'STX': this.w(ea[mode](), this.x); break;
-      case 'STY': this.w(ea[mode](), this.y); break;
-      case 'ADC': this.adc(val()); break;
-      case 'SBC': this.adc(val() ^ 255); break;
-      case 'AND': this.a = this.nz(this.a & val()); break;
-      case 'ORA': this.a = this.nz(this.a | val()); break;
-      case 'EOR': this.a = this.nz(this.a ^ val()); break;
-      case 'CMP': this.cmp(this.a, val()); break;
-      case 'CPX': this.cmp(this.x, val()); break;
-      case 'CPY': this.cmp(this.y, val()); break;
-      case 'BIT': { const v = val(); this.p = (this.p & 0x3d) | (v & 0xc0) | ((this.a & v) ? 0 : 2); break; }
-      case 'ASL': rmw(v => { this.p = (this.p & 0xfe) | (v >> 7); return this.nz(v << 1); }); break;
-      case 'LSR': rmw(v => { this.p = (this.p & 0xfe) | (v & 1); return this.nz(v >> 1); }); break;
-      case 'ROL': rmw(v => { const c = this.C; this.p = (this.p & 0xfe) | (v >> 7); return this.nz((v << 1) | c); }); break;
-      case 'ROR': rmw(v => { const c = this.C; this.p = (this.p & 0xfe) | (v & 1); return this.nz((v >> 1) | (c << 7)); }); break;
-      case 'INC': rmw(v => this.nz(v + 1)); break;
-      case 'DEC': rmw(v => this.nz(v - 1)); break;
-      case 'INX': this.x = this.nz(this.x + 1); break;
-      case 'INY': this.y = this.nz(this.y + 1); break;
-      case 'DEX': this.x = this.nz(this.x - 1); break;
-      case 'DEY': this.y = this.nz(this.y - 1); break;
-      case 'TAX': this.x = this.nz(this.a); break;
-      case 'TAY': this.y = this.nz(this.a); break;
-      case 'TXA': this.a = this.nz(this.x); break;
-      case 'TYA': this.a = this.nz(this.y); break;
-      case 'TSX': this.x = this.nz(this.s); break;
-      case 'TXS': this.s = this.x; break;
-      case 'PHA': this.push(this.a); break;
-      case 'PHP': this.push(this.p | 0x30); break;
-      case 'PLA': this.a = this.nz(this.pop()); break;
-      case 'PLP': this.p = (this.pop() & 0xef) | 0x20; break;
-      case 'CLC': this.p &= 0xfe; break; case 'SEC': this.p |= 1; break;
-      case 'CLI': this.p &= 0xfb; break; case 'SEI': this.p |= 4; break;
-      case 'CLD': this.p &= 0xf7; break; case 'SED': this.p |= 8; break;
-      case 'CLV': this.p &= 0xbf; break;
-      case 'NOP': break;
-      case 'BPL': br(!(this.p & 0x80)); break; case 'BMI': br(this.p & 0x80); break;
-      case 'BVC': br(!(this.p & 0x40)); break; case 'BVS': br(this.p & 0x40); break;
-      case 'BCC': br(!(this.p & 1)); break; case 'BCS': br(this.p & 1); break;
-      case 'BNE': br(!(this.p & 2)); break; case 'BEQ': br(this.p & 2); break;
-      case 'JMP': if (mode === 'abs') next = w1(); else { const p = w1(); next = r(p) | r((p & 0xff00) | ((p + 1) & 255)) << 8; } break;
-      case 'JSR': { const ret = (this.pc + 2) & 0xffff; this.push(ret >> 8); this.push(ret); next = w1(); break; }
-      case 'RTS': { const lo = this.pop(), hi = this.pop(); next = ((hi << 8 | lo) + 1) & 0xffff; break; }
-      case 'RTI': { this.p = (this.pop() & 0xef) | 0x20; const lo = this.pop(), hi = this.pop(); next = hi << 8 | lo; break; }
-      case 'BRK': throw new Error('6502: BRK at ' + this.pc.toString(16));
-      default: throw new Error('6502: ' + mn);
+// Bit-exact VAL of the Blitz!128 runtime, without any ROM.
+//
+// Transliteration of
+//   - the runtime's own FIN ($4314-$4450) and int->float ($2D41), and
+//   - the C128 BASIC-hi ROM math routines it calls: FADDT ($8848), MUL10 ($8B17),
+//     DIV10/FDIVT ($8B38), ROUND ($8C47), MOVAF/MOVFA, normalize ($88B6), MULDIV ($8AEC),
+//     FIN tail ($8D67), digit add ($8DB8), NEGOP ($8FFA).
+// Zero page as on the C128: FAC $63 exp, $64-$67 mantissa, $68 sign; ARG $6A-$6F;
+// ARISGN $70, FACOV $71, OLDOV $58; FIN work cells $5F-$62, $69; int result $66/$67, type $10.
+// Every routine keeps the 6502 carry semantics, so all rounding quirks are reproduced.
+// Verified against the original code run on a 6502 core (js/cpu6502.js + ROM), see tools/fincheck.mjs.
+
+class OverflowError extends Error {}
+
+function finVal(s) {
+  const z = new Uint8Array(256);
+  let C = 0;                                   // carry flag
+  const B = i => s.charCodeAt(i) & 255;
+  const len = Math.min(s.length, 255);
+
+  // ---------- ROM helpers
+  const incfac = () => {                       // $894E, returns Z (mantissa wrapped)
+    for (const a of [0x67, 0x66, 0x65, 0x64]) { z[a] = (z[a] + 1) & 255; if (z[a]) return false; }
+    return true;
+  };
+  const rorfac = () => {                       // $891B: ROR $64..$67,$71 with carry in
+    for (const a of [0x64, 0x65, 0x66, 0x67, 0x71]) { const n = z[a] & 1; z[a] = (z[a] >> 1) | (C << 7); C = n; }
+  };
+  const incExpRor = () => {                    // $8917: INC exp (overflow at 0), ROR mantissa
+    z[0x63] = (z[0x63] + 1) & 255; if (!z[0x63]) throw new OverflowError();
+    rorfac();
+  };
+  const round = () => {                        // $8C47
+    if (!z[0x63]) return;
+    C = z[0x71] >> 7; z[0x71] = (z[0x71] << 1) & 255;
+    if (!C) return;
+    if (incfac()) incExpRor();                 // $8C54 JMP $8917 (C=1 -> top bit set again)
+  };
+  const movaf = () => {                        // $8C38: round FAC, copy FAC -> ARG
+    round();
+    for (let x = 6; x >= 1; x--) z[0x69 + x] = z[0x62 + x];
+    z[0x71] = 0;
+    return z[0x6a];                            // A = exponent (last byte copied)
+  };
+  const movfa = () => {                        // $8C28: ARG -> FAC
+    z[0x68] = z[0x6f];
+    for (let x = 5; x >= 1; x--) z[0x62 + x] = z[0x69 + x];
+    z[0x71] = 0;
+  };
+  const zerofac = () => { z[0x63] = 0; z[0x68] = 0; };   // $88D6
+  // $8964-$899B: shift the 5-byte value at base+1..base+4 (+A as low byte) right; A = -count (8-bit)
+  const shiftr = (base, A) => {
+    // $8979 entry (byte shifts while A+8 <= 0)
+    for (;;) {
+      let r = A + 8 + C; C = r > 255 ? 1 : 0; A = r & 255;
+      if (A & 0x80 || A === 0) {               // BMI/BEQ $8964: shift one byte
+        z[0x71] = z[base + 4]; z[base + 4] = z[base + 3]; z[base + 3] = z[base + 2]; z[base + 2] = z[base + 1];
+        z[base + 1] = 0;                       // LDY $03DF (0 in the compiler's memory)
+        continue;
+      }
+      break;
     }
-    this.pc = next;
-  }
+    // $897F SBC #8; TAY; LDA $71; BCS $899A
+    { const r = A - 8 - (1 - C); C = r >= 0 ? 1 : 0; A = r & 255; }
+    let Y = A; A = z[0x71];
+    if (C) { C = 0; return A; }
+    return bitshift(base, A, Y);
+  };
+  // $8986 loop: arithmetic shift right of base+1, ROR base+2..4 and A; Y counts up to 0
+  const bitshift = (base, A, Y, first) => {
+    for (;;) {
+      if (first) {                             // $887D LSR 1,X then $8990
+        C = z[base + 1] & 1; z[base + 1] >>= 1; first = false;
+      } else {
+        // ASL 1,X; BCC +2; INC 1,X; ROR 1,X; ROR 1,X
+        let v = z[base + 1]; C = v >> 7; v = (v << 1) & 255;
+        if (C) v = (v + 1) & 255;
+        let n = v & 1; v = (v >> 1) | (C << 7); C = n;
+        n = v & 1; v = (v >> 1) | (C << 7); C = n;
+        z[base + 1] = v;
+      }
+      for (const a of [base + 2, base + 3, base + 4]) { const n = z[a] & 1; z[a] = (z[a] >> 1) | (C << 7); C = n; }
+      { const n = A & 1; A = (A >> 1) | (C << 7); C = n; }
+      Y = (Y + 1) & 255;
+      if (!Y) break;
+    }
+    C = 0; return A;                           // $899A CLC; RTS
+  };
+  // FADDT $8848 (Z from LDX $63 / TAX before), only the "same sign" path is reachable from FIN
+  const faddt = () => {
+    if (!z[0x63]) { movfa(); return; }
+    z[0x58] = z[0x71];
+    let X = 0x6a; let A = z[0x6a];
+    fadd855(A, X);
+  };
+  const fadd855 = (A, X) => {                  // $8855 (A = ARG exponent)
+    const Y = A; if (!Y) return;
+    let r = A - z[0x63]; C = r >= 0 ? 1 : 0; A = r & 255;
+    if (A !== 0) {
+      if (!C) {                                // $8872: ARG smaller, shift ARG
+        z[0x71] = 0;
+      } else {                                 // ARG bigger: shift FAC
+        z[0x63] = Y; z[0x68] = z[0x6f];
+        A ^= 0xff; r = A + C; C = r > 255 ? 1 : 0; A = r & 255;    // EOR #$FF; ADC #0
+        z[0x58] = 0; X = 0x63;
+      }
+      // $8876 CMP #$F9; BMI $8840
+      C = A >= 0xf9 ? 1 : 0;                   // CMP #$F9
+      if ((A - 0xf9) & 0x80) { A = shiftr(X, A); }    // $8840 JSR $8979 ; BCC $8882 (always clear)
+      else { const Yc = A; A = bitshift(X, z[0x71], Yc, true); }  // TAY; LDA $71; LSR 1,X; JSR $8990
+    }
+    // $8882 BIT $70; BPL $88DD (ARISGN is 0 on every path from FIN)
+    if (z[0x70] & 0x80) throw new Error('fadd: subtraction path not ported');
+    let r2 = A + z[0x58] + C; C = r2 > 255 ? 1 : 0; z[0x71] = r2 & 255;
+    for (const [f, a] of [[0x67, 0x6e], [0x66, 0x6d], [0x65, 0x6c], [0x64, 0x6b]]) {
+      const t = z[f] + z[a] + C; C = t > 255 ? 1 : 0; z[f] = t & 255;
+    }
+    if (C) incExpRor();                         // $8915 BCC rts; $8917
+  };
+  const normalize = () => {                    // $88B6 (Y=0, A=0, CLC)
+    let A = 0; C = 0;
+    for (;;) {                                 // $88BA
+      if (z[0x64]) break;
+      // byte shift left: $88BE-$88D4
+      z[0x64] = z[0x65]; z[0x65] = z[0x66]; z[0x66] = z[0x67]; z[0x67] = z[0x71]; z[0x71] = 0;
+      const r = A + 8 + C; C = r > 255 ? 1 : 0; A = r & 255;
+      if (A === 0x20) { zerofac(); return; }
+    }
+    // $8908 BPL $88FC: shift left until top bit set, counting in A
+    while (!(z[0x64] & 0x80)) {
+      const r = A + 1 + C; C = r > 255 ? 1 : 0; A = r & 255;
+      for (const a of [0x71, 0x67, 0x66, 0x65, 0x64]) { const n = z[a] >> 7; z[a] = ((z[a] << 1) | C) & 255; C = n; }
+    }
+    // $890A SEC; SBC $63; BCS zero; EOR #$FF; ADC #1; STA $63
+    let r = A - z[0x63]; C = r >= 0 ? 1 : 0; A = r & 255;
+    if (C) { zerofac(); return; }
+    A ^= 0xff; r = A + 1 + C; C = r > 255 ? 1 : 0; z[0x63] = r & 255;
+    if (C) incExpRor();                         // $8915
+  };
+  const muldiv = () => {                       // $8AEC (FAC exp already negated)
+    let A = z[0x6a];
+    if (!A) { zerofac(); return false; }       // $8B0F: PLA PLA -> result 0
+    let r = A + z[0x63]; C = r > 255 ? 1 : 0; A = r & 255;
+    if (!C) { if (!(A & 0x80)) { zerofac(); return false; } }    // BPL $8B0F (underflow)
+    else if (A & 0x80) throw new OverflowError();
+    r = A + 0x80; A = r & 255;                 // CLC; ADC #$80
+    z[0x63] = A;
+    if (!A) { z[0x68] = 0; return true; }      // $88DA STA $68 with A=0
+    z[0x68] = z[0x70];
+    return true;
+  };
+  const mul10 = () => {                        // $8B17
+    let A = movaf(); if (!A) return;
+    const r = A + 2; if (r > 255) throw new OverflowError();
+    z[0x70] = 0;
+    fadd855(r & 255, 0x6a);
+    z[0x63] = (z[0x63] + 1) & 255; if (!z[0x63]) throw new OverflowError();
+  };
+  const div10 = () => {                        // $8B38
+    movaf();
+    z[0x70] = 0;
+    z[0x63] = 0x84; z[0x68] = 0x20; z[0x64] = 0xa0; z[0x65] = 0; z[0x66] = 0; z[0x67] = 0; z[0x71] = 0;  // MOVFM 10.0
+    round();
+    z[0x63] = (0 - z[0x63]) & 255;
+    if (!muldiv()) return;
+    z[0x63] = (z[0x63] + 1) & 255; if (!z[0x63]) throw new OverflowError();
+    // $8B5F: restoring division ARG / FAC, 32 quotient bits + 2 rounding bits
+    let X = -4, A = 1;
+    const res = [0, 0, 0, 0];
+    const cmp = () => {                        // $8B63: compare ARG with FAC mantissa
+      for (const [a, f] of [[0x6b, 0x64], [0x6c, 0x65], [0x6d, 0x66], [0x6e, 0x67]]) {
+        if (z[a] !== z[f]) return z[a] > z[f] ? 1 : 0;
+      }
+      return 1;
+    };
+    let c = cmp();
+    for (;;) {
+      // $8B79 PHP; ROL A
+      const saved = c;
+      const out = A >> 7; A = ((A << 1) | c) & 255;
+      if (out) {
+        X++;
+        if (X <= 0) res[X + 3] = A;            // STA $2B,X
+        if (X === 0) { A = 0x40; }             // $8BB4
+        else if (X > 0) {                      // $8BB8: done
+          z[0x71] = (A << 6) & 255;
+          z[0x64] = res[0]; z[0x65] = res[1]; z[0x66] = res[2]; z[0x67] = res[3];
+          normalize();
+          return;
+        } else A = 1;
+      }
+      // $8B86 PLP; BCS subtract
+      if (saved) {
+        let b = 0;
+        for (const [a, f] of [[0x6e, 0x67], [0x6d, 0x66], [0x6c, 0x65], [0x6b, 0x64]]) {
+          const t = z[a] - z[f] - b; b = t < 0 ? 1 : 0; z[a] = t & 255;
+        }
+      }
+      // $8B89: ASL ARG
+      let top = 0;
+      for (const a of [0x6e, 0x6d, 0x6c, 0x6b]) { const n = z[a] >> 7; z[a] = ((z[a] << 1) | top) & 255; top = n; }
+      if (top) c = 1;                          // BCS $8B79
+      else if (z[0x6b] & 0x80) c = cmp();      // BMI $8B63
+      else c = 0;                              // BPL $8B79 (C clear)
+    }
+  };
+  const addDigit = d => {                      // runtime $43D0 + ROM $8DB8
+    z[0x6a] = DEXP[d]; z[0x6b] = DMANT[d]; z[0x6c] = z[0x6d] = z[0x6e] = z[0x6f] = 0;
+    z[0x70] = z[0x6f] ^ z[0x68];
+    faddt();
+  };
+  const int2float = () => {                    // $2D41
+    z[0x10] = 0; z[0x71] = 0; z[0x63] = 0; z[0x64] = 0; z[0x65] = 0;
+    let X = 0x90, A = z[0x66];
+    z[0x68] = A;
+    if (A & 0x80) { negInt(); A = z[0x66]; }
+    if (!A) {
+      X = 0x88; A = z[0x67];
+      if (!A) return;
+      z[0x67] = 0;
+    }
+    while (!(A & 0x80)) { X--; const n = z[0x67] >> 7; z[0x67] = (z[0x67] << 1) & 255; A = ((A << 1) | n) & 255; }
+    z[0x64] = A; z[0x65] = z[0x67]; z[0x63] = X; z[0x66] = 0; z[0x67] = 0;
+  };
+  const negInt = () => {                       // $26CE
+    z[0x66] ^= 0xff; z[0x67] ^= 0xff;
+    z[0x67] = (z[0x67] + 1) & 255; if (!z[0x67]) z[0x66] = (z[0x66] + 1) & 255;
+  };
+  const finTail = () => {                      // $8D67
+    let A = (z[0x62] & 0x80) ? (0 - z[0x60]) & 255 : z[0x60];
+    A = (A - z[0x5f]) & 255; z[0x60] = A;
+    if (A) {
+      if (A & 0x80) { do { div10(); z[0x60] = (z[0x60] + 1) & 255; } while (z[0x60]); }
+      else { do { mul10(); z[0x60] = (z[0x60] - 1) & 255; } while (z[0x60]); }
+    }
+    if (z[0x69] & 0x80 && z[0x63]) z[0x68] ^= 0xff;      // NEGOP
+  };
+
+  // ---------- runtime FIN $4314
+  const run = () => {
+    z[0x10] = 0x80;
+    let y = -1, ch;
+    const next = () => { y++; return y >= len ? -1 : B(y); };
+    // sign, then integer digits
+    do ch = next(); while (ch === 0x20);
+    if (ch === 0x2b || ch === 0x2d) { if (ch === 0x2d) z[0x69] = 0xff; do ch = next(); while (ch === 0x20); }
+    let pending = -1;                          // digit that overflowed the integer path
+    for (;;) {
+      if (ch < 0) return endInt();
+      if (ch >= 0x30 && ch <= 0x39) {
+        if (z[0x66] >= 0x0c) { pending = ch; int2float(); break; }
+        const v = ((z[0x66] << 8 | z[0x67]) * 10 + (ch & 15)) & 0xffff;
+        z[0x66] = v >> 8; z[0x67] = v & 255;
+        do ch = next(); while (ch === 0x20);
+        continue;
+      }
+      if (ch === 0x2e) { int2float(); return fraction(true); }
+      if (ch === 0x45) { int2float(); return exponent(); }
+      return endInt();
+    }
+    // $43BE with the overflowing digit
+    digit(pending);
+    return fraction(false);
+
+    function endInt() { if (z[0x69] & 0x80) negInt(); }
+    function digit(c) {
+      if (z[0x61] & 0x80) z[0x5f] = (z[0x5f] + 1) & 255;
+      mul10();
+      const d = c & 15; if (d) addDigit(d);
+    }
+    function fraction(dot) {
+      if (dot) { z[0x61] = (z[0x61] >> 1) | 0x80; if (z[0x61] & 0x40) return finTail(); }
+      for (;;) {
+        do ch = next(); while (ch === 0x20);
+        if (ch < 0) return finTail();
+        if (ch === 0x2e) { z[0x61] = (z[0x61] >> 1) | 0x80; if (z[0x61] & 0x40) return finTail(); continue; }
+        if (ch < 0x30) return finTail();
+        if (ch > 0x39) { if (ch === 0x45) return exponent(); return finTail(); }
+        digit(ch);
+      }
+    }
+    function exponent() {
+      do ch = next(); while (ch === 0x20);
+      if (ch < 0) return finTail();
+      if (ch === 0x2b || ch === 0x2d) { if (ch === 0x2d) z[0x62] = (z[0x62] - 1) & 255; do ch = next(); while (ch === 0x20); }
+      for (;;) {
+        if (ch < 0x30 || ch > 0x39) return finTail();
+        const d = ch & 15;
+        if (z[0x60] >= 10) { if (!(z[0x62] & 0x80)) throw new OverflowError(); z[0x60] = 100; }
+        else z[0x60] = (z[0x60] * 10 + d) & 255;
+        do ch = next(); while (ch === 0x20);
+        if (ch < 0) return finTail();
+      }
+    }
+  };
+  run();
+  // result as the store would see it: integer in $66/$67, or FAC rounded with FACOV (MOVMF)
+  if (z[0x10] & 0x80) { const v = z[0x66] << 8 | z[0x67]; return v & 0x8000 ? v - 0x10000 : v; }
+  round();
+  if (!z[0x63]) return 0;
+  const m = z[0x64] * 2 ** 24 + z[0x65] * 65536 + z[0x66] * 256 + z[0x67];
+  const r = m * Math.pow(2, z[0x63] - 128 - 32);
+  return z[0x68] & 0x80 ? -r : r;
 }
-const OPS = [];
-const def = (mn, list) => { for (const [op, mode] of list) OPS[op] = [mn, mode]; };
-const G1 = (mn, base) => def(mn, [[base + 9, 'imm'], [base + 5, 'zp'], [base + 0x15, 'zpx'], [base + 0xd, 'abs'], [base + 0x1d, 'abx'], [base + 0x19, 'aby'], [base + 1, 'izx'], [base + 0x11, 'izy']]);
-G1('ORA', 0x00); G1('AND', 0x20); G1('EOR', 0x40); G1('ADC', 0x60); G1('LDA', 0xa0); G1('CMP', 0xc0); G1('SBC', 0xe0);
-def('STA', [[0x85, 'zp'], [0x95, 'zpx'], [0x8d, 'abs'], [0x9d, 'abx'], [0x99, 'aby'], [0x81, 'izx'], [0x91, 'izy']]);
-const G2 = (mn, base) => def(mn, [[base + 0xa, 'acc'], [base + 6, 'zp'], [base + 0x16, 'zpx'], [base + 0xe, 'abs'], [base + 0x1e, 'abx']]);
-G2('ASL', 0x00); G2('ROL', 0x20); G2('LSR', 0x40); G2('ROR', 0x60);
-def('INC', [[0xe6, 'zp'], [0xf6, 'zpx'], [0xee, 'abs'], [0xfe, 'abx']]);
-def('DEC', [[0xc6, 'zp'], [0xd6, 'zpx'], [0xce, 'abs'], [0xde, 'abx']]);
-def('LDX', [[0xa2, 'imm'], [0xa6, 'zp'], [0xb6, 'zpy'], [0xae, 'abs'], [0xbe, 'aby']]);
-def('LDY', [[0xa0, 'imm'], [0xa4, 'zp'], [0xb4, 'zpx'], [0xac, 'abs'], [0xbc, 'abx']]);
-def('STX', [[0x86, 'zp'], [0x96, 'zpy'], [0x8e, 'abs']]);
-def('STY', [[0x84, 'zp'], [0x94, 'zpx'], [0x8c, 'abs']]);
-def('CPX', [[0xe0, 'imm'], [0xe4, 'zp'], [0xec, 'abs']]);
-def('CPY', [[0xc0, 'imm'], [0xc4, 'zp'], [0xcc, 'abs']]);
-def('BIT', [[0x24, 'zp'], [0x2c, 'abs']]);
-def('JMP', [[0x4c, 'abs'], [0x6c, 'ind']]);
-def('JSR', [[0x20, 'abs']]);
-const IMP = { 0xea: 'NOP', 0xe8: 'INX', 0xc8: 'INY', 0xca: 'DEX', 0x88: 'DEY', 0xaa: 'TAX', 0xa8: 'TAY', 0x8a: 'TXA', 0x98: 'TYA', 0xba: 'TSX', 0x9a: 'TXS',
-  0x48: 'PHA', 0x08: 'PHP', 0x68: 'PLA', 0x28: 'PLP', 0x18: 'CLC', 0x38: 'SEC', 0x58: 'CLI', 0x78: 'SEI', 0xd8: 'CLD', 0xf8: 'SED', 0xb8: 'CLV',
-  0x60: 'RTS', 0x40: 'RTI', 0x00: 'BRK' };
-for (const [op, mn] of Object.entries(IMP)) OPS[+op] = [mn, 'imp'];
-const BR = { 0x10: 'BPL', 0x30: 'BMI', 0x50: 'BVC', 0x70: 'BVS', 0x90: 'BCC', 0xb0: 'BCS', 0xd0: 'BNE', 0xf0: 'BEQ' };
-for (const [op, mn] of Object.entries(BR)) OPS[+op] = [mn, 'rel'];
+{ OverflowError };
+const DEXP = [0, 0x81, 0x82, 0x82, 0x83, 0x83, 0x83, 0x83, 0x84, 0x84];   // runtime table $4566
+const DMANT = [0, 0x80, 0x80, 0xc0, 0x80, 0xa0, 0xc0, 0xe0, 0x80, 0x90];  // runtime table $456F
 
 // Blitz!128 port: runtime environment for compiler.gen.js.
 // Provides the BASIC primitives the compiled compiler uses, a small 1581
@@ -181,71 +368,8 @@ function numStr(n) {               // like STR$: sign or blank, no trailing blan
   }
   return sg + s;
 }
-// ---------- CBM floating point, bit-exact where VAL needs it.
-// FAC = { m: BigInt 32-bit normalized mantissa, e: exponent byte, ov: rounding byte }, value = m/2^32 * 2^(e-128)
-const B32 = 1n << 32n, B31 = 1n << 31n;
-function facRound(f) {              // ROUND / MOVAF / MOVMF: add 1 if rounding byte >= $80
-  if (!f.m) return { m: 0n, e: 0, ov: 0 };
-  let { m, e } = f;
-  if (f.ov & 0x80) { m += 1n; if (m === B32) { m = B31; e++; } }
-  return { m, e, ov: 0 };
-}
-function facFromBig(n) {            // exact integer -> FAC (n < 2^32 keeps all bits)
-  if (n === 0n) return { m: 0n, e: 0, ov: 0 };
-  let e = 128, m = n, ov = 0;
-  while (m < B31) { m <<= 1n; e--; }
-  while (m >= B32) { ov = Number(((m & 1n) << 7n)) | (ov >> 1); m >>= 1n; e++; }
-  return { m, e: e + 32, ov };
-}
-function facAdd(x, y) {             // FADDT for two non-negative values: smaller operand shifted right, its bits form FACOV
-  if (!x.m) return { ...y }; if (!y.m) return { ...x };
-  if (y.e > x.e) [x, y] = [y, x];
-  const d = x.e - y.e;
-  const ys = (y.m << 8n) >> BigInt(d);           // 8 guard bits
-  let s = (x.m << 8n) + ys, e = x.e;
-  if (s >= (B32 << 8n)) { s >>= 1n; e++; }
-  return { m: s >> 8n, e, ov: Number(s & 255n) };
-}
-function facMul10(f) {              // MUL10: ARG=round(FAC); FAC=ARG*4; FAC+=ARG; FAC*=2
-  const a = facRound(f); if (!a.m) return a;
-  const r = facAdd({ m: a.m, e: a.e + 2, ov: 0 }, a);
-  return { m: r.m, e: r.e + 1, ov: r.ov };
-}
-function facDiv10(f) {              // DIV10: ARG=round(FAC); FAC=10; FDIVT -> 34 quotient bits, no sticky bit
-  const a = facRound(f); if (!a.m) return a;
-  const tm = 0xa0000000n, te = 132;              // 10.0
-  const q = (a.m << 33n) / tm;
-  if (q >= (1n << 33n)) return { m: q >> 2n, e: a.e - te + 129, ov: Number((q & 3n) << 6n) };
-  return { m: q >> 1n, e: a.e - te + 128, ov: Number((q & 1n) << 7n) };
-}
-function facToNum(f) { return f.m ? Number(f.m) * Math.pow(2, f.e - 128 - 32) : 0; }
-// FIN as called by VAL: digits accumulate with MUL10 + digit, then scaled by MUL10/DIV10.
-function cbmVal(s) {
-  let i = 0; const n = s.length; const sk = () => { while (i < n && s[i] === ' ') i++; };
-  sk(); let neg = false;
-  if (s[i] === '-') { neg = true; i++; } else if (s[i] === '+') i++;
-  let f = { m: 0n, e: 0, ov: 0 }, dexp = 0, dot = false, any = false;
-  for (; i < n; i++) {
-    const c = s[i];
-    if (c === ' ') continue;
-    if (c >= '0' && c <= '9') { f = facAdd(facMul10(f), facFromBig(BigInt(c.charCodeAt(0) - 48))); if (dot) dexp--; any = true; }
-    else if (c === '.' && !dot) dot = true;
-    else break;
-  }
-  if (!any) return 0;
-  if (s[i] === 'E' || s[i] === 'e') {
-    i++; sk(); let en = false, ev = 0;
-    if (s[i] === '-') { en = true; i++; } else if (s[i] === '+') i++;
-    for (; i < n; i++) { const c = s[i]; if (c === ' ') continue; if (c < '0' || c > '9') break; ev = ev * 10 + (c.charCodeAt(0) - 48); }
-    dexp += en ? -ev : ev;
-  }
-  while (dexp > 0) { f = facMul10(f); dexp--; }
-  while (dexp < 0) { f = facDiv10(f); dexp++; }
-  const fr = facRound(f);
-  if (fr.e <= 0) return 0;                       // underflow -> 0, as in the ROM
-  const r = facToNum(fr);
-  return neg ? -r : r;
-}
+// VAL = the runtime's FIN, bit-exact (js/cbmfloat.js); other numeric input (READ, GET, INPUT) uses it too
+function cbmVal(s) { return finVal(s); }
 // CBM 5-byte float (MFLPT)
 function mflpt(x) {
   if (x === 0) return [0, 0, 0, 0, 0];
@@ -336,7 +460,6 @@ class Runtime {
     this.keys = (opts.keys || '').split(''); this.lines = (opts.lines || []).slice();
     this.screen = ''; this.inputMode = false;
     this.rndq = opts.rnd ? opts.rnd.slice() : null;
-    this.basicRom = opts.basicRom || null;   // optional C128 BASIC hi ROM (318019-04), for bit-exact float constants
   }
   init(VARS) { this.VARS = VARS; this.clr(); }
   clr() { for (const [, js, t] of this.VARS) this.v[js] = t === '$' ? '' : 0; }
@@ -376,30 +499,9 @@ class Runtime {
     if (!s.length) return 0;
     const n = Math.min(s.length, 0xa0);
     for (let k = 0; k < n; k++) this.mem[0x1d00 + k] = s.charCodeAt(k);
-    if (this.basicRom) { try { return this.fin6502(s.length); } catch (e) { this.cpu = null; } }
-    return cbmVal(s);
+    return finVal(s);
   }
-  fin6502(len) {
-    // run the runtime's FIN with the C128 BASIC-hi ROM at $8000-$BFFF (MMU config $02)
-    if (!this.cpu) {
-      const ram = this.ram6502 = new Uint8Array(this.mem);
-      ram.copyWithin(0x0202, 0x1c5e, 0x1c5e + 0xa0);           // bank trampolines, as copied at startup
-      const rom = this.basicRom;
-      this.cpu = new CPU6502(a => (a >= 0x8000 && a < 0xc000 ? rom[a - 0x8000] : ram[a]),
-        (a, v) => { if ((a < 0x8000 || a >= 0xc000) && !(a >= 0xff00 && a <= 0xff04)) ram[a] = v; });
-    }
-    const ram = this.ram6502;
-    ram.set(this.mem.subarray(0x1d00, 0x1da0), 0x1d00);
-    const c = this.cpu; c.s = 0xff; c.p = 0x24; c.a = len & 255; c.x = c.y = 0;
-    c.call(0x4314);
-    if (ram[0x10] & 0x80) return s16(ram[0x66] << 8 | ram[0x67]);   // integer result in $66/$67
-    const e = ram[0x63]; if (!e) return 0;
-    let m = (ram[0x64] * 2 ** 24 + ram[0x65] * 65536 + ram[0x66] * 256 + ram[0x67]);
-    let ex = e;
-    if (ram[0x71] & 0x80) { m += 1; if (m === 2 ** 32) { m = 2 ** 31; ex++; } }   // MOVMF rounding
-    const r = m * Math.pow(2, ex - 128 - 32);
-    return (ram[0x68] & 0x80) ? -r : r;
-  }
+
   asc(s) { return s.length ? s.charCodeAt(0) : 0; }
   chr(n) { return String.fromCharCode(Math.floor(n) & 255); }
   left(s, n) { return s.slice(0, Math.max(0, Math.floor(n))); }
@@ -4698,7 +4800,7 @@ function compile(source, blitz, opts = {}) {
   const rt = new Runtime(blitz, {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
-    rnd, maxSteps: opts.maxSteps, basicRom: opts.basicRom,
+    rnd, maxSteps: opts.maxSteps,
   });
   rt.init(VARS);
   run(rt);
@@ -4717,10 +4819,10 @@ const link = (data, name) => { const a = document.createElement('a'); a.href = U
 $('go').onclick = async () => {
   const blitz = await read('blitz'), src = await read('src');
   if (!blitz || !src) { $('screen').textContent = 'BLITZ!.128 und Quellprogramm wählen.'; return; }
-  const like = await read('like'); const basicRom = await read('rom');
+  const like = await read('like');
   const name = $('name').value || 'PROG';
   try {
-    const r = compile(src, blitz, { name, basicRom, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
+    const r = compile(src, blitz, { name, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
     $('files').replaceChildren(...[r.c && link(r.c, 'c-' + name.toLowerCase() + '.prg'), r.z && link(r.z, 'z-' + name.toLowerCase() + '.prg')].filter(Boolean));
     $('screen').textContent = r.screen;
   } catch (e) { $('screen').textContent = 'Fehler: ' + e.message; }

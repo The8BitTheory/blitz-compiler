@@ -4,7 +4,7 @@
 // cells the compiler PEEKs/POKEs, the DATA table and native versions of the
 // compiler's machine-code helpers (SYS 288/291/5816/5872/5960/5985/6012).
 
-import { CPU6502 } from './cpu6502.js';
+import { finVal } from './cbmfloat.js';
 const s16 = u => (u & 0x8000 ? (u & 0xffff) - 0x10000 : u & 0xffff);
 
 // ---------- CBM number formatting / parsing
@@ -25,71 +25,8 @@ export function numStr(n) {               // like STR$: sign or blank, no traili
   }
   return sg + s;
 }
-// ---------- CBM floating point, bit-exact where VAL needs it.
-// FAC = { m: BigInt 32-bit normalized mantissa, e: exponent byte, ov: rounding byte }, value = m/2^32 * 2^(e-128)
-const B32 = 1n << 32n, B31 = 1n << 31n;
-function facRound(f) {              // ROUND / MOVAF / MOVMF: add 1 if rounding byte >= $80
-  if (!f.m) return { m: 0n, e: 0, ov: 0 };
-  let { m, e } = f;
-  if (f.ov & 0x80) { m += 1n; if (m === B32) { m = B31; e++; } }
-  return { m, e, ov: 0 };
-}
-function facFromBig(n) {            // exact integer -> FAC (n < 2^32 keeps all bits)
-  if (n === 0n) return { m: 0n, e: 0, ov: 0 };
-  let e = 128, m = n, ov = 0;
-  while (m < B31) { m <<= 1n; e--; }
-  while (m >= B32) { ov = Number(((m & 1n) << 7n)) | (ov >> 1); m >>= 1n; e++; }
-  return { m, e: e + 32, ov };
-}
-function facAdd(x, y) {             // FADDT for two non-negative values: smaller operand shifted right, its bits form FACOV
-  if (!x.m) return { ...y }; if (!y.m) return { ...x };
-  if (y.e > x.e) [x, y] = [y, x];
-  const d = x.e - y.e;
-  const ys = (y.m << 8n) >> BigInt(d);           // 8 guard bits
-  let s = (x.m << 8n) + ys, e = x.e;
-  if (s >= (B32 << 8n)) { s >>= 1n; e++; }
-  return { m: s >> 8n, e, ov: Number(s & 255n) };
-}
-function facMul10(f) {              // MUL10: ARG=round(FAC); FAC=ARG*4; FAC+=ARG; FAC*=2
-  const a = facRound(f); if (!a.m) return a;
-  const r = facAdd({ m: a.m, e: a.e + 2, ov: 0 }, a);
-  return { m: r.m, e: r.e + 1, ov: r.ov };
-}
-function facDiv10(f) {              // DIV10: ARG=round(FAC); FAC=10; FDIVT -> 34 quotient bits, no sticky bit
-  const a = facRound(f); if (!a.m) return a;
-  const tm = 0xa0000000n, te = 132;              // 10.0
-  const q = (a.m << 33n) / tm;
-  if (q >= (1n << 33n)) return { m: q >> 2n, e: a.e - te + 129, ov: Number((q & 3n) << 6n) };
-  return { m: q >> 1n, e: a.e - te + 128, ov: Number((q & 1n) << 7n) };
-}
-function facToNum(f) { return f.m ? Number(f.m) * Math.pow(2, f.e - 128 - 32) : 0; }
-// FIN as called by VAL: digits accumulate with MUL10 + digit, then scaled by MUL10/DIV10.
-export function cbmVal(s) {
-  let i = 0; const n = s.length; const sk = () => { while (i < n && s[i] === ' ') i++; };
-  sk(); let neg = false;
-  if (s[i] === '-') { neg = true; i++; } else if (s[i] === '+') i++;
-  let f = { m: 0n, e: 0, ov: 0 }, dexp = 0, dot = false, any = false;
-  for (; i < n; i++) {
-    const c = s[i];
-    if (c === ' ') continue;
-    if (c >= '0' && c <= '9') { f = facAdd(facMul10(f), facFromBig(BigInt(c.charCodeAt(0) - 48))); if (dot) dexp--; any = true; }
-    else if (c === '.' && !dot) dot = true;
-    else break;
-  }
-  if (!any) return 0;
-  if (s[i] === 'E' || s[i] === 'e') {
-    i++; sk(); let en = false, ev = 0;
-    if (s[i] === '-') { en = true; i++; } else if (s[i] === '+') i++;
-    for (; i < n; i++) { const c = s[i]; if (c === ' ') continue; if (c < '0' || c > '9') break; ev = ev * 10 + (c.charCodeAt(0) - 48); }
-    dexp += en ? -ev : ev;
-  }
-  while (dexp > 0) { f = facMul10(f); dexp--; }
-  while (dexp < 0) { f = facDiv10(f); dexp++; }
-  const fr = facRound(f);
-  if (fr.e <= 0) return 0;                       // underflow -> 0, as in the ROM
-  const r = facToNum(fr);
-  return neg ? -r : r;
-}
+// VAL = the runtime's FIN, bit-exact (js/cbmfloat.js); other numeric input (READ, GET, INPUT) uses it too
+export function cbmVal(s) { return finVal(s); }
 // CBM 5-byte float (MFLPT)
 export function mflpt(x) {
   if (x === 0) return [0, 0, 0, 0, 0];
@@ -180,7 +117,6 @@ export class Runtime {
     this.keys = (opts.keys || '').split(''); this.lines = (opts.lines || []).slice();
     this.screen = ''; this.inputMode = false;
     this.rndq = opts.rnd ? opts.rnd.slice() : null;
-    this.basicRom = opts.basicRom || null;   // optional C128 BASIC hi ROM (318019-04), for bit-exact float constants
   }
   init(VARS) { this.VARS = VARS; this.clr(); }
   clr() { for (const [, js, t] of this.VARS) this.v[js] = t === '$' ? '' : 0; }
@@ -220,30 +156,9 @@ export class Runtime {
     if (!s.length) return 0;
     const n = Math.min(s.length, 0xa0);
     for (let k = 0; k < n; k++) this.mem[0x1d00 + k] = s.charCodeAt(k);
-    if (this.basicRom) { try { return this.fin6502(s.length); } catch (e) { this.cpu = null; } }
-    return cbmVal(s);
+    return finVal(s);
   }
-  fin6502(len) {
-    // run the runtime's FIN with the C128 BASIC-hi ROM at $8000-$BFFF (MMU config $02)
-    if (!this.cpu) {
-      const ram = this.ram6502 = new Uint8Array(this.mem);
-      ram.copyWithin(0x0202, 0x1c5e, 0x1c5e + 0xa0);           // bank trampolines, as copied at startup
-      const rom = this.basicRom;
-      this.cpu = new CPU6502(a => (a >= 0x8000 && a < 0xc000 ? rom[a - 0x8000] : ram[a]),
-        (a, v) => { if ((a < 0x8000 || a >= 0xc000) && !(a >= 0xff00 && a <= 0xff04)) ram[a] = v; });
-    }
-    const ram = this.ram6502;
-    ram.set(this.mem.subarray(0x1d00, 0x1da0), 0x1d00);
-    const c = this.cpu; c.s = 0xff; c.p = 0x24; c.a = len & 255; c.x = c.y = 0;
-    c.call(0x4314);
-    if (ram[0x10] & 0x80) return s16(ram[0x66] << 8 | ram[0x67]);   // integer result in $66/$67
-    const e = ram[0x63]; if (!e) return 0;
-    let m = (ram[0x64] * 2 ** 24 + ram[0x65] * 65536 + ram[0x66] * 256 + ram[0x67]);
-    let ex = e;
-    if (ram[0x71] & 0x80) { m += 1; if (m === 2 ** 32) { m = 2 ** 31; ex++; } }   // MOVMF rounding
-    const r = m * Math.pow(2, ex - 128 - 32);
-    return (ram[0x68] & 0x80) ? -r : r;
-  }
+
   asc(s) { return s.length ? s.charCodeAt(0) : 0; }
   chr(n) { return String.fromCharCode(Math.floor(n) & 255); }
   left(s, n) { return s.slice(0, Math.max(0, Math.floor(n))); }

@@ -4,7 +4,6 @@
 //   --no-runtime: C/ without runtime routines; --full: RESUME and COLLISION with full syntax (original menu 4-6)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { findBasicRom } from './rom.js';
 import { compile, keysOf, validKey } from './blitzc.js';
 
 const a = process.argv.slice(2); const opt = {}; const pos = [];
@@ -17,7 +16,7 @@ let keys, pad;
 if (opt.like) ({ keys, pad } = keysOf(readFileSync(opt.like)));
 if (opt.keys) { keys = hex(opt.keys); pad = hex(opt.pad || ''); }
 if (keys && !keys.every(validKey)) console.error('warning: original never produces keys with a zero nibble');
-const r = compile(readFileSync(pos[0]), blitz, { name: opt.name || 'PROG', keys, pad, basicRom: findBasicRom(opt.rom), runtime: !opt['no-runtime'], fullSyntax: !!opt.full });
+const r = compile(readFileSync(pos[0]), blitz, { name: opt.name || 'PROG', keys, pad, runtime: !opt['no-runtime'], fullSyntax: !!opt.full });
 mkdirSync(pos[1], { recursive: true });
 if (r.c) writeFileSync(pos[1] + '/c.prg', r.c);
 if (r.z) writeFileSync(pos[1] + '/z.prg', r.z);

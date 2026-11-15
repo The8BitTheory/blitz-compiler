@@ -37,7 +37,7 @@ node js/test.js                                   # alle tests/expected nachbaue
 bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
 MODE=65 bash oracle/compare.sh x.prg             # Modus: 1, 4 (volle Syntax), 35 (ohne Runtime), 65 (beides)
 ```
-Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg, {name, runtime, fullSyntax, keys, pad, basicRom})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
+Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg, {name, runtime, fullSyntax, keys, pad})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
 
 Aufbau:
 - `tools/bc2js.py` übersetzt den **Bytecode des Compilers** (nicht das Pseudo-BASIC) nach `js/compiler.gen.js`: ein `case` pro Sprungziel, Label = Originaladresse. Damit entfallen die Anzeigefehler von `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): alle Arrays sind eindimensional, FOR/GET/READ/INPUT nehmen die zuletzt geladene Variable als Referenz, `X58` = `IF x THEN RETURN`, POKE/OPEN mit umgekehrter Argumentfolge.
@@ -47,7 +47,7 @@ Aufbau:
 Befunde aus der Portierung:
 - Zufall: RND(0) wird nur für die 6 Schlüssel (Reihenfolge W1,W3,W4,W5,W6,W2), für J% (0–9 Füllbytes hinter dem Header) und die Füllbytes selbst gezogen. `keysOf()` liest alles aus einer C/-Datei zurück.
 - `$1D00` in C/ ist der Puffer, den VAL (String-Kopie ohne Endnull, max. 160 Bytes) und INPUT# (mit Endnull) benutzen. Er enthält die letzte Statuszeile `00, OK,00,00` und ggf. Reste einer langen Konstante.
-- Gleitkommakonstanten: VAL ist eine Blitz-eigene Routine (`$4314`), die Ziffern 16-bittig sammelt und dann Routinen im C128-BASIC-ROM ruft (`$8B17`, `$8DB8`, `$8D67`). Für Bitgenauigkeit führt `js/cpu6502.js` genau diesen Code aus, mit dem BASIC-ROM hi 318019-04 (`--rom`, `BLITZ_BASICROM` oder VICE-Installation). Ohne ROM rechnet ein BigInt-Modell (MUL10/DIV10 mit Rundungsbyte); im Test weichen dann 2 von 84 Konstanten im letzten Bit ab.
+- Gleitkommakonstanten: VAL ist eine Blitz-eigene Routine (`$4314`), die Ziffern 16-bittig sammelt und dann Rechenroutinen im C128-BASIC-ROM ruft (×10, ÷10, Addition, Runden). `js/cbmfloat.js` überträgt diesen Code samt ROM-Routinen Befehl für Befehl mit Carry-Flag nach JS; **kein ROM nötig**. Geprüft mit `node tools/fincheck.mjs 500000`: 500 000 Zufallszahlen gegen den Originalcode auf dem 6502-Kern (`js/cpu6502.js`, braucht dafür das BASIC-ROM hi 318019-04 aus VICE), 0 Abweichungen.
 - Orakel: große Quellen brauchen mehr Frames, z. B. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
 - `Z/` ist ein BASIC-Programm (Ladeadresse `$0401`): je Zeile `04 08`, Adresse als Zeilennummer, Text `= nnn `.
 - Varianten: volle RESUME/COLLISION-Syntax = Menü 4–6 (`TA%=2`), ohne Runtime = zweites Menü Punkt 5 (`T9%=1`), das nur bei Dual Drive oder zwei Laufwerken erscheint. Der Port bedient intern Menü 1/4 bzw. 3/6 mit Geräten 8→9; das Laufwerkssetup hat sonst keinen Einfluss. C/ ohne Runtime beginnt direkt mit dem Header (Ladeadresse `$46B0` bzw. `$6C41`). Testnamen: `<name>.m4`, `.m35`, `.m65`.

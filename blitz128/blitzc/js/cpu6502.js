@@ -1,6 +1,6 @@
 // Minimal NMOS 6502 core (documented opcodes, binary mode only).
-// Used for one thing: running the Blitz runtime's own VAL/FIN routine ($4314)
-// together with the C128 BASIC math ROM, so float constants come out bit-exact.
+// Only a test reference (tools/fincheck.mjs): runs the Blitz runtime's original FIN ($4314)
+// with the C128 BASIC math ROM, to verify js/cbmfloat.js. The compiler itself does not need it.
 export class CPU6502 {
   constructor(read, write) { this.r = read; this.w = write; this.a = this.x = this.y = 0; this.s = 0xff; this.p = 0x24; this.pc = 0; }
   get C() { return this.p & 1; }

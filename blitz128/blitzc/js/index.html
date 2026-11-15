@@ -20,8 +20,6 @@ Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code
 
 <label>BLITZ!.128 (Original-Compiler, liefert die Runtime)</label>
 <input type="file" id="blitz">
-<label>C128 BASIC-ROM hi, 318019-04 <small>(optional, für bitgenaue Gleitkommakonstanten)</small></label>
-<input type="file" id="rom">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
 <label>Optionen</label>
@@ -42,10 +40,10 @@ const link = (data, name) => { const a = document.createElement('a'); a.href = U
 $('go').onclick = async () => {
   const blitz = await read('blitz'), src = await read('src');
   if (!blitz || !src) { $('screen').textContent = 'BLITZ!.128 und Quellprogramm wählen.'; return; }
-  const like = await read('like'); const basicRom = await read('rom');
+  const like = await read('like');
   const name = $('name').value || 'PROG';
   try {
-    const r = compile(src, blitz, { name, basicRom, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
+    const r = compile(src, blitz, { name, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
     $('files').replaceChildren(...[r.c && link(r.c, 'c-' + name.toLowerCase() + '.prg'), r.z && link(r.z, 'z-' + name.toLowerCase() + '.prg')].filter(Boolean));
     $('screen').textContent = r.screen;
   } catch (e) { $('screen').textContent = 'Fehler: ' + e.message; }
