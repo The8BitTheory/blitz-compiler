@@ -1,0 +1,25 @@
+pass2      ( mode:1/1)
+ 260       program: prog
+
+?illegal command in 30
+?illegal command in 30
+?syntax error in 100
+?syntax error in 180
+?syntax error in 190
+?bad subscript error in 210
+?bad subscript error in 210
+?illegal command in 260
+?illegal command in 260
+?illegal command in 260
+?illegal command in 260
+?illegal command in 260
+?illegal command in 260
+?illegal command in 260
+?syntax error in 260
+?syntax error in 260
+?loop without do error in 65531
+errors: 17      extensions: 0
+ 0 ok
+
+ready.
+
