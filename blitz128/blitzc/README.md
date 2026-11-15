@@ -37,12 +37,12 @@ node js/test.js                                   # alle tests/expected nachbaue
 bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
 MODE=65 bash oracle/compare.sh x.prg             # Modus: 1, 4 (volle Syntax), 35 (ohne Runtime), 65 (beides)
 ```
-Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg, {name, runtime, fullSyntax, keys, pad})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
+Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg|null, {name, runtime, fullSyntax, keys, pad})` (null = eingebettete BLITZ!.128 aus `js/blitzimg.js`, erzeugt mit `tools/embed.py`) aus `js/blitzc.js` → `{c, z, errors, screen}`.
 
 Aufbau:
 - `tools/bc2js.py` übersetzt den **Bytecode des Compilers** (nicht das Pseudo-BASIC) nach `js/compiler.gen.js`: ein `case` pro Sprungziel, Label = Originaladresse. Damit entfallen die Anzeigefehler von `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): alle Arrays sind eindimensional, FOR/GET/READ/INPUT nehmen die zuletzt geladene Variable als Referenz, `X58` = `IF x THEN RETURN`, POKE/OPEN mit umgekehrter Argumentfolge.
 - `js/rt.js`: BASIC-Primitiven, 1581-Simulation (Kanäle, Befehlskanal, Scratch, Status), Tastatur (Menü `1`, Programmname), DATA-Tabelle, native Fassungen der Maschinencode-Helfer: `SYS 288/291` Tokenizer, `SYS 5872` Zeile lesen, `SYS 5960/5985` Byte lesen/schreiben (Schlüssel bei `$1769`), `SYS 6012` Suche in Integer-Array, `SYS 5816` Speicherblock schreiben.
-- Die Runtime in C/ kommt aus BLITZ!.128 selbst (Image 1 mit den zur Laufzeit gepatchten Compiler-Schlüsseln, Image 2 ab `$A065` plus 10 Bytes RAM-Muster `00 00 00 FF FF FF FF 00 00 00`).
+- Die Runtime in C/ kommt aus BLITZ!.128 selbst; die Datei ist als Base64 eingebettet (`js/blitzimg.js`), eine eigene kann man mit `--blitz` bzw. im Browser-Feld angeben (Image 1 mit den zur Laufzeit gepatchten Compiler-Schlüsseln, Image 2 ab `$A065` plus 10 Bytes RAM-Muster `00 00 00 FF FF FF FF 00 00 00`).
 
 Befunde aus der Portierung:
 - Zufall: RND(0) wird nur für die 6 Schlüssel (Reihenfolge W1,W3,W4,W5,W6,W2), für J% (0–9 Füllbytes hinter dem Header) und die Füllbytes selbst gezogen. `keysOf()` liest alles aus einer C/-Datei zurück.

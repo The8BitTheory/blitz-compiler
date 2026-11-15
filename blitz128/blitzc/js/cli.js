@@ -10,7 +10,7 @@ const a = process.argv.slice(2); const opt = {}; const pos = [];
 const FLAGS = ['no-runtime', 'full'];
 for (let i = 0; i < a.length; i++) if (a[i].startsWith('--')) opt[a[i].slice(2)] = FLAGS.includes(a[i].slice(2)) ? true : a[++i]; else pos.push(a[i]);
 if (pos.length < 2) { console.error('usage: cli.js in.prg outdir [--no-runtime] [--full] [--blitz file] [--name N] [--like c.prg | --keys k0,..,k5 [--pad b,..]]'); process.exit(2); }
-const blitz = readFileSync(opt.blitz || new URL('../../blitz!.128.prg', import.meta.url).pathname);
+const blitz = opt.blitz ? readFileSync(opt.blitz) : null;   // default: embedded BLITZ!.128
 const hex = s => s.split(',').filter(Boolean).map(x => parseInt(x, 16));
 let keys, pad;
 if (opt.like) ({ keys, pad } = keysOf(readFileSync(opt.like)));

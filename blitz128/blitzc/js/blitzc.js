@@ -1,7 +1,7 @@
 // Blitz!128 compiler port - public API (Node and browser, no dependencies).
 //
 //   import { compile } from './blitzc.js';
-//   const r = compile(sourcePrg, blitzPrg, { name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
+//   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
 //               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
@@ -11,6 +11,17 @@
 // every C/ file, exactly like the original does from memory.
 import { run, VARS } from './compiler.gen.js';
 import { Runtime } from './rt.js';
+import { BLITZ_B64 } from './blitzimg.js';
+
+let blitzCache = null;
+// the original compiler file, embedded (js/blitzimg.js)
+export function blitzImage() {
+  if (!blitzCache) {
+    const bin = typeof atob === 'function' ? atob(BLITZ_B64) : Buffer.from(BLITZ_B64, 'base64').toString('latin1');
+    blitzCache = Uint8Array.from(bin, c => c.charCodeAt(0));
+  }
+  return blitzCache;
+}
 
 const petscii = s => s.toUpperCase();
 
@@ -49,7 +60,7 @@ export function compile(source, blitz, opts = {}) {
   const name = petscii(opts.name || 'PROG');
   let rnd = null;
   if (opts.keys) rnd = rndFor(opts.keys, opts.pad || []);
-  const rt = new Runtime(blitz, {
+  const rt = new Runtime(blitz || blitzImage(), {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
     rnd, maxSteps: opts.maxSteps,

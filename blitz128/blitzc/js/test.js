@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { compile, keysOf } from './blitzc.js';
 const here = new URL('..', import.meta.url).pathname;
-const blitz = readFileSync(here + '../blitz!.128.prg');
+const blitz = null;   // embedded image (js/blitzimg.js)
 let fail = 0;
 const only = process.argv[2];
 for (const t of readdirSync(here + 'tests/expected').sort()) {

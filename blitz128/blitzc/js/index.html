@@ -18,7 +18,7 @@
 <p>Nachbau des Blitz!&nbsp;128 Compilers (Skyles, V860929) in JavaScript. Alles läuft lokal im Browser.
 Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code>), weil ES-Module per <code>file://</code> nicht laden.</p>
 
-<label>BLITZ!.128 (Original-Compiler, liefert die Runtime)</label>
+<label>BLITZ!.128 <small>(optional: eigene Datei statt der eingebauten V860929)</small></label>
 <input type="file" id="blitz">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
@@ -39,7 +39,7 @@ const read = async id => { const f = $(id).files[0]; return f ? new Uint8Array(a
 const link = (data, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data])); a.download = name; a.textContent = name; return a; };
 $('go').onclick = async () => {
   const blitz = await read('blitz'), src = await read('src');
-  if (!blitz || !src) { $('screen').textContent = 'BLITZ!.128 und Quellprogramm wählen.'; return; }
+  if (!src) { $('screen').textContent = 'Quellprogramm wählen.'; return; }
   const like = await read('like');
   const name = $('name').value || 'PROG';
   try {
