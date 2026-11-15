@@ -2,13 +2,13 @@ pass1         BLITZ! 128         000028
 pass2      ( mode:1/1)
  260       program: prog
 
-?illegal command in 110
-?syntax error in 230
-?illegal command in 240
-errors: 3      extensions: 0
+errors: 0      extensions: 0
  0 ok
 
 ready.
+
+
+
 
 
 

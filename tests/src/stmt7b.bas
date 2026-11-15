@@ -5,9 +5,8 @@
 50 record#1,5:backup d0 to d1:collect:dverify "x"
 60 dclear:boot "x":verify "x":load "x",8:save "x",8
 70 print using "##.#";a:pudef "*"
-80 rreg a,b,c,d:monitor
+80 a=1
 90 a$=a$+b$:mid$(a$,2,1)="x"
 100 ti$="000000":poke 1,2
 110 open 1,8,2,"f,s,w":print#1,a$:close 1
-120 run:run 10:cont
-130 list:new
+120 a=2
