@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         000004
+pass2      ( mode:3/5)
+ 90        program: prog
+
+?type mismatch error in 20
+?syntax error in 40
+?overflow error in 80
+?undef'd statement error in 30
+?loop without do error in 65533
+errors: 5      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+
+

@@ -24,6 +24,9 @@ Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code
 <input type="file" id="rom">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
+<label>Optionen</label>
+<label style="font-weight:normal"><input type="checkbox" id="runtime" checked> mit Runtime-Routinen <small>(aus: C/ ohne Runtime, braucht eine bereits geladene Runtime)</small></label>
+<label style="font-weight:normal"><input type="checkbox" id="full"> RESUME und COLLISION mit voller Syntax <small>(aus: kein COLLISION, RESUME nur mit Zeilennummer)</small></label>
 <label>Programmname</label>
 <input type="text" id="name" value="PROG">
 <label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
@@ -42,7 +45,7 @@ $('go').onclick = async () => {
   const like = await read('like'); const basicRom = await read('rom');
   const name = $('name').value || 'PROG';
   try {
-    const r = compile(src, blitz, { name, basicRom, ...(like ? keysOf(like) : {}) });
+    const r = compile(src, blitz, { name, basicRom, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
     $('files').replaceChildren(...[r.c && link(r.c, 'c-' + name.toLowerCase() + '.prg'), r.z && link(r.z, 'z-' + name.toLowerCase() + '.prg')].filter(Boolean));
     $('screen').textContent = r.screen;
   } catch (e) { $('screen').textContent = 'Fehler: ' + e.message; }

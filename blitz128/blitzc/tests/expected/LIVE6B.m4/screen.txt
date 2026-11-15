@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         000946
+pass2      ( mode:4/1)
+ 40099     program: prog
+
+?loop without do error in 150
+errors: 1      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

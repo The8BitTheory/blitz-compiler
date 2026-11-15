@@ -303,7 +303,7 @@ export class Runtime {
   }
   open(lfn, dev, sa = 0, name = '') {
     lfn = Math.floor(lfn); dev = Math.floor(dev); sa = Math.floor(sa);
-    if (dev !== 8) { this.ch.set(lfn, { kind: 'null' }); return; }
+    if (dev < 8 || dev > 11) { this.ch.set(lfn, { kind: 'null' }); return; }   // all disk devices share one simulated disk
     if (sa === 15) { this.ch.set(lfn, { kind: 'cmd', buf: '' }); if (name) this.doCmd(name); return; }
     if (name.startsWith('$')) { this.ch.set(lfn, { kind: 'file', data: this.dirListing(), pos: 0, mode: 'R' }); this.dstatus = '00, OK,00,00'; return; }
     const f = this.parseName(name);

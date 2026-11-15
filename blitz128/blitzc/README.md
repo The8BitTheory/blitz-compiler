@@ -27,15 +27,17 @@ Format-Notizen:
 
 ## JS-Portierung (Stand 15.11.2026)
 
-`js/` enthält den Compiler als eigenständiges Programm für Node und Browser. **Alle 24 Testprogramme sind byte-identisch zum Original (C/ und Z/)**, darunter CRAWL, alle LIVE-Quellen der D81 (bis 56 KB Quelltext, 45 KB C/), Fehlerfälle, Direktiven, `$4001`-Variante, 80 Gleitkommakonstanten.
+`js/` enthält den Compiler als eigenständiges Programm für Node und Browser. **Alle 51 Referenzläufe sind byte-identisch zum Original (C/ und Z/)**, in allen vier Varianten (mit/ohne Runtime × eingeschränkte/volle RESUME/COLLISION-Syntax), darunter CRAWL, alle LIVE-Quellen der D81 (bis 56 KB Quelltext, 45 KB C/), Fehlerfälle, Direktiven, `$4001`-Variante, 80 Gleitkommakonstanten.
 
 ```
 node js/cli.js prog.prg out/                      # zufällige Schlüssel wie das Original
+node js/cli.js prog.prg out/ --no-runtime --full  # ohne Runtime, volle RESUME/COLLISION-Syntax
 node js/cli.js prog.prg out/ --like ref/c.prg     # Schlüssel+Füllbytes aus einer Original-C/-Datei
 node js/test.js                                   # alle tests/expected nachbauen und vergleichen
 bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
+MODE=65 bash oracle/compare.sh x.prg             # Modus: 1, 4 (volle Syntax), 35 (ohne Runtime), 65 (beides)
 ```
-Browser: `js/index.html` über einen lokalen Webserver öffnen. API: `compile(srcPrg, blitzPrg, {name, keys, pad, basicRom})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
+Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg, {name, runtime, fullSyntax, keys, pad, basicRom})` aus `js/blitzc.js` → `{c, z, errors, screen}`.
 
 Aufbau:
 - `tools/bc2js.py` übersetzt den **Bytecode des Compilers** (nicht das Pseudo-BASIC) nach `js/compiler.gen.js`: ein `case` pro Sprungziel, Label = Originaladresse. Damit entfallen die Anzeigefehler von `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): alle Arrays sind eindimensional, FOR/GET/READ/INPUT nehmen die zuletzt geladene Variable als Referenz, `X58` = `IF x THEN RETURN`, POKE/OPEN mit umgekehrter Argumentfolge.
@@ -48,3 +50,4 @@ Befunde aus der Portierung:
 - Gleitkommakonstanten: VAL ist eine Blitz-eigene Routine (`$4314`), die Ziffern 16-bittig sammelt und dann Routinen im C128-BASIC-ROM ruft (`$8B17`, `$8DB8`, `$8D67`). Für Bitgenauigkeit führt `js/cpu6502.js` genau diesen Code aus, mit dem BASIC-ROM hi 318019-04 (`--rom`, `BLITZ_BASICROM` oder VICE-Installation). Ohne ROM rechnet ein BigInt-Modell (MUL10/DIV10 mit Rundungsbyte); im Test weichen dann 2 von 84 Konstanten im letzten Bit ab.
 - Orakel: große Quellen brauchen mehr Frames, z. B. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
 - `Z/` ist ein BASIC-Programm (Ladeadresse `$0401`): je Zeile `04 08`, Adresse als Zeilennummer, Text `= nnn `.
+- Varianten: volle RESUME/COLLISION-Syntax = Menü 4–6 (`TA%=2`), ohne Runtime = zweites Menü Punkt 5 (`T9%=1`), das nur bei Dual Drive oder zwei Laufwerken erscheint. Der Port bedient intern Menü 1/4 bzw. 3/6 mit Geräten 8→9; das Laufwerkssetup hat sonst keinen Einfluss. C/ ohne Runtime beginnt direkt mit dem Header (Ladeadresse `$46B0` bzw. `$6C41`). Testnamen: `<name>.m4`, `.m35`, `.m65`.

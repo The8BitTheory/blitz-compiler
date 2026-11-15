@@ -11,11 +11,13 @@ const only = process.argv[2];
 for (const t of readdirSync(here + 'tests/expected').sort()) {
   if (only && t !== only) continue;
   const ex = here + 'tests/expected/' + t + '/';
-  const src = readFileSync(here + 'tests/src/' + t + '.prg');
+  // <name>.m4 = full syntax, .m35 = without runtime, .m65 = both (original menu keys)
+  const [base, m] = t.split('.m'); const mode = { runtime: !(m === '35' || m === '65'), fullSyntax: m === '4' || m === '65' };
+  const src = readFileSync(here + 'tests/src/' + base + '.prg');
   const ec = readFileSync(ex + 'c.prg'); const ez = existsSync(ex + 'z.prg') ? readFileSync(ex + 'z.prg') : null;
   const { keys, pad } = keysOf(ec);
   let r;
-  try { r = compile(src, blitz, { keys, pad, basicRom }); }
+  try { r = compile(src, blitz, { keys, pad, basicRom, ...mode }); }
   catch (e) { console.log('FAIL', t, 'exception', e.message); fail++; continue; }
   const cmp = (a, b, what) => {
     if (!a || !b) return `${what}: missing (${!!a}/${!!b})`;

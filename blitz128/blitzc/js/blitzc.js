@@ -1,7 +1,10 @@
 // Blitz!128 compiler port - public API (Node and browser, no dependencies).
 //
 //   import { compile } from './blitzc.js';
-//   const r = compile(sourcePrg, blitzPrg, { name: 'PROG', keys, pad });
+//   const r = compile(sourcePrg, blitzPrg, { name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
+//   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
+//   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
+//               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
 //   r.c  -> C/NAME (Uint8Array), r.z -> Z/NAME, r.errors, r.screen
 //
 // blitzPrg is the original BLITZ!.128 file: its runtime images are copied into
@@ -22,15 +25,25 @@ export function rndFor(keys, pad) {
 }
 // Read keys and padding back out of a C/ file (for byte-identical rebuilds).
 export function keysOf(c) {
-  const la = c[0] | c[1] << 8, H = (la === 0x1c01 ? 0x46b0 : 0x6c41) - la + 2;
+  const la = c[0] | c[1] << 8;
+  const hdrAt = la === 0x1c01 ? 0x46b0 : la === 0x4001 ? 0x6c41 : la;   // without runtime the file starts at the header
+  const H = hdrAt - la + 2;
   let a = 0x2f; const keys = [];
   for (let i = 0; i < 6; i++) { a ^= c[H + 12 + i]; keys.push(a); }
   const ent = (c[H + 6] ^ 0x79) | (c[H + 7] ^ 0x79) << 8;
-  const hdr = (la === 0x1c01 ? 0x46b0 : 0x6c41) + 18;
+  const hdr = hdrAt + 18;
   const pad = Array.from(c.subarray(H + 18, H + 18 + (ent - hdr)));
   return { keys, pad };
 }
 export function validKey(k) { return (k & 15) !== 0 && (k & 240) !== 0; }
+
+// Keyboard input that drives the original menus.
+// With runtime: menu 1 (or 4) = single drive, one program with runtime; then the program name.
+// Without runtime: menu 3 (or 6) = two drives, devices 8 -> 9, then 5 = single program without runtime.
+function menuInput(runtime, full, name) {
+  if (runtime) return { keys: full ? '4' : '1', lines: [name] };
+  return { keys: (full ? '6' : '3') + '5', lines: ['8', '9', name] };
+}
 
 export function compile(source, blitz, opts = {}) {
   const name = petscii(opts.name || 'PROG');
@@ -38,8 +51,7 @@ export function compile(source, blitz, opts = {}) {
   if (opts.keys) rnd = rndFor(opts.keys, opts.pad || []);
   const rt = new Runtime(blitz, {
     files: { [name]: source },
-    keys: '1',              // menu: 1 = single drive, single program with runtime
-    lines: [name],          // program name
+    ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
     rnd, maxSteps: opts.maxSteps, basicRom: opts.basicRom,
   });
   rt.init(VARS);
