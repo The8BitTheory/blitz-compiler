@@ -35,13 +35,13 @@
 
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
+<label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
+<input type="file" id="like">
 <label>Optionen</label>
 <label style="font-weight:normal"><input type="checkbox" id="runtime" checked> mit Runtime-Routinen <small>(aus: C/ ohne Runtime, braucht eine bereits geladene Runtime)</small></label>
 <label style="font-weight:normal"><input type="checkbox" id="full"> RESUME und COLLISION mit voller Syntax <small>(aus: kein COLLISION, RESUME nur mit Zeilennummer)</small></label>
 <label>Programmname</label>
 <input type="text" id="name" value="PROG">
-<label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
-<input type="file" id="like">
 <br><button id="go">Kompilieren</button>
 <p id="status" aria-live="polite"></p>
 <p class="files" id="files"></p>
