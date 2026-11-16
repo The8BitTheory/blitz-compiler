@@ -34,8 +34,6 @@
 <p>Nachbau des Blitz!&nbsp;128 Compilers (Skyles, V860929) in JavaScript. Alles läuft lokal im Browser.<span id="srvhint">
 Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code>), weil ES-Module per <code>file://</code> nicht laden.</span></p>
 
-<label>BLITZ!.128 <small>(optional: eigene Datei statt der eingebauten V860929)</small></label>
-<input type="file" id="blitz">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
 <label>Optionen</label>
@@ -136,7 +134,7 @@ function finish(m) {
 $('go').onclick = async () => {
   const src = await read('src');
   if (!src) { $('status').className = 'err'; $('status').textContent = 'Quellprogramm wählen.'; return; }
-  const job = { src, blitz: await read('blitz'), like: await read('like'), name: $('name').value || 'PROG', runtime: $('runtime').checked, fullSyntax: $('full').checked };
+  const job = { src, blitz: null, like: await read('like'), name: $('name').value || 'PROG', runtime: $('runtime').checked, fullSyntax: $('full').checked };
   $('go').disabled = true; $('files').replaceChildren(); $('msgs').value = ''; $('msgcount').textContent = '';
   pend = []; total = 0; state = {}; resetRows(); $('status').className = ''; $('status').textContent = 'Kompiliere …'; t0 = performance.now();
   await runJob(job, onMsg);
