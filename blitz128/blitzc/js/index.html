@@ -34,17 +34,15 @@
 <p>Nachbau des Blitz!&nbsp;128 Compilers (Skyles, V860929) in JavaScript. Alles läuft lokal im Browser.<span id="srvhint">
 Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code>), weil ES-Module per <code>file://</code> nicht laden.</span></p>
 
-<label>BLITZ!.128 <small>(optional: eigene Datei statt der eingebauten V860929)</small></label>
-<input type="file" id="blitz">
 <label>Quellprogramm (getokentes BASIC-7-PRG)</label>
 <input type="file" id="src">
+<label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
+<input type="file" id="like">
 <label>Optionen</label>
 <label style="font-weight:normal"><input type="checkbox" id="runtime" checked> mit Runtime-Routinen <small>(aus: C/ ohne Runtime, braucht eine bereits geladene Runtime)</small></label>
 <label style="font-weight:normal"><input type="checkbox" id="full"> RESUME und COLLISION mit voller Syntax <small>(aus: kein COLLISION, RESUME nur mit Zeilennummer)</small></label>
 <label>Programmname</label>
 <input type="text" id="name" value="PROG">
-<label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
-<input type="file" id="like">
 <br><button id="go">Kompilieren</button>
 <p id="status" aria-live="polite"></p>
 <p class="files" id="files"></p>
@@ -136,7 +134,7 @@ function finish(m) {
 $('go').onclick = async () => {
   const src = await read('src');
   if (!src) { $('status').className = 'err'; $('status').textContent = 'Quellprogramm wählen.'; return; }
-  const job = { src, blitz: await read('blitz'), like: await read('like'), name: $('name').value || 'PROG', runtime: $('runtime').checked, fullSyntax: $('full').checked };
+  const job = { src, blitz: null, like: await read('like'), name: $('name').value || 'PROG', runtime: $('runtime').checked, fullSyntax: $('full').checked };
   $('go').disabled = true; $('files').replaceChildren(); $('msgs').value = ''; $('msgcount').textContent = '';
   pend = []; total = 0; state = {}; resetRows(); $('status').className = ''; $('status').textContent = 'Kompiliere …'; t0 = performance.now();
   await runJob(job, onMsg);
