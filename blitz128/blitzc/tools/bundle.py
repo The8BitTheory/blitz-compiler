@@ -8,9 +8,15 @@ def mod(n):
     return re.sub(r'^export ', '', s, flags=re.M)
 code = '\n'.join(mod(n) for n in ['blitzimg.js', 'cbmfloat.js', 'rt.js', 'compiler.gen.js', 'blitzc.js'])
 page = open(os.path.join(J, 'index.html')).read()
-page = page.replace("import { compile, keysOf } from './blitzc.js';\n", '')
-page = page.replace('<script type="module">', '<script type="module">\n' + code.replace('</script', '<\\/script') + '\n', 1)
-page = re.sub(r'<p>Seite über einen lokalen Webserver.*?</p>', '', page, flags=re.S)
+# the compiler code goes into a text block: the page starts a Web Worker from it (Blob URL, works from file://)
+# and falls back to running it inside the page if no worker can be started
+page = page.replace('<script type="module">', '<script type="text/plain" id="wsrc">\n' + code.replace('</script', '<\\/script') + '\n</script>\n<script type="module">', 1)
+page = page.replace("const makeWorker = () => new Worker('./worker.js', { type: 'module' });",
+  "const WSRC = document.getElementById('wsrc').textContent;\n"
+  "const makeWorker = () => new Worker(URL.createObjectURL(new Blob([WSRC, '\\nonmessage = e => compileJob(e.data, m => postMessage(m));'], { type: 'text/javascript' })));")
+page = page.replace("const runInline = async (job, post) => (await import('./blitzc.js')).compileJob(job, post);",
+  "const runInline = async (job, post) => new Function(WSRC + '\\nreturn compileJob;')()(job, post);")
+page = re.sub(r'<span id="srvhint">.*?</span>', '', page, flags=re.S)
 page = page.replace('Alles läuft lokal im Browser.', 'Alles läuft lokal im Browser, die Datei lässt sich direkt per Doppelklick öffnen.')
 open(os.path.join(J, 'blitzc.html'), 'w').write(page)
 print('js/blitzc.html', len(page), 'bytes')

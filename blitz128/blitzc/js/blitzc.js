@@ -56,21 +56,59 @@ function menuInput(runtime, full, name) {
   return { keys: (full ? '6' : '3') + '5', lines: ['8', '9', name] };
 }
 
+// line numbers of a tokenized BASIC program (PRG), in file order
+export function sourceLines(prg) {
+  const la = prg[0] | prg[1] << 8, out = [];
+  for (let p = 2; p + 3 < prg.length;) {
+    const next = prg[p] | prg[p + 1] << 8;
+    if (!next) break;
+    out.push(prg[p + 2] | prg[p + 3] << 8);
+    p = next - la + 2;
+  }
+  return out;
+}
+
+// opts.onEvent(ev) is called while compiling:
+//   {type:'start', total}                          total = number of source lines
+//   {type:'pass', pass}                            PASS0/1/2 begins
+//   {type:'progress', pass, line, index, total}    line = BASIC line number being processed, index = its position (1..total)
+//   {type:'message', text}                         everything else the compiler prints (?extensions in N, errors, summary)
 export function compile(source, blitz, opts = {}) {
   const name = petscii(opts.name || 'PROG');
   let rnd = null;
   if (opts.keys) rnd = rndFor(opts.keys, opts.pad || []);
+  const lines = sourceLines(source), pos = new Map(lines.map((n, i) => [n, i + 1]));
+  const lastLine = {};
+  const onEvent = opts.onEvent && (ev => {
+    if (ev.type === 'progress') {
+      ev.index = pos.get(ev.line) || 0; ev.total = lines.length;
+      if (!ev.index || ev.line <= (lastLine[ev.pass] ?? -1)) return;   // pass 2 ends with a 0 (end marker of the line table)
+      lastLine[ev.pass] = ev.line;
+    }
+    opts.onEvent(ev);
+  });
   const rt = new Runtime(blitz || blitzImage(), {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
-    rnd, maxSteps: opts.maxSteps,
+    rnd, maxSteps: opts.maxSteps, onEvent,
   });
+  if (onEvent) onEvent({ type: 'start', total: lines.length });
   rt.init(VARS);
   run(rt);
   const get = n => rt.files.has(n) ? Uint8Array.from(rt.files.get(n)) : null;
   return {
     c: get('C/' + name), z: get('Z/' + name),
     errors: rt.v.X1_f + rt.v.X3_f, extensions: rt.v.X0_f,
-    screen: rt.screen, files: rt.files,
+    screen: rt.screen, messages: rt.messages, files: rt.files,
   };
+}
+
+// One compile as a message stream, for a Web Worker (js/worker.js) or the page itself.
+// job = {src, blitz|null, like|null, name, runtime, fullSyntax}; post gets the compile() events plus
+//   {type:'done', c, z, errors, extensions}  or  {type:'error', text}
+export function compileJob({ src, blitz, like, name, runtime, fullSyntax }, post) {
+  try {
+    const r = compile(src, blitz || null, { name, runtime, fullSyntax, ...(like ? keysOf(like) : {}), onEvent: post });
+    post({ type: 'done', c: r.c, z: r.z, errors: r.errors, extensions: r.extensions });
+  } catch (e) { post({ type: 'error', text: e.message }); }
 }

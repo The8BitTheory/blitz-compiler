@@ -116,6 +116,9 @@ export class Runtime {
     this.dstatus = '00, OK,00,00';
     this.keys = (opts.keys || '').split(''); this.lines = (opts.lines || []).slice();
     this.screen = ''; this.inputMode = false;
+    // structured view of the screen output (progress per pass, messages), see feed()
+    this.onEvent = opts.onEvent || null;
+    this.pass = null; this.lineBuf = ''; this.homed = false; this.messages = [];
     this.rndq = opts.rnd ? opts.rnd.slice() : null;
   }
   init(VARS) { this.VARS = VARS; this.clr(); }
@@ -197,11 +200,42 @@ export class Runtime {
   }
   fmt(x) { return typeof x === 'string' ? x : numStr(x) + ' '; }
   out(s) {
-    if (this.outLfn === null) return this.toScreen(s);
+    if (this.outLfn === null) { this.toScreen(s); return this.feed(s); }
     for (const ch of s) this.writeByte(this.outLfn, ch.charCodeAt(0));
   }
-  pr(x) { this.out(this.fmt(x)); }
-  prcr(x) { this.out(this.fmt(x) + '\r'); }
+  // The original compiler draws on the C128 screen with cursor codes: PASSn at the top, the current
+  // line number overwritten in place (HOME, DOWN, number), messages at fixed places. feed() turns that
+  // into events: {type:'pass', pass}, {type:'progress', pass, line}, {type:'message', text}.
+  // Everything before the first PASSn (menus, title, clock) is dropped.
+  emit(ev) { if (ev.type === 'message') this.messages.push(ev.text); if (this.onEvent) this.onEvent(ev); }
+  feed(s) {
+    for (const ch of s) {
+      const c = ch.charCodeAt(0);
+      if (c === 13) { this.flushLine(); continue; }
+      if (c === 0x13 || c === 0x93) { this.homed = true; continue; }          // HOME / clear screen
+      let t = '';
+      if (c >= 0x41 && c <= 0x5a) t = String.fromCharCode(c + 32);
+      else if (c >= 0xc1 && c <= 0xda) t = String.fromCharCode(c - 0x80);
+      else if (c >= 32 && c < 127) t = ch;
+      if (t) { this.lineBuf += t; this.homed = false; }                          // other cursor/colour codes: ignored
+    }
+  }
+  flushLine() {
+    const t = this.lineBuf.trim(); this.lineBuf = ''; this.homed = false;
+    if (!t || /^\d{6}$/.test(t)) return;                                     // empty, or the TI$ clock in the top right corner
+    const m = /^pass(\d)$/.exec(t);
+    if (m) { this.pass = +m[1]; return this.emit({ type: 'pass', pass: this.pass }); }
+    if (this.pass !== null) this.emit({ type: 'message', text: t });
+  }
+  // a number printed right after HOME/DOWN is the line number the compiler is working on
+  pnum(x) {
+    if (typeof x === 'number' && this.outLfn === null && this.homed && this.pass !== null) {
+      this.homed = false; this.emit({ type: 'progress', pass: this.pass, line: x }); return true;
+    }
+    return false;
+  }
+  pr(x) { if (this.pnum(x)) this.toScreen(this.fmt(x)); else this.out(this.fmt(x)); }
+  prcr(x) { if (this.pnum(x)) this.toScreen(this.fmt(x) + '\r'); else this.out(this.fmt(x) + '\r'); }
   spc(n) { this.out(' '.repeat(Math.max(0, Math.floor(n)))); }
   cmd(l) { this.outLfn = Math.floor(l); }
   prhcr(x) { this.out(this.fmt(x) + '\r'); this.outLfn = null; }

@@ -51,3 +51,9 @@ Befunde aus der Portierung:
 - Orakel: große Quellen brauchen mehr Frames, z. B. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
 - `Z/` ist ein BASIC-Programm (Ladeadresse `$0401`): je Zeile `04 08`, Adresse als Zeilennummer, Text `= nnn `.
 - Varianten: volle RESUME/COLLISION-Syntax = Menü 4–6 (`TA%=2`), ohne Runtime = zweites Menü Punkt 5 (`T9%=1`), das nur bei Dual Drive oder zwei Laufwerken erscheint. Der Port bedient intern Menü 1/4 bzw. 3/6 mit Geräten 8→9; das Laufwerkssetup hat sonst keinen Einfluss. C/ ohne Runtime beginnt direkt mit dem Header (Ladeadresse `$46B0` bzw. `$6C41`). Testnamen: `<name>.m4`, `.m35`, `.m65`.
+
+### Textausgabe im Browser (Stand 16.11.2026)
+`js/blitzc.html` zeigt nicht mehr den rohen C128-Bildschirmtext, sondern drei Fortschrittszeilen (PASS0/PASS1/PASS2: Balken, Prozent, letzte Zeilennummer) und eine scrollbare, nur lesbare Textarea für alle übrigen Meldungen (`?extensions in N`, Fehler, Zusammenfassung). Menü- und Titeltext entfallen.
+- `rt.js` übersetzt die Cursor-Ausgabe des Compilers (HOME/DOWN + Zahl = aktuelle Zeile, `PASSn`, Meldungszeilen) in Ereignisse; `compile(..., {onEvent})` ergänzt Position und Gesamtzahl der Quellzeilen (`sourceLines()`), `r.messages` liefert die Meldungen, `r.screen` bleibt unverändert.
+- Ereignisse: `start`, `pass`, `progress {pass,line,index,total}`, `message {text}`. PASS0 läuft nur im Mehrprogramm-Modus (T8), der Port bedient nur Einzelprogramme.
+- Die Seite kompiliert in einem Web Worker (`js/worker.js`; in `blitzc.html` per Blob-URL, geht auch von `file://`), damit der Fortschritt live erscheint; ohne Worker läuft derselbe Code in der Seite.

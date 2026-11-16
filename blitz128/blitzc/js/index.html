@@ -2,21 +2,37 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>blitzc – Blitz! 128 im Browser</title>
 <style>
-  body { font: 15px/1.5 system-ui, sans-serif; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
+  :root { color-scheme: light dark; --fg:#222; --bg:#fff; --muted:#666; --box:#f4f4f4; --line:#d0d0d0; --accent:#2f6fdd; --ok:#2a9d4a; --err:#c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e4e4e4; --bg:#1b1b1d; --muted:#9a9a9a; --box:#262629; --line:#3d3d42; --accent:#5b9cff; --ok:#4cc16d; --err:#ff6b5b; } }
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: var(--fg); background: var(--bg); }
   label { display: block; margin: .6rem 0 .2rem; font-weight: 600; }
   input[type=text] { width: 12rem; }
   button { margin-top: 1rem; padding: .4rem 1rem; }
-  pre { background: #f4f4f4; padding: .8rem; overflow: auto; max-height: 20rem; }
+  small { color: var(--muted); }
   .files a { margin-right: 1rem; }
-  small { color: #666; }
+  h2 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
+  /* progress per pass */
+  .pass { display: grid; grid-template-columns: 4.2rem 1fr 6rem 7.5rem; gap: .6rem; align-items: center; margin: .35rem 0; }
+  .pass b { font-variant-numeric: tabular-nums; }
+  .bar { height: .9rem; background: var(--box); border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .pass.done .bar > i { background: var(--ok); }
+  .pass.idle { opacity: .55; }
+  .pass input { width: 100%; box-sizing: border-box; font: inherit; font-family: ui-monospace, Consolas, monospace; text-align: right; }
+  .pass .pct { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  #status { margin: .6rem 0 0; min-height: 1.4em; }
+  #status.err { color: var(--err); }
+  /* messages */
+  #msgs { width: 100%; box-sizing: border-box; height: 15rem; resize: vertical; font: 13px/1.4 ui-monospace, Consolas, monospace; background: var(--box); color: var(--fg); border: 1px solid var(--line); border-radius: .3rem; padding: .5rem; white-space: pre; overflow: auto; }
 </style>
 </head>
 <body>
 <h1>blitzc</h1>
-<p>Nachbau des Blitz!&nbsp;128 Compilers (Skyles, V860929) in JavaScript. Alles läuft lokal im Browser.
-Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code>), weil ES-Module per <code>file://</code> nicht laden.</p>
+<p>Nachbau des Blitz!&nbsp;128 Compilers (Skyles, V860929) in JavaScript. Alles läuft lokal im Browser.<span id="srvhint">
+Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code>), weil ES-Module per <code>file://</code> nicht laden.</span></p>
 
 <label>BLITZ!.128 <small>(optional: eigene Datei statt der eingebauten V860929)</small></label>
 <input type="file" id="blitz">
@@ -30,24 +46,103 @@ Seite über einen lokalen Webserver öffnen (z.&nbsp;B. <code>npx serve js</code
 <label>Schlüssel wie in Referenzdatei <small>(optional: C/-Datei des Originals, für byte-identische Ausgabe)</small></label>
 <input type="file" id="like">
 <br><button id="go">Kompilieren</button>
+<p id="status" aria-live="polite"></p>
 <p class="files" id="files"></p>
-<pre id="screen"></pre>
+
+<h2>Fortschritt</h2>
+<div id="passes"></div>
+
+<h2>Meldungen <small id="msgcount"></small></h2>
+<textarea id="msgs" readonly spellcheck="false" aria-label="Meldungen des Compilers"></textarea>
+
 <script type="module">
-import { compile, keysOf } from './blitzc.js';
 const $ = id => document.getElementById(id);
 const read = async id => { const f = $(id).files[0]; return f ? new Uint8Array(await f.arrayBuffer()) : null; };
 const link = (data, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data])); a.download = name; a.textContent = name; return a; };
+
+// ---- compile in a worker (live progress); falls back to the page itself if no worker can be started
+const makeWorker = () => new Worker('./worker.js', { type: 'module' });
+const runInline = async (job, post) => (await import('./blitzc.js')).compileJob(job, post);
+function runJob(job, post) {
+  return new Promise(resolve => {
+    const inline = async () => { try { await runInline(job, post); } finally { resolve(); } };
+    let w, got = false;
+    try { w = makeWorker(); } catch { return inline(); }
+    w.onmessage = ev => { got = true; post(ev.data); if (ev.data.type === 'done' || ev.data.type === 'error') { w.terminate(); resolve(); } };
+    w.onerror = () => { w.terminate(); if (!got) inline(); else { post({ type: 'error', text: 'Worker abgestürzt' }); resolve(); } };
+    w.postMessage(job);
+  });
+}
+
+// ---- one row per compiler pass: bar + last line number
+const PASSES = [[0, 'PASS0', 'nur im Mehrprogramm-Modus'], [1, 'PASS1'], [2, 'PASS2']];
+const rows = {};
+for (const [n, label, idle] of PASSES) {
+  const d = document.createElement('div'); d.className = 'pass idle';
+  d.innerHTML = '<b></b><div class="bar"><i></i></div><span class="pct"></span><input type="text" readonly aria-label="letzte Zeilennummer">';
+  d.querySelector('b').textContent = label;
+  $('passes').append(d);
+  if (idle) d.title = label + ': ' + idle;
+  rows[n] = { d, bar: d.querySelector('i'), pct: d.querySelector('.pct'), line: d.querySelector('input'), idle: idle ? '–' : '' };
+}
+function resetRows() {
+  for (const r of Object.values(rows)) { r.d.className = 'pass idle'; r.bar.style.width = '0'; r.pct.textContent = r.idle; r.line.value = ''; r.frac = 0; }
+}
+function finishRow(n) {
+  const r = rows[n]; if (!r) return;
+  r.d.className = 'pass done'; r.bar.style.width = '100%'; r.pct.textContent = '100 %';
+  if (state[n]) r.line.value = state[n].line;
+}
+
+// ---- messages: appended, never overwritten; follows the end unless the reader scrolled up
+let pend = [], total = 0, frame = 0, state = {};
+function paint() {
+  frame = 0;
+  for (const [n, r] of Object.entries(rows)) {
+    const s = state[n]; if (!s) continue;
+    r.line.value = s.line;
+    if (!r.d.classList.contains('done')) { r.bar.style.width = s.pct + '%'; r.pct.textContent = Math.round(s.pct) + ' %'; }
+  }
+  if (pend.length) {
+    const ta = $('msgs'), atEnd = ta.scrollHeight - ta.scrollTop - ta.clientHeight < 24;
+    ta.value += pend.join('\n') + '\n'; pend = [];
+    if (atEnd) ta.scrollTop = ta.scrollHeight;
+    $('msgcount').textContent = '(' + total + ')';
+  }
+}
+const later = () => { if (!frame) frame = requestAnimationFrame(paint); };
+
+function onMsg(m) {
+  switch (m.type) {
+    case 'pass':
+      for (const n in rows) if (+n < m.pass && !rows[n].d.classList.contains('idle')) finishRow(n);
+      rows[m.pass].d.className = 'pass'; rows[m.pass].pct.textContent = '0 %'; break;
+    case 'progress': state[m.pass] = { line: m.line, pct: 100 * m.index / m.total }; later(); break;
+    case 'message': pend.push(m.text); total++; later(); break;
+    case 'error': pend.push('FEHLER: ' + m.text); total++; later(); $('status').className = 'err'; $('status').textContent = 'Fehler: ' + m.text; break;
+    case 'done': finish(m); break;
+  }
+}
+let t0 = 0;
+function finish(m) {
+  if (frame) cancelAnimationFrame(frame); paint();
+  for (const n in rows) if (!rows[n].d.classList.contains('idle')) finishRow(n);
+  const name = $('name').value || 'PROG', sec = ((performance.now() - t0) / 1000).toFixed(2).replace('.', ',');
+  $('files').replaceChildren(...[m.c && link(m.c, 'c-' + name.toLowerCase() + '.prg'), m.z && link(m.z, 'z-' + name.toLowerCase() + '.prg')].filter(Boolean));
+  $('status').className = m.errors ? 'err' : '';
+  $('status').textContent = `Fertig in ${sec} s – Fehler: ${m.errors}, Extensions: ${m.extensions}`;
+}
+
 $('go').onclick = async () => {
-  const blitz = await read('blitz'), src = await read('src');
-  if (!src) { $('screen').textContent = 'Quellprogramm wählen.'; return; }
-  const like = await read('like');
-  const name = $('name').value || 'PROG';
-  try {
-    const r = compile(src, blitz, { name, runtime: $('runtime').checked, fullSyntax: $('full').checked, ...(like ? keysOf(like) : {}) });
-    $('files').replaceChildren(...[r.c && link(r.c, 'c-' + name.toLowerCase() + '.prg'), r.z && link(r.z, 'z-' + name.toLowerCase() + '.prg')].filter(Boolean));
-    $('screen').textContent = r.screen;
-  } catch (e) { $('screen').textContent = 'Fehler: ' + e.message; }
+  const src = await read('src');
+  if (!src) { $('status').className = 'err'; $('status').textContent = 'Quellprogramm wählen.'; return; }
+  const job = { src, blitz: await read('blitz'), like: await read('like'), name: $('name').value || 'PROG', runtime: $('runtime').checked, fullSyntax: $('full').checked };
+  $('go').disabled = true; $('files').replaceChildren(); $('msgs').value = ''; $('msgcount').textContent = '';
+  pend = []; total = 0; state = {}; resetRows(); $('status').className = ''; $('status').textContent = 'Kompiliere …'; t0 = performance.now();
+  await runJob(job, onMsg);
+  $('go').disabled = false;
 };
+resetRows();
 </script>
 </body>
 </html>
