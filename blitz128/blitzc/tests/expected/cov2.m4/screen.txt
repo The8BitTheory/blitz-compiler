@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         000023
+pass2      ( mode:4/1)
+ 190       program: prog
+
+?type mismatch error in 20
+?overflow error in 40
+?syntax error in 60
+?syntax error in 60
+?syntax error in 80
+?syntax error in 160
+errors: 6      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         000206
+pass2      ( mode:1/1)
+ 410       program: prog
+
+?syntax error in 60
+?syntax error in 70
+?syntax error in 100
+?syntax error in 180
+?syntax error in 230
+errors: 5      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,25 @@
+pass1         BLITZ! 128         001907
+pass2      ( mode:1/1)
+ 60102     program: prog
+
+errors: 0      extensions: 0
+ 0 ok
+
+ready.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
