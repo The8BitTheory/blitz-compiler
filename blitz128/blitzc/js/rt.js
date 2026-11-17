@@ -90,7 +90,9 @@ export class Runtime {
     const mem = this.mem = new Uint8Array(0x10000);
     mem.set(blitz.subarray(2), 0x1c01);
     const fend = 0x1c01 + blitz.length - 2;
-    mem.set([0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0], fend);   // C128 RAM power-on pattern behind the file
+    // C128 RAM power-on pattern behind the file. The ORIGINAL BLITZ!.128 (V860929) is 10 bytes short (image 2 needs them), so
+    // C/ files from it contain this pattern in place of the tail of the dispatch table and PI; the fixed build contains the real bytes.
+    mem.set([0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0], fend);
     this.patch = applyPatcher(mem, 0x1c01, 0x46b0);
     // compiler header: keys + DATA table
     const H = 0x46b0; let a = 0x2f; const K = [];

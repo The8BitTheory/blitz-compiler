@@ -2,6 +2,8 @@
 
 # blitzc – a re-implementation of the Blitz! 128 compiler (Skyles, V860929)
 
+> **Fixed build V261117.** The original `BLITZ!.128` (V860929) is 10 bytes short; programs with graphics statements (the `$4001` runtime) then contain RAM garbage instead of the tail of the dispatch table (CIRCLE, PAINT, BOX, `$44`) and the constant PI. `tools/patch_blitz128.py` appends the missing bytes (`fixed/blitz!.128.prg`, version string V261117); this port embeds the fixed build. Details: `tools/patch_blitz128.py`.
+
 Goal: the compiler runs without an emulator (Node and browser). Input is a tokenized BASIC 7 PRG, output is `C/`, `Z/` and `D/`, byte-identical to the original for the same six random keys.
 
 ## Status
