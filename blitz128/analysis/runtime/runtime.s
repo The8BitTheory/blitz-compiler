@@ -112,25 +112,25 @@ start:
         cli  
         lda  $2e
         cmp  #$1c
-        beq  L1c5b
+        beq  copy_up_loop_1
         sta  ptr27
         lda  #$1c
         sta  ptr25
         ldy  #$00
         sty  ptr26
         sty  ptr24
-L1c46:
+copy_up_loop:
         lda  (ptr26),y
         sta  (ptr24),y
         iny  
-        bne  L1c46
+        bne  copy_up_loop
         inc  ptr27
         inc  ptr25
         lda  $1211
         cmp  ptr27
-        bcc  L1c5b
-        jmp  L1c46
-L1c5b:
+        bcc  copy_up_loop_1
+        jmp  copy_up_loop
+copy_up_loop_1:
         jmp  init
 ; TRAMPOLINES ($1C5E-$1CFD, 160 bytes).  Copied to $0202.. in common RAM by install_trampolines.
 ; MMU facts (C128): a STORE to $FF01..$FF04 (any value) selects pre-configuration A..D.
@@ -194,38 +194,38 @@ fout:
         ldy  #$02
         lda  #$20
         bit  fac_m3
-        bpl  L1db3
+        bpl  fout_1
         jsr  neg_int
         lda  #$2d
-L1db3:
+fout_1:
         sta  a:$fe,y
         sty  $72
         ldx  #$00
         stx  fac_m1
         lda  fac_m3
-        beq  L1dcc
+        beq  fout_2
         cmp  #$27
-        bcs  L1dd7
+        bcs  fout_3
         inx  
         cmp  #$03
-        bcs  L1dd7
+        bcs  fout_3
         inx  
-        bcc  L1dd7
-L1dcc:
+        bcc  fout_3
+fout_2:
         lda  fac_m4
-        beq  L1e1b
+        beq  fout_7
         ldx  #$02
         cmp  #$64
-        bcs  L1dd7
+        bcs  fout_3
         inx  
-L1dd7:
+fout_3:
         lda  $4555,x
         sta  ptr24
         lda  $4559,x
         sta  ptr25
         ldy  #$ff
         sec  
-L1de4:
+fout_4:
         iny  
         lda  fac_m4
         sbc  ptr25
@@ -233,7 +233,7 @@ L1de4:
         lda  fac_m3
         sbc  ptr24
         sta  fac_m3
-        bcs  L1de4
+        bcs  fout_4
         lda  fac_m4
         adc  ptr25
         sta  fac_m4
@@ -241,23 +241,23 @@ L1de4:
         adc  ptr24
         sta  fac_m3
         lda  fac_m1
-        bne  L1e08
+        bne  fout_5
         tya  
-        beq  L1e12
+        beq  fout_6
         inc  fac_m1
-L1e08:
+fout_5:
         tya  
         ora  #$30
         ldy  $72
         sta  a:$ff,y
         inc  $72
-L1e12:
+fout_6:
         inx  
         cpx  #$04
-        bcc  L1dd7
+        bcc  fout_3
         ldy  $72
         lda  fac_m4
-L1e1b:
+fout_7:
         ora  #$30
         sta  a:$ff,y
         lda  #$00
@@ -274,12 +274,12 @@ decrypt_inline:
         lda  $0101,x
         sta  fac_exp
         ldy  #$68
-L1e37:
+decrypt_inline_1:
         lda  (fac_exp),y
         eor  decrypt_tab,y
         sta  (fac_exp),y
         dey  
-        bne  L1e37
+        bne  decrypt_inline_1
         rts  
 round_fac:
 ; round_fac: ROM call $8C47 (FAC1 rounding: asl facov / increment mantissa) when facov bit 7 is set.  [sure: ROM disassembly]
@@ -290,9 +290,9 @@ round_fac:
         jmp  rom_call
 fout_int:
         lda  intflg
-        bmi  L1e56
+        bmi  fout_int_1
         jsr  fac_to_int
-L1e56:
+fout_int_1:
         jsr  fout
         sta  $3d
         sty  $3e
@@ -301,30 +301,30 @@ L1e56:
         rts  
 op22_ABS:
         lda  intflg
-        bpl  L1e7d
+        bpl  op0e_NEG_1
         lda  fac_m3
-        bpl  L1e6e
-L1e6b:
+        bpl  op22_ABS_2
+op22_ABS_1:
         jsr  neg_int
-L1e6e:
+op22_ABS_2:
         jmp  next_inc1
 op0e_NEG:
 ; ---- unary operators ----
         lda  intflg
-        bmi  L1e6b
+        bmi  op22_ABS_1
         lda  fac_exp
-        beq  L1e7f
+        beq  op0e_NEG_2
         lda  fac_sign
         eor  #$ff
-L1e7d:
+op0e_NEG_1:
         sta  fac_sign
-L1e7f:
+op0e_NEG_2:
         jmp  next_inc1
 op0f_NOT:
         lda  intflg
-        bmi  L1e89
+        bmi  op0f_NOT_1
         jsr  fac_to_int
-L1e89:
+op0f_NOT_1:
         lda  fac_m3
         eor  #$ff
         sta  fac_m3
@@ -332,23 +332,23 @@ L1e89:
         eor  #$ff
         sta  fac_m4
         jmp  next_inc1
-L1e98:
-        jmp  L31c7
-L1e9b:
+op0f_NOT_2:
+        jmp  tmpstr_push
+op0f_NOT_string_too_long_1:
         jmp  err_string_too_long
 str_concat:
 ; str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]
         tax  
-        bne  L1ea5
+        bne  str_concat_1
         ldx  $70
-        bne  L1eab
-L1ea5:
+        bne  str_concat_2
+str_concat_1:
         ldx  fac_m4
-        bne  L1ead
+        bne  str_concat_3
         ldx  fac_m3
-L1eab:
+str_concat_2:
         stx  $18
-L1ead:
+str_concat_3:
         lda  fac_exp
         sta  t6f
         lda  #$70
@@ -356,28 +356,28 @@ L1ead:
         sta  t6a
         clc  
         adc  fac_exp
-        bcs  L1e9b
+        bcs  op0f_NOT_string_too_long_1
         sta  fac_exp
-        beq  L1e98
+        beq  op0f_NOT_2
         lda  frespc
         ldy  frespc_hi
         sec  
         sbc  #$02
-        bcs  L1ecc
+        bcs  str_concat_4
         dey  
         sec  
-L1ecc:
+str_concat_4:
         sbc  fac_exp
-        bcs  L1ed1
+        bcs  str_concat_5
         dey  
-L1ed1:
+str_concat_5:
         cpy  fretop_hi
-        bne  L1ed7
+        bne  str_concat_6
         cmp  fretop
-L1ed7:
-        bcs  L1edc
+str_concat_6:
+        bcs  str_concat_7
         jsr  garbage_collect
-L1edc:
+str_concat_7:
         sta  frespc
         sta  fac_m1
         sta  $37
@@ -392,15 +392,15 @@ L1edc:
         jsr  rd_zp
         sta  ptr24
         ldy  t6a
-        beq  L1f09
+        beq  str_concat_8
         jsr  blkcpy_b
         lda  t6a
         clc  
         adc  $37
         sta  $37
-        bcc  L1f09
+        bcc  str_concat_8
         inc  $38
-L1f09:
+str_concat_8:
         ldy  #$02
         lda  #$66
         jsr  rd_zp_set
@@ -409,33 +409,33 @@ L1f09:
         jsr  rd_zp
         sta  ptr24
         ldy  t6f
-        beq  L1f1f
+        beq  str_concat_9
         jsr  blkcpy_b
-L1f1f:
-        jmp  L31b1
+str_concat_9:
+        jmp  str_ret_ptr
 str_compare:
 ; str_compare: string vs string, $3E<7.  Compares the common length with cmp_b, then the lengths; result -1/0 via mask.  [likely]
         ldx  fac_m4
-        bne  L1f48
+        bne  str_compare_2
         ldx  fac_m3
         stx  $18
         ldx  fac_m2
         cpx  frespc_hi
-        bne  L1f48
+        bne  str_compare_2
         ldx  fac_m1
         cpx  frespc
-        bne  L1f48
+        bne  str_compare_2
         lda  fac_exp
-        beq  L1f48
+        beq  str_compare_2
         adc  frespc
         sta  frespc
-        bcc  L1f42
+        bcc  str_compare_1
         inc  frespc_hi
-L1f42:
+str_compare_1:
         inc  frespc
-        bne  L1f48
+        bne  str_compare_2
         inc  frespc_hi
-L1f48:
+str_compare_2:
         lda  #$70
         jsr  rd_zp_set
         tax  
@@ -446,51 +446,51 @@ L1f48:
         jsr  rd_zp
         sta  t6c
         lda  facov
-        bne  L1f7f
+        bne  str_compare_4
         lda  $70
         sta  $18
         lda  t6c
         cmp  frespc_hi
-        bne  L1f7f
+        bne  str_compare_4
         lda  t6b
         cmp  frespc
-        bne  L1f7f
+        bne  str_compare_4
         txa  
-        beq  L1f7f
+        beq  str_compare_4
         adc  t6b
         sta  frespc
-        bcc  L1f79
+        bcc  str_compare_3
         inc  frespc_hi
-L1f79:
+str_compare_3:
         inc  frespc
-        bne  L1f7f
+        bne  str_compare_4
         inc  frespc_hi
-L1f7f:
+str_compare_4:
         lda  $3e
         bne  str_compare_len
         stx  t6a
-        jmp  L3e37
+        jmp  instr_core
 str_compare_len:
         cpx  fac_exp
-        beq  L1f94
+        beq  str_compare_len_1
         ldy  #$04
-        bcc  L1f94
+        bcc  str_compare_len_1
         ldy  #$01
         ldx  fac_exp
-L1f94:
+str_compare_len_1:
         sty  fac_sign
         ldy  #$ff
         inx  
         jsr  cmp_b
-        beq  L1fb9
+        beq  str_compare_len_4
         lda  #$01
-        bcs  L1fa4
+        bcs  str_compare_len_2
         lda  #$04
-L1fa4:
+str_compare_len_2:
         and  $3e
-        beq  L1faa
+        beq  str_compare_len_3
         lda  #$ff
-L1faa:
+str_compare_len_3:
         sta  fac_m3
         sta  fac_m4
         lda  #$80
@@ -498,64 +498,64 @@ L1faa:
         ldy  #$00
         sty  valtyp
         jmp  next_inc1_y0
-L1fb9:
+str_compare_len_4:
         lda  fac_sign
-        bpl  L1fa4
+        bpl  str_compare_len_2
 fcmp:
 ; fcmp: compare ARG with FAC1 (float), produce -1/0 as integer using the operator mask in $3E.  [sure]
         ldy  t6a
-        bne  L1fe3
+        bne  fcmp_7
         ldy  fac_exp
-        beq  L1fcd
-L1fc5:
+        beq  fcmp_3
+fcmp_1:
         lda  fac_sign
         bmi  *+9
-L1fc9:
+fcmp_2:
         lda  #$04
-        bne  L1fd2
-L1fcd:
+        bne  fcmp_5
+fcmp_3:
         lda  #$02
         bit  $01a9
-L1fd2:
+fcmp_5:
         and  $3e
-        beq  L1fd8
+        beq  fcmp_6
         lda  #$ff
-L1fd8:
+fcmp_6:
         sta  fac_m3
         sta  fac_m4
         lda  #$80
         sta  intflg
         jmp  next_inc1_y0
-L1fe3:
+fcmp_7:
         lda  fac_exp
-        bne  L1fed
-L1fe7:
+        bne  fcmp_9
+fcmp_8:
         lda  t6f
-        bmi  L1fc9
+        bmi  fcmp_2
         bpl  *-27
-L1fed:
+fcmp_9:
         lda  fac_sign
         eor  t6f
-        bmi  L1fc5
+        bmi  fcmp_1
         cpy  fac_exp
-        bne  L2013
+        bne  fcmp_10
         lda  t6b
         cmp  fac_m1
-        bne  L2013
+        bne  fcmp_10
         lda  t6c
         cmp  fac_m2
-        bne  L2013
+        bne  fcmp_10
         lda  t6d
         cmp  fac_m3
-        bne  L2013
+        bne  fcmp_10
         lda  #$7f
         cmp  facov
         lda  t6e
         sbc  fac_m4
-        beq  L1fcd
-L2013:
-        bcc  L1fc5
-        bcs  L1fe7
+        beq  fcmp_3
+fcmp_10:
+        bcc  fcmp_1
+        bcs  fcmp_8
 int_left_to_arg:
 ; int_left_to_arg: left operand integer but the operation needs floats ('/' '^' or float right): convert t6d/t6e to a float in ARG.  [likely]
         ldy  #$00
@@ -565,31 +565,31 @@ int_left_to_arg:
         ldx  #$90
         lda  t6d
         sta  t6f
-        bpl  L2039
+        bpl  int_left_to_arg_2
         eor  #$ff
         sta  t6d
         lda  t6e
         eor  #$ff
         sta  t6e
         inc  t6e
-        bne  L2037
+        bne  int_left_to_arg_1
         inc  t6d
-L2037:
+int_left_to_arg_1:
         lda  t6d
-L2039:
-        bne  L2043
+int_left_to_arg_2:
+        bne  int_left_to_arg_3
         ldx  #$88
         lda  t6e
         beq  right_to_fac
         sty  t6e
-L2043:
-        bmi  L204b
-L2045:
+int_left_to_arg_3:
+        bmi  int_left_to_arg_5
+int_left_to_arg_4:
         dex  
         asl  t6e
         rol  a
-        bpl  L2045
-L204b:
+        bpl  int_left_to_arg_4
+int_left_to_arg_5:
         sta  t6b
         lda  t6e
         sta  t6c
@@ -599,9 +599,9 @@ L204b:
 right_to_fac:
 ; right_to_fac: float left operand; make the right operand float (int_to_fac) and go to fcmp ($3E<7) or float_arith_rom.  [likely]
         lda  intflg
-        bpl  L205e
+        bpl  right_to_fac_1
         jsr  int_to_fac
-L205e:
+right_to_fac_1:
         ldy  $3e
         cpy  #$07
         bcs  float_arith_rom
@@ -622,41 +622,41 @@ icmp:
         ldx  #$02
         lda  t6d
         cmp  fac_m3
-        bne  L208c
+        bne  icmp_1
         ldy  t6e
         cpy  fac_m4
-        beq  L2095
-L208c:
+        beq  icmp_3
+icmp_1:
         dex  
         eor  fac_m3
-        bmi  L20a3
-        bcs  L2095
-L2093:
+        bmi  icmp_5
+        bcs  icmp_3
+icmp_2:
         ldx  #$04
-L2095:
+icmp_3:
         txa  
         and  $3e
-        beq  L209c
+        beq  icmp_4
         lda  #$ff
-L209c:
+icmp_4:
         sta  fac_m3
         sta  fac_m4
         jmp  next_inc1_y0
-L20a3:
-        bcs  L2093
-        bcc  L2095
+icmp_5:
+        bcs  icmp_2
+        bcc  icmp_3
 right_float_to_int:
 ; right_float_to_int: right operand is float; if it is integral and in range convert it to integer and stay on the integer path, else to_float_path.  [likely]
         lda  fac_exp
-        bne  L20af
+        bne  right_float_to_int_1
         sta  fac_m3
-        beq  L20f6
-L20af:
+        beq  right_float_to_int_7
+right_float_to_int_1:
         bit  facov
-        bpl  L20b9
+        bpl  right_float_to_int_2
         jsr  round_fac
         sta  MMU_LCRA
-L20b9:
+right_float_to_int_2:
         lda  fac_m3
         ora  fac_m4
         bne  to_float_path
@@ -666,48 +666,48 @@ L20b9:
         sbc  #$90
         bpl  to_float_path
         cmp  #$f9
-        bcs  L20e3
+        bcs  right_float_to_int_5
         adc  #$07
         tax  
         lda  fac_m2
         bne  to_float_path
         lda  fac_m1
         inx  
-        beq  L20df
-L20d9:
+        beq  right_float_to_int_4
+right_float_to_int_3:
         lsr  a
         bcs  to_float_path
         inx  
-        bne  L20d9
-L20df:
+        bne  right_float_to_int_3
+right_float_to_int_4:
         stx  fac_m3
-        beq  L20f6
-L20e3:
+        beq  right_float_to_int_7
+right_float_to_int_5:
         tax  
         lda  fac_m2
         sta  $2a
         lda  fac_m1
-L20ea:
+right_float_to_int_6:
         lsr  a
         ror  $2a
         bcs  to_float_path
         inx  
-        bne  L20ea
+        bne  right_float_to_int_6
         sta  fac_m3
         lda  $2a
-L20f6:
+right_float_to_int_7:
         sta  fac_m4
         bit  fac_sign
-        bpl  L20ff
+        bpl  right_float_to_int_8
         jsr  neg_int
-L20ff:
+right_float_to_int_8:
         lda  #$80
         sta  intflg
         ldx  $3e
         cpx  #$07
-        bcs  L210c
+        bcs  right_float_to_int_9
         jmp  icmp
-L210c:
+right_float_to_int_9:
         jmp  int_addsub_mul
 to_float_path:
         jmp  int_left_to_arg
@@ -716,55 +716,55 @@ bitop_left_float:
 bitop:
 ; bitop: AND / OR of two 16-bit integers (lsr $3E: carry set = OR).  Operands that are float are converted with fac_to_int first.  [sure]
         lda  intflg
-        bmi  L211c
+        bmi  bitop_1
         jsr  fac_to_int
-L211c:
+bitop_1:
         lsr  $3e
-        bcs  L212c
+        bcs  bitop_2
         lda  t6d
         and  fac_m3
         sta  fac_m3
         lda  t6e
         and  fac_m4
-        bcc  L2136
-L212c:
+        bcc  bitop_3
+bitop_2:
         lda  t6d
         ora  fac_m3
         sta  fac_m3
         lda  t6e
         ora  fac_m4
-L2136:
+bitop_3:
         sta  fac_m4
         jmp  next_inc1_y0
-L213b:
+bitop_illegal_quantity_1:
         jmp  err_illegal_quantity
-L213e:
+bitop_4:
         lda  #$00
         sta  t6c
-        beq  L2157
+        beq  fac_to_int_arg_2
 fac_to_int_arg:
         lda  t6a
         cmp  #$81
-        bcc  L213e
+        bcc  bitop_4
         sbc  #$90
-        bpl  L213b
+        bpl  bitop_illegal_quantity_1
         tax  
         lda  t6b
-L2151:
+fac_to_int_arg_1:
         lsr  a
         ror  t6c
         inx  
-        bne  L2151
-L2157:
+        bne  fac_to_int_arg_1
+fac_to_int_arg_2:
         asl  t6f
-        bcc  L215d
+        bcc  fac_to_int_arg_3
         eor  #$ff
-L215d:
+fac_to_int_arg_3:
         sta  t6d
         lda  t6c
-        bcc  L2165
+        bcc  fac_to_int_arg_4
         eor  #$ff
-L2165:
+fac_to_int_arg_4:
         sta  t6e
         rts  
 alloc_string_x:
@@ -775,33 +775,33 @@ alloc_string_x:
         cmp  t6f
         bne  alloc_string
         inc  flags80
-        bcs  L219b
+        bcs  alloc_string_5
 alloc_string:
 ; alloc_string: reserve A bytes below frespc; runs garbage_collect when it would cross fretop.  [likely]
         lda  frespc
         ldy  frespc_hi
         sec  
         sbc  #$02
-        bcs  L2183
+        bcs  alloc_string_1
         dey  
         sec  
-L2183:
+alloc_string_1:
         sbc  fac_exp
-        bcs  L2188
+        bcs  alloc_string_2
         dey  
-L2188:
+alloc_string_2:
         cpy  fretop_hi
-        bne  L218e
+        bne  alloc_string_3
         cmp  fretop
-L218e:
-        bcs  L2193
+alloc_string_3:
+        bcs  alloc_string_4
         jsr  garbage_collect
-L2193:
+alloc_string_4:
         sta  fac_m1
         sta  frespc
         sty  fac_m2
         sty  frespc_hi
-L219b:
+alloc_string_5:
         stx  $0298
         ldy  fac_exp
         jmp  str_copy_b
@@ -811,41 +811,41 @@ op7b_STR_ARG:
         sty  $77
         sty  $0123
         bit  valtyp
-        bpl  L21b9
+        bpl  op7b_STR_ARG_1
         lda  #$67
         ldx  #$95
         ldy  #$36
-        bne  L21c2
-L21b9:
+        bne  op7b_STR_ARG_2
+op7b_STR_ARG_1:
         jsr  fac_to_str_setup
         lda  #$a3
         ldx  #$95
         ldy  #$23
-L21c2:
+op7b_STR_ARG_2:
         sta  $57
         stx  $58
         lda  #$60
         sta  $0141,y
-L21cb:
+op7b_STR_ARG_3:
         lda  ($57),y
         sta  $0140,y
         dey  
-        bpl  L21cb
+        bpl  op7b_STR_ARG_3
         lda  #$40
         ldy  #$01
-        jmp  L255d
+        jmp  rom_stmt_18
         .byte $8d,$03,$ff,$20,$d9,$51,$8d,$01,$ff,$4c,$a6,$23,$8d,$03,$ff,$20
         .byte $fa,$51,$8d,$01,$ff,$4c,$06,$22
 op15_CLR:
         ldy  #$17
         bit  $0ba0
         ldx  #$0b
-L21f9:
+xop1e_NEW_1:
         lda  $21da,y
         sta  $0100,x
         dey  
         dex  
-        bpl  L21f9
+        bpl  xop1e_NEW_1
         jmp  $0100
         .byte $a9,$00,$20,$88,$22,$a5,$3b,$85,$52,$a5,$3c,$85,$53,$ad,$b7,$46
         .byte $49,$79,$aa,$ad,$b6,$46,$49,$79,$4c,$9c,$37
@@ -869,20 +869,20 @@ init:
         jsr  init_vars
         bit  flags80
         bpl  op15_CLR
-L2247:
+init_1:
         jmp  next
 op1e_RESTORE:
         jsr  data_ptr_init
         jsr  get_word
         ora  $16
-        beq  L2247
-L2254:
+        beq  init_1
+op1e_RESTORE_1:
         ldy  #$00
         ldx  #$ee
         txa  
         eor  (dataptr),y
         cmp  #$ff
-        beq  L2247
+        beq  init_1
         tay  
         iny  
         txa  
@@ -894,18 +894,18 @@ L2254:
         tax  
         pla  
         cpx  $17
-        bne  L2273
+        bne  op1e_RESTORE_2
         cmp  $16
-        beq  L2247
-L2273:
-        bcs  L2247
+        beq  init_1
+op1e_RESTORE_2:
+        bcs  init_1
         tya  
         sec  
         adc  dataptr
         sta  dataptr
-        bcc  L2254
+        bcc  op1e_RESTORE_1
         inc  dataptr_hi
-        bcs  L2254
+        bcs  op1e_RESTORE_1
 op16_JUMP_ptr52:
         lda  $52
         ldx  $53
@@ -922,16 +922,16 @@ init_vars:
 ; Compile mode 4 ('overlay') exists to make every module's table identical (see OVERLAY.md).  [sure: VICE experiments, OVERLAY.md]
         sta  flags80
         ldx  #$05
-L228c:
+init_vars_1:
         lda  $46b0,x
         eor  #$97
         sta  t6a,x
         lda  #$00
         sta  fac_m1,x
         dex  
-        bpl  L228c
+        bpl  init_vars_1
         bit  flags80
-        bpl  L22b2
+        bpl  init_vars_3
         lda  t6e
         clc  
         adc  vbase
@@ -939,27 +939,27 @@ L228c:
         lda  t6f
         adc  vbase_hi
         cmp  strend_hi
-        bne  L22b0
+        bne  init_vars_2
         cpx  strend
-        beq  L22b2
-L22b0:
-        bcs  L22ec
-L22b2:
+        beq  init_vars_3
+init_vars_2:
+        bcs  init_vars_7
+init_vars_3:
         lda  vbase
         ldx  vbase_hi
         stx  varptr_hi
         sta  varptr
         lda  t6a
         ldx  t6b
-L22be:
+init_vars_4:
         stx  t6b
-L22c0:
+init_vars_5:
         sta  t6a
         cpx  t6d
-        bne  L22ca
+        bne  init_vars_6
         cmp  t6c
-        beq  L230e
-L22ca:
+        beq  init_vars_11
+init_vars_6:
         ldy  #$00
         lda  (t6a),y
         eor  #$b7
@@ -969,48 +969,48 @@ L22ca:
         eor  #$b7
         sta  fac_m1
         bit  flags80
-        bpl  L22f0
+        bpl  init_vars_8
         ldx  #$04
         jsr  ld_var
         cmp  fac_exp
-        bne  L22ec
+        bne  init_vars_7
         lda  fac_m4
         cmp  fac_m1
-        beq  L22f7
-L22ec:
+        beq  init_vars_9
+init_vars_7:
         asl  flags80
-        bpl  L2324
-L22f0:
+        bpl  init_vars_12
+init_vars_8:
         ldy  #$06
         ldx  #$06
         jsr  st_var
-L22f7:
+init_vars_9:
         lda  #$07
         clc  
         adc  varptr
         sta  varptr
-        bcc  L2303
+        bcc  init_vars_10
         inc  varptr_hi
         clc  
-L2303:
+init_vars_10:
         lda  t6a
         ldx  t6b
         adc  #$02
-        bcc  L22c0
+        bcc  init_vars_5
         inx  
-        bcs  L22be
-L230e:
+        bcs  init_vars_4
+init_vars_11:
         sta  $1210
         stx  $1211
         bit  flags80
-        bmi  L2324
+        bmi  init_vars_12
         lda  varptr
         ldx  varptr_hi
         sta  strend
         sta  fretop
         stx  strend_hi
         stx  fretop_hi
-L2324:
+init_vars_12:
         pla  
         tay  
         pla  
@@ -1041,19 +1041,19 @@ op7f_STMT_HEAD:
 ; statement in bytes (incl. these two).  The handler polls the collision/event flags ($127F, $1276..) and, if one fired, pushes a return frame and
 ; jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised the error.  [sure: op/length from the compiler's output; poll [likely]]
         lda  $127f
-        bmi  L2396
+        bmi  event_frame_done_2
         ldx  #$02
-L2355:
+op7f_STMT_HEAD_1:
         lda  $1276,x
-        beq  L2393
+        beq  event_frame_done_1
         tya  
         sta  $1276,x
         lda  fstk
         sec  
         sbc  #$03
-        bcs  L2367
+        bcs  op7f_STMT_HEAD_2
         dec  fstk_hi
-L2367:
+op7f_STMT_HEAD_2:
         sta  fstk
         txa  
         ora  #$fc
@@ -1071,22 +1071,22 @@ L2367:
         lda  $127c,x
         tax  
         tya  
-        jmp  L379c
-L238b:
+        jmp  jump_ax
+event_frame_done:
         lda  $127f
         and  #$7f
         sta  $127f
-L2393:
+event_frame_done_1:
         dex  
-        bpl  L2355
-L2396:
+        bpl  op7f_STMT_HEAD_1
+event_frame_done_2:
         lda  bcptr
         sta  $1202
         ldx  bcptr_hi
         stx  $1203
         clc  
         adc  #$02
-        jmp  L27ee
+        jmp  set_bcptr_lo
 op4f_END:
         clc  
 op49_STOP:
@@ -1110,18 +1110,18 @@ rom_call_f9_80:
         lda  #$f9
 rom_call_ay:
         sta  rom_call_lo
-L23c7:
+rom_call_y:
         sty  rom_call_hi
         jmp  rom_call
 install_trampolines:
 ; install_trampolines: decrypt the patcher block, copy $1C5E.. to $0202.., point the error vector $0300 at the stubs.  [sure]
         jsr  decrypt_inline
         ldx  #$a0
-L23d2:
+trampoline_copy_loop:
         lda  $1c5d,x
         sta  $0201,x
         dex  
-        bne  L23d2
+        bne  trampoline_copy_loop
         lda  #$02
         sta  $0301
         lda  #$02
@@ -1133,15 +1133,15 @@ xop24_SLEEP:
         ldx  #$da
         stx  rom_call_lo
         ldx  #$6b
-        bne  L240f
+        bne  rom_x_tail
 xop2b_KEY_def:
         lda  #$f4
         ldx  #$60
-        bne  L23fe
+        bne  xop0a_PLAY_1
 xop0a_PLAY:
         lda  #$e7
         ldx  #$6d
-L23fe:
+xop0a_PLAY_1:
         sta  rom_call_lo
         lda  #$1b
         sta  $18
@@ -1150,13 +1150,13 @@ L23fe:
         sty  ptr25
         sta  ptr24
         lda  fac_exp
-L240f:
+rom_x_tail:
         jsr  rom_call_x
         jmp  next_y0
 xop0c_SPRDEF:
         lda  #$72
         ldx  #$73
-L2419:
+xop0c_SPRDEF_1:
         jsr  rom_call_ax
         jmp  next_y0
 xop39_SCALE:
@@ -1167,11 +1167,11 @@ xop3a_SCALE_off:
         bcs  *+126
         stx  $116a
         dey  
-        bne  L2433
+        bne  xop3a_SCALE_off_1
         lda  #$72
         ldx  #$69
-        bne  L2419
-L2433:
+        bne  xop0c_SPRDEF_1
+xop3a_SCALE_off_1:
         jsr  pop_value
         jsr  fout_int
         jsr  pop_get_word
@@ -1182,7 +1182,7 @@ L2433:
         jsr  int_to_fac
         lda  #$89
         ldx  #$69
-        bne  L2419
+        bne  xop0c_SPRDEF_1
 xop05_SYS_arg:
 ; shared by: $00,$05 SYS_arg, $00,$06 ?, $00,$07 ?, $00,$08 ?
         txa  
@@ -1196,7 +1196,7 @@ xop09_PEN:
         lda  #$b4
         ldy  #$82
         jsr  rom_call_ay
-        jmp  L4110
+        jmp  fac_to_int_skip2
 xop14_COLLISION_off:
 ; COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
 ; $127F is the enable bitmask (masks at $45AB).  [likely]
@@ -1218,15 +1218,15 @@ xop15_COLLISION_on:
         lda  $127f
         ora  $45ab,x
         plp  
-        bcs  L248b
+        bcs  xop15_COLLISION_on_1
         eor  $45ab,x
-L248b:
+xop15_COLLISION_on_1:
         sta  $127f
         lda  #$04
         ldy  #$00
         sty  prevop
-        jmp  L27eb
-L2497:
+        jmp  skip_a_keep_y
+error_entries:
 ; ERROR ENTRIES.  Each entry is `ldx #errnum` hidden behind BIT opcodes ($2C), so every entry point lies inside the
 ; previous instruction; callers `jmp` to the address.  Numbers are the C128 BASIC error numbers (names from the standard list;
 ; usage in the runtime checked for 13 OUT OF DATA in READ, 14 in the integer/byte range checks, 16 in the GOSUB stack overflow,
@@ -1252,14 +1252,14 @@ error_common:
         lda  #$80
         sta  $7f
         txa  
-        bmi  L24cd
+        bmi  error_common_1
         ldy  $120c
         iny  
-        bne  L24d3
-L24cd:
+        bne  error_common_2
+error_common_1:
         jsr  trap_reset
         jmp  tr_call_vec
-L24d3:
+error_common_2:
         sta  $1208
         ldx  #$f8
         txs  
@@ -1276,44 +1276,45 @@ L24d3:
         sty  $120f
         ldy  #$ff
         sty  $120c
-        jmp  L379c
-L2500:
+        jmp  jump_ax
+load_stub_src:
+; load_stub_src: copied to $0120 by op5d/5e/5f (83 bytes).  Calls the ROM LOAD ($A1B8) or VERIFY ($9133) in config C, then looks at the load end address ($AC/$AD): $40 -> graphics-area program ($4000 := 0, $76 := $FF), $1C -> normal ($1C00 := 0, $76 := 0), sets the BASIC pointer $2E and restarts the program through the ROM ($5AA6).  [likely]
         sta  MMU_LCRC
         lda  $7f
         pha  
         lda  #$40
         sta  $7f
         dey  
-        bne  L2513
+        bne  load_stub_src_1
         jsr  $a1b8
         clc  
-        bcc  L2516
-L2513:
+        bcc  load_stub_src_2
+load_stub_src_1:
         jsr  $9133
-L2516:
+load_stub_src_2:
         ldx  $ac
         dex  
-        bne  L2532
+        bne  load_stub_src_5
         lda  $ad
         cmp  #$40
-        bne  L2527
+        bne  load_stub_src_3
         stx  $4000
         dex  
-        bne  L252e
-L2527:
+        bne  load_stub_src_4
+load_stub_src_3:
         cmp  #$1c
-        bne  L2532
+        bne  load_stub_src_5
         stx  $1c00
-L252e:
+load_stub_src_4:
         stx  $76
         sta  $2e
-L2532:
+load_stub_src_5:
         jsr  $0163
         pla  
         sta  $7f
-        bmi  L253d
+        bmi  load_stub_src_6
         jmp  $5aa6
-L253d:
+load_stub_src_6:
         jsr  $9184
         jmp  $4af6
 trap_reset:
@@ -1328,13 +1329,13 @@ trap_reset:
 xop22_GO64:
         lda  #$59
         ldy  #$5a
-        bne  L257d
+        bne  rom_stmt
 op56_TI_S_assign:
         lda  #$0b
         ldy  #$54
-L255d:
+rom_stmt_18:
         jsr  rom_call_ay
-L2560:
+rom_stmt_18_1:
         lda  #$1b
         sta  $18
         jmp  next
@@ -1342,16 +1343,16 @@ op4b_SCNCLR_n:
         jsr  get_byte
         lda  #$92
         ldy  #$6a
-        bne  L257d
+        bne  rom_stmt
 op5b_SCNCLR:
         lda  #$7b
         ldy  #$6a
-        bne  L257d
+        bne  rom_stmt
 op79_VOL:
         jsr  get_byte
         lda  #$c8
         ldy  #$71
-L257d:
+rom_stmt:
         jsr  rom_call_ay
         jmp  next
 op78_USING:
@@ -1363,22 +1364,22 @@ op78_USING:
         sta  $40
         ldy  fac_exp
         sty  $0135
-        beq  L25a3
-L2596:
+        beq  op78_USING_syntax_1
+op78_USING_1:
         dey  
         lda  #$3f
         jsr  rd_zp_set
         cmp  #$23
-        beq  L2560
+        beq  rom_stmt_18_1
         tya  
-        bne  L2596
-L25a3:
+        bne  op78_USING_1
+op78_USING_syntax_1:
         jmp  err_syntax
 op7c_USING_end:
         ror  $77
         lda  #$f2
         ldy  #$98
-        bne  L255d
+        bne  rom_stmt_18
 op59_HEX_S:
         jsr  get_word
         sty  t6f
@@ -1389,26 +1390,26 @@ op59_HEX_S:
         sty  intflg
         sty  t6e
         ldy  #$04
-        jmp  L2ff9
+        jmp  str_result_6c
 hex_byte:
 ; hex_byte: print/convert a byte as two hex digits (HEX$).  [likely]
-        jsr  L25c9
+        jsr  hex_byte_2
         txa  
-L25c9:
+hex_byte_2:
         pha  
         lsr  a
         lsr  a
         lsr  a
         lsr  a
-        jsr  L25d2
+        jsr  hex_nibble
         pla  
-L25d2:
+hex_nibble:
         and  #$0f
         ora  #$30
         cmp  #$3a
-        bcc  L25dc
+        bcc  hex_nibble_1
         adc  #$06
-L25dc:
+hex_nibble_1:
         sta  $0100,y
         iny  
         rts  
@@ -1424,7 +1425,7 @@ op68_XOR:
         eor  t6e
         sta  fac_m4
         lda  fac_m3
-        jmp  L2afe
+        jmp  ret_signed_a
 int_addsub_mul:
 ; int_addsub_mul: $07 add, $08 subtract, else multiply; overflow (V flag) falls back to float via ROM call $8D0A.  [likely]
         beq  int_add
@@ -1435,7 +1436,7 @@ int_addsub_mul:
         sta  fac_m4
         lda  t6d
         sbc  fac_m3
-        jmp  L261a
+        jmp  int_result_store
 int_add:
         clc  
         lda  t6e
@@ -1443,7 +1444,7 @@ int_add:
         sta  fac_m4
         lda  t6d
         adc  fac_m3
-L261a:
+int_result_store:
         sta  fac_m3
         bvs  int_overflow_to_float
         jmp  next_inc1_y0
@@ -1452,10 +1453,10 @@ int_overflow_to_float:
         stx  fac_m1
         stx  fac_m2
         stx  fac_sign
-        bcc  L2630
+        bcc  int_overflow_to_float_1
         dec  fac_sign
         jsr  neg_int
-L2630:
+int_overflow_to_float_1:
         lda  #$0a
         sta  rom_call_lo
         lda  #$00
@@ -1467,13 +1468,13 @@ L2630:
 int_mul_check:
         lda  fac_m1
         ora  fac_m2
-        bne  L2630
+        bne  int_overflow_to_float_1
         lda  fac_m3
-        bmi  L2630
+        bmi  int_overflow_to_float_1
         lda  fac_sign
-        bpl  L2654
+        bpl  int_mul_check_1
         jsr  neg_int
-L2654:
+int_mul_check_1:
         jmp  next_inc1_y0
 int_mul:
 ; int_mul: 16x16 shift-and-add multiply into a 32-bit accumulator (fac_m1..fac_m4); result outside 16 bit -> float.  [likely]
@@ -1481,31 +1482,31 @@ int_mul:
         eor  t6d
         sta  fac_sign
         lda  fac_m3
-        bpl  L2664
+        bpl  int_mul_1
         jsr  neg_int
-L2664:
+int_mul_1:
         lda  t6d
-        bpl  L2678
+        bpl  int_mul_2
         eor  #$ff
         sta  t6d
         lda  t6e
         eor  #$ff
         sta  t6e
         inc  t6e
-        bne  L2678
+        bne  int_mul_2
         inc  t6d
-L2678:
+int_mul_2:
         lda  fac_m3
         ldx  fac_m4
         cmp  t6d
-        bcc  L268a
+        bcc  int_mul_3
         ldy  t6d
         sta  t6d
         lda  t6e
         stx  t6e
         tax  
         tya  
-L268a:
+int_mul_3:
         ldy  #$00
         sty  fac_m1
         sty  fac_m2
@@ -1514,17 +1515,17 @@ L268a:
         sty  t6b
         sty  t6c
         tay  
-        beq  L26e1
+        beq  neg_int_2
         sta  $2a
         stx  $2b
-L269f:
+int_mul_4:
         lda  $2a
         ora  $2b
-L26a3:
+int_mul_5:
         beq  int_mul_check
         lsr  $2a
         ror  $2b
-        bcc  L26c4
+        bcc  int_mul_6
         clc  
         lda  fac_m4
         adc  t6e
@@ -1538,12 +1539,12 @@ L26a3:
         lda  fac_m1
         adc  t6b
         sta  fac_m1
-L26c4:
+int_mul_6:
         asl  t6e
         rol  t6d
         rol  t6c
         rol  t6b
-        bcc  L269f
+        bcc  int_mul_4
 neg_int:
 ; neg_int: two's-complement negate of the 16-bit integer in fac_m3/fac_m4.  [sure]
         lda  fac_m3
@@ -1553,16 +1554,16 @@ neg_int:
         eor  #$ff
         sta  fac_m4
         inc  fac_m4
-        bne  L26e0
+        bne  neg_int_1
         inc  fac_m3
-L26e0:
+neg_int_1:
         rts  
-L26e1:
+neg_int_2:
         txa  
-        beq  L26a3
+        beq  int_mul_5
         lsr  a
         tax  
-        bcc  L26fb
+        bcc  neg_int_3
         clc  
         lda  fac_m4
         adc  t6e
@@ -1573,11 +1574,11 @@ L26e1:
         lda  fac_m2
         adc  t6c
         sta  fac_m2
-L26fb:
+neg_int_3:
         asl  t6e
         rol  t6d
         rol  t6c
-        bcc  L26e1
+        bcc  neg_int_2
 op47:
         lda  $0308
         ldx  $0309
@@ -1624,9 +1625,9 @@ binop_dispatch:
         pla  
         sta  t6e
         cpx  #$0c
-        bcs  L2755
+        bcs  binop_dispatch_1
         jmp  right_to_fac
-L2755:
+binop_dispatch_1:
         jmp  bitop_left_float
 binop_int_left:
         pla  
@@ -1634,21 +1635,21 @@ binop_int_left:
         pla  
         sta  t6e
         cpx  #$0c
-        bcs  L2777
+        bcs  binop_int_left_3
         cpx  #$0a
-        bcs  L2774
+        bcs  binop_int_left_2
         ldy  intflg
-        bpl  L277a
+        bpl  binop_int_left_4
         cpx  #$07
-        bcs  L2771
+        bcs  binop_int_left_1
         jmp  icmp
-L2771:
+binop_int_left_1:
         jmp  int_addsub_mul
-L2774:
+binop_int_left_2:
         jmp  int_left_to_arg
-L2777:
+binop_int_left_3:
         jmp  bitop
-L277a:
+binop_int_left_4:
         jmp  right_float_to_int
 binop_str_left:
         pla  
@@ -1656,9 +1657,9 @@ binop_str_left:
         pla  
         sta  facov
         cpx  #$07
-        bcs  L278a
+        bcs  binop_str_left_1
         jmp  str_compare
-L278a:
+binop_str_left_1:
         jmp  str_concat
 main_op:
         tax  
@@ -1687,9 +1688,9 @@ user_return:
         lda  $1da2
         sta  $127f
         ldx  $1cff
-        beq  L27cc
-        jsr  L23d2
-L27cc:
+        beq  jump_3d3e
+        jsr  trampoline_copy_loop
+jump_3d3e:
         lda  $3d
         ldx  $3e
 bc_jump_ax:
@@ -1710,7 +1711,7 @@ next:
 ; Handlers finish with `jmp next` ($27D4: advance 1 byte), `next_inc1`, `skip_a` (advance by A) or by loading
 ; a new bcptr (jumps).
         ldy  #$00
-L27d6:
+next_pv:
         sty  prevop
         inc  bcptr
         bne  fetch
@@ -1720,27 +1721,27 @@ xop44_reinstall:
         jsr  install_trampolines
 next_y0:
         ldy  #$00
-L27e5:
+skip2_pv:
         sty  prevop
-L27e7:
+skip2:
         lda  #$02
 skip_a:
         ldy  #$00
-L27eb:
+skip_a_keep_y:
         clc  
-L27ec:
+skip_a_c:
         adc  bcptr
-L27ee:
+set_bcptr_lo:
         sta  bcptr
         bcc  fetch
-L27f2:
+set_bcptr_lo_1:
         inc  bcptr_hi
         bne  fetch
 next_inc1_y0:
         ldy  #$00
 next_inc1:
         inc  bcptr
-        beq  L27f2
+        beq  set_bcptr_lo_1
 fetch:
         lda  (bcptr),y
         eor  #$5a
@@ -1755,70 +1756,71 @@ fetch:
         ldx  vbase_hi
         adc  vbase
         sta  $61
-        bcc  L281a
+        bcc  fetch_1
         inx  
         clc  
-L281a:
+fetch_1:
         stx  $62
         adc  #$02
         sta  varptr
-        bcc  L2823
+        bcc  fetch_2
         inx  
-L2823:
+fetch_2:
         stx  varptr_hi
-L2825:
+var_store:
+; var_store ($C0-$DF): the token after an expression assigns the value in FAC to the variable (Rosetta: `b1 c0` = a=1).  $80-$9F load the same slots as second operands.  [sure: Rosetta, likely: details]
         lda  #$61
         ldy  #$00
         jsr  rd_zp_set
-        bpl  L283b
-L282e:
+        bpl  var_store_int2_1
+var_store_int:
         ldy  #$01
         lda  intflg
-        bmi  L2859
+        bmi  var_store_float_conv_3
         jsr  fac_to_int
-L2837:
+var_store_int2:
         ldy  #$01
-        bne  L2859
-L283b:
+        bne  var_store_float_conv_3
+var_store_int2_1:
         iny  
         jsr  rd_zp
-        bmi  L2861
-L2841:
+        bmi  var_store_float_conv_4
+var_store_float:
         lda  intflg
-        bpl  L2848
-L2845:
+        bpl  var_store_float_conv_1
+var_store_float_conv:
         jsr  int_to_fac
-L2848:
+var_store_float_conv_1:
         bit  facov
-        bpl  L284f
+        bpl  var_store_float_conv_2
         jsr  round_fac
-L284f:
+var_store_float_conv_2:
         lda  fac_sign
         ora  #$7f
         and  fac_m1
         sta  fac_m1
         ldy  #$04
-L2859:
+var_store_float_conv_3:
         ldx  #$04
         jsr  st_var
         jmp  next
-L2861:
-        jmp  L2c7a
+var_store_float_conv_4:
+        jmp  str_store
 var_long_or_const:
         cmp  #$e6
         bcs  operand_push
         sta  prevop
         inc  bcptr
-        beq  L2878
-L286e:
+        beq  var_long_or_const_3
+var_long_or_const_1:
         cmp  #$e4
-        bcc  L2875
-        jmp  L2b3d
-L2875:
+        bcc  var_long_or_const_2
+        jmp  var_long_ref
+var_long_or_const_2:
         jmp  const_small
-L2878:
+var_long_or_const_3:
         inc  bcptr_hi
-        bne  L286e
+        bne  var_long_or_const_1
 operand_push:
 ; operand_push: tokens $80-$BF and $E6+.  prevop != 0 means FAC already holds a left operand: push it (push_left).
 ; A float that is a whole number in 16 bit range is narrowed to an integer first (push_narrow_try) so integer arithmetic stays on the
@@ -1831,10 +1833,10 @@ push_left:
         ldy  intflg
         bne  push_int
         lda  fac_exp
-        bne  L2891
+        bne  push_left_1
         sta  fac_m3
-        beq  L28d8
-L2891:
+        beq  push_narrow_try_5
+push_left_1:
         bit  facov
         bpl  push_narrow_try
         jsr  round_fac
@@ -1849,40 +1851,40 @@ push_narrow_try:
         sbc  #$90
         bpl  push_float
         cmp  #$f9
-        bcs  L28c5
+        bcs  push_narrow_try_3
         adc  #$07
         tax  
         lda  fac_m2
         bne  push_float
         lda  fac_m1
         inx  
-        beq  L28c1
-L28bb:
+        beq  push_narrow_try_2
+push_narrow_try_1:
         lsr  a
         bcs  push_float
         inx  
-        bne  L28bb
-L28c1:
+        bne  push_narrow_try_1
+push_narrow_try_2:
         stx  fac_m3
-        beq  L28d8
-L28c5:
+        beq  push_narrow_try_5
+push_narrow_try_3:
         tax  
         lda  fac_m2
         sta  $2a
         lda  fac_m1
-L28cc:
+push_narrow_try_4:
         lsr  a
         ror  $2a
         bcs  push_float
         inx  
-        bne  L28cc
+        bne  push_narrow_try_4
         sta  fac_m3
         lda  $2a
-L28d8:
+push_narrow_try_5:
         sta  fac_m4
         ldy  #$80
         bit  fac_sign
-        bpl  L28fe
+        bpl  push_int_1
         jsr  neg_int
         jmp  push_int
 push_float:
@@ -1900,16 +1902,16 @@ push_float:
         pha  
         tya  
         pha  
-        beq  L2904
+        beq  push_int_2
 push_int:
         lda  fac_m4
-L28fe:
+push_int_1:
         pha  
         lda  fac_m3
         pha  
         tya  
         pha  
-L2904:
+push_int_2:
         lda  prevop
 operand_load:
         cmp  #$a0
@@ -1919,23 +1921,23 @@ operand_load:
         ldx  vbase_hi
         adc  vbase
         sta  $61
-        bcc  L2918
+        bcc  operand_load_1
         inx  
         clc  
-L2918:
+operand_load_1:
         stx  $62
         adc  #$02
         sta  varptr
-        bcc  L2921
+        bcc  operand_load_2
         inx  
-L2921:
+operand_load_2:
         stx  varptr_hi
-L2923:
+var_load:
         ldy  #$00
         lda  #$61
         jsr  rd_zp_set
-        bpl  L293c
-L292c:
+        bpl  var_load_int_1
+var_load_int:
         sta  intflg
         ldy  #$01
         ldx  #$04
@@ -1943,11 +1945,11 @@ L292c:
         ldy  #$00
         sty  valtyp
         jmp  next_inc1
-L293c:
+var_load_int_1:
         iny  
         jsr  rd_zp
-        bpl  L296c
-L2942:
+        bpl  var_load_float
+var_load_str:
         sta  valtyp
         lda  varptr
         sta  fac_m3
@@ -1958,20 +1960,20 @@ L2942:
         iny  
         jsr  ld_var
         jmp  next_inc1_y0
-L2957:
+var_load_str_1:
         inc  bcptr_hi
-        bne  L2963
+        bne  operand_const_1
 operand_const:
         cmp  #$a6
-        bcs  L29d5
+        bcs  const_small_3
         inc  bcptr
-        beq  L2957
-L2963:
+        beq  var_load_str_1
+operand_const_1:
         ldy  #$00
         cmp  #$a4
         bcc  const_small
-        jmp  L2b3d
-L296c:
+        jmp  var_long_ref
+var_load_float:
         ldx  #$04
         ldy  #$04
         jsr  ld_var
@@ -1984,18 +1986,18 @@ L296c:
         sty  valtyp
         sty  facov
         jmp  next_inc1
-L2986:
+var_load_float_1:
         lda  (bcptr),y
         eor  #$5a
         inc  bcptr
-        bne  L2998
+        bne  const_small_1
         inc  bcptr_hi
-        bne  L2998
+        bne  const_small_1
 const_small:
         and  #$03
         cmp  #$03
-        beq  L2986
-L2998:
+        beq  var_load_float_1
+const_small_1:
         sta  $4a
         sta  $62
         lda  (bcptr),y
@@ -2027,139 +2029,139 @@ L2998:
         adc  #$00
         sta  varptr_hi
         bit  prevop
-        bvs  L29d2
-        jmp  L2923
-L29d2:
-        jmp  L2825
-L29d5:
+        bvs  const_small_2
+        jmp  var_load
+const_small_2:
+        jmp  var_store
+const_small_3:
         cmp  #$e6
-        bcs  L2a40
+        bcs  const_small_12
         cmp  #$b0
-        bcc  L29ec
+        bcc  const_small_5
         sta  intflg
         and  #$0f
-L29e1:
+const_small_4:
         sta  fac_m4
         ldy  #$00
         sty  fac_m3
         sty  valtyp
         jmp  next_inc1
-L29ec:
+const_small_5:
         ldx  #$00
         cmp  #$a9
-        bcc  L29f5
-        jmp  L2a89
-L29f5:
+        bcc  const_small_6
+        jmp  const_ops
+const_small_6:
         ldy  #$01
         sta  intflg
         stx  valtyp
         cmp  #$a7
-        bcc  L2a07
-        bne  L2a14
+        bcc  const_small_7
+        bne  const_small_9
         lda  (bcptr),y
         eor  #$5a
         tax  
         iny  
-L2a07:
+const_small_7:
         lda  (bcptr),y
         eor  #$5a
         sta  fac_m4
         stx  fac_m3
         iny  
-L2a10:
+const_small_8:
         tya  
         jmp  skip_a
-L2a14:
+const_small_9:
         lda  (bcptr),y
         eor  #$5a
         sta  a:$62,y
         iny  
         cpy  #$06
-        bne  L2a14
+        bne  const_small_9
         stx  intflg
         stx  facov
         lda  fac_m1
         sta  fac_sign
         ora  #$80
         sta  fac_m1
-        bmi  L2a10
-L2a2e:
+        bmi  const_small_8
+const_small_10:
         sta  intflg
         and  #$1f
-        bpl  L29e1
-L2a34:
+        bpl  const_small_4
+const_small_11:
         lda  (bcptr),y
         eor  #$5a
         inc  bcptr
-        bne  L2a5c
+        bne  const_small_14
         inc  bcptr_hi
-        bne  L2a5c
-L2a40:
-        bne  L2a4e
+        bne  const_small_14
+const_small_12:
+        bne  const_small_13
         ldx  #$00
         stx  valtyp
         sta  intflg
         lda  $1208
-        jmp  L2aea
-L2a4e:
+        jmp  const_int16
+const_small_13:
         cmp  #$f0
-        bcs  L2a2e
+        bcs  const_small_10
         ldy  #$01
         sty  intflg
         cmp  #$e7
-        beq  L2a34
+        beq  const_small_11
         and  #$07
-L2a5c:
+const_small_14:
         sta  fac_exp
-        beq  L2a7e
+        beq  const_small_17
         lda  bcptr
         tax  
         clc  
         adc  fac_exp
         sta  bcptr
         ldy  bcptr_hi
-        bcc  L2a6e
+        bcc  const_small_15
         inc  bcptr_hi
-L2a6e:
+const_small_15:
         inx  
-        bne  L2a72
+        bne  const_small_16
         iny  
-L2a72:
+const_small_16:
         stx  t6b
         sty  t6c
         ldx  #$3e
         jsr  alloc_string
-        jmp  L31b1
-L2a7e:
-        jmp  L31c7
-L2a81:
+        jmp  str_ret_ptr
+const_small_17:
+        jmp  tmpstr_push
+const_small_18:
         ldx  #$79
         lda  #$9f
         dec  valtyp
-        bne  L2ad2
-L2a89:
+        bne  rom_ax_tail
+const_ops:
         stx  valtyp
         stx  intflg
-        beq  L2af4
+        beq  const_int16_2
         cmp  #$ad
-        beq  L2ace
-        bcs  L2aa1
+        beq  const_ops_4
+        bcs  const_ops_1
         cmp  #$ab
-        beq  L2ad8
+        beq  rom_ax_tail_1
         bcc  pi_load
         lda  #$11
         ldx  #$7a
-        bne  L2ad2
-L2aa1:
+        bne  rom_ax_tail
+const_ops_1:
         inc  intflg
         cmp  #$ae
-        bne  L2a81
+        bne  const_small_18
         lda  $7a
-        bne  L2ab2
+        bne  const_ops_2
         ldx  #$79
         lda  #$e3
         jsr  rom_call_ax
-L2ab2:
+const_ops_2:
         lda  #$00
         sta  t6f
         sta  $53
@@ -2168,63 +2170,63 @@ L2ab2:
         lda  #$7b
         sta  $0233
         ldy  #$ff
-L2ac3:
+const_ops_3:
         iny  
         jsr  rd_zp
-        bne  L2ac3
+        bne  const_ops_3
         sty  fac_exp
-        jmp  L316d
-L2ace:
+        jmp  str_result
+const_ops_4:
         lda  #$3e
         ldx  #$7a
-L2ad2:
+rom_ax_tail:
         jsr  rom_call_ax
         jmp  next_inc1_y0
-L2ad8:
+rom_ax_tail_1:
         sta  intflg
         lda  $ba
         cmp  #$02
-        bne  L2ae8
+        bne  rom_ax_tail_2
         lda  $0a14
         stx  $0a14
-        bcs  L2aea
-L2ae8:
+        bcs  const_int16
+rom_ax_tail_2:
         lda  $90
-L2aea:
-        bpl  L2aed
+const_int16:
+        bpl  const_int16_1
         dex  
-L2aed:
+const_int16_1:
         stx  fac_m3
         sta  fac_m4
         jmp  next_inc1_y0
-L2af4:
+const_int16_2:
         ldx  $1209
         lda  $120a
-L2afa:
+const_int16_3:
         stx  fac_m4
         sta  fac_m3
-L2afe:
-        bmi  L2b05
+ret_signed_a:
+        bmi  ret_signed_a_1
         ldy  #$00
-        jmp  L2f7e
-L2b05:
+        jmp  ret_int_set
+ret_signed_a_1:
         clc  
         jmp  int_overflow_to_float
 pi_load:
 ; pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]
         stx  facov
         ldx  #$05
-L2b0d:
+pi_load_1:
         lda  pi_const,x
         sta  fac_exp,x
         dex  
-        bpl  L2b0d
+        bpl  pi_load_1
         jmp  next_inc1_y0
 op4d_POINTER:
         ldx  varptr
         lda  varptr_hi
-        bne  L2afa
-L2b1e:
+        bne  const_int16_3
+op4d_POINTER_1:
         lda  (bcptr),y
         eor  #$5a
         clc  
@@ -2236,19 +2238,19 @@ L2b1e:
         adc  strend_hi
         sta  t6b
         inc  bcptr
-        bne  L2b36
+        bne  op4d_POINTER_2
         inc  bcptr_hi
-L2b36:
+op4d_POINTER_2:
         ldy  #$00
         lda  #$6a
-        jmp  L2b46
-L2b3d:
-        bne  L2b1e
+        jmp  var_long_ref2
+var_long_ref:
+        bne  op4d_POINTER_1
         lda  (bcptr),y
         eor  #$5a
         tay  
         lda  #$31
-L2b46:
+var_long_ref2:
         jsr  rd_zp_set
         clc  
         tax  
@@ -2256,10 +2258,10 @@ L2b46:
         sta  $61
         iny  
         txa  
-        bne  L2b58
+        bne  var_long_ref2_1
         jsr  rd_zp
-        beq  L2bb6
-L2b58:
+        beq  var_long_ref2_bad_subscript_1
+var_long_ref2_1:
         jsr  rd_zp
         adc  strend_hi
         sta  $62
@@ -2282,7 +2284,7 @@ L2b58:
         sta  $5b
         iny  
         pla  
-        bmi  L2b9d
+        bmi  var_long_ref2_2
         pla  
         sta  t6f
         pla  
@@ -2298,33 +2300,33 @@ L2b58:
         pha  
         lda  t6d
         pha  
-L2b9d:
+var_long_ref2_2:
         jsr  rd_zp
         sta  t6a
         pla  
         sta  $73
         cmp  t6a
-        bcc  L2bb9
-        bne  L2bb6
+        bcc  var_long_ref2_3
+        bne  var_long_ref2_bad_subscript_1
         iny  
         jsr  rd_zp
         sta  t6a
         pla  
         cmp  t6a
-        bcc  L2bbb
-L2bb6:
+        bcc  var_long_ref2_4
+var_long_ref2_bad_subscript_1:
         jmp  err_bad_subscript
-L2bb9:
+var_long_ref2_3:
         iny  
         pla  
-L2bbb:
+var_long_ref2_4:
         sta  $72
         dec  $0d
-        beq  L2c1d
-L2bc1:
+        beq  var_long_ref2_10
+var_long_ref2_5:
         iny  
         pla  
-        bmi  L2bdc
+        bmi  var_long_ref2_6
         pla  
         sta  t6f
         pla  
@@ -2340,32 +2342,32 @@ L2bc1:
         pha  
         lda  t6d
         pha  
-L2bdc:
+var_long_ref2_6:
         jsr  rd_zp
         sta  t6a
         pla  
         sta  t6d
         cmp  t6a
-        bcc  L2bf8
-        bne  L2bf5
+        bcc  var_long_ref2_7
+        bne  var_long_ref2_bad_subscript_2
         iny  
         jsr  rd_zp
         sta  t6a
         pla  
         cmp  t6a
-        bcc  L2bfa
-L2bf5:
+        bcc  var_long_ref2_8
+var_long_ref2_bad_subscript_2:
         jmp  err_bad_subscript
-L2bf8:
+var_long_ref2_7:
         iny  
         pla  
-L2bfa:
+var_long_ref2_8:
         sta  t6e
         tax  
         lda  $73
         ora  $72
         clc  
-        beq  L2c12
+        beq  var_long_ref2_9
         ldx  #$7e
         lda  #$3e
         jsr  rom_call_ax
@@ -2374,28 +2376,28 @@ L2bfa:
         tax  
         tya  
         ldy  ptr24
-L2c12:
+var_long_ref2_9:
         adc  t6d
         stx  $72
         sta  $73
         dec  $0d
-        bne  L2bc1
+        bne  var_long_ref2_5
         txa  
-L2c1d:
+var_long_ref2_10:
         ldx  $73
         asl  a
         rol  $73
         bit  $47
-        bmi  L2c48
+        bmi  var_long_ref2_13
         bit  $48
-        bmi  L2c5e
+        bmi  var_long_ref2_15
         asl  a
         rol  $73
         adc  $72
-        bcc  L2c33
+        bcc  var_long_ref2_11
         inx  
         clc  
-L2c33:
+var_long_ref2_11:
         adc  $5a
         sta  varptr
         txa  
@@ -2403,28 +2405,28 @@ L2c33:
         adc  $5b
         sta  varptr_hi
         bit  prevop
-        bvc  L2c45
-        jmp  L2841
-L2c45:
-        jmp  L296c
-L2c48:
+        bvc  var_long_ref2_12
+        jmp  var_store_float
+var_long_ref2_12:
+        jmp  var_load_float
+var_long_ref2_13:
         adc  $5a
         sta  varptr
         lda  $73
         adc  $5b
         sta  varptr_hi
         bit  prevop
-        bvs  L2c5b
+        bvs  var_long_ref2_14
         lda  #$80
-        jmp  L292c
-L2c5b:
-        jmp  L282e
-L2c5e:
+        jmp  var_load_int
+var_long_ref2_14:
+        jmp  var_store_int
+var_long_ref2_15:
         adc  $72
-        bcc  L2c64
+        bcc  var_long_ref2_16
         inx  
         clc  
-L2c64:
+var_long_ref2_16:
         adc  $5a
         sta  varptr
         txa  
@@ -2432,43 +2434,43 @@ L2c64:
         adc  $5b
         sta  varptr_hi
         bit  prevop
-        bvs  L2c7a
+        bvs  str_store
         lda  #$ff
         ldy  #$01
-        jmp  L2942
-L2c7a:
+        jmp  var_load_str
+str_store:
         lda  #$1b
         sta  $18
         lda  fac_exp
-        beq  L2ce4
+        beq  str_store_done
         ldy  fac_m2
         cpy  frespc_hi
-        bne  L2c8c
+        bne  str_store_1
         ldy  fac_m1
         cpy  frespc
-L2c8c:
-        bcc  L2ce4
+str_store_1:
+        bcc  str_store_done
         lda  fac_m4
-        beq  L2ccd
+        beq  str_store_ptr
         ldy  frespc_hi
         lda  frespc
         sec  
         sbc  #$02
-        bcs  L2c9d
+        bcs  str_store_2
         dey  
         sec  
-L2c9d:
+str_store_2:
         sbc  fac_exp
-        bcs  L2ca2
+        bcs  str_store_3
         dey  
-L2ca2:
+str_store_3:
         cpy  fretop_hi
-        bne  L2ca8
+        bne  str_store_4
         cmp  fretop
-L2ca8:
-        bcs  L2cad
+str_store_4:
+        bcs  str_store_5
         jsr  garbage_collect
-L2cad:
+str_store_5:
         sta  fac_m1
         sta  frespc
         sta  $37
@@ -2484,7 +2486,7 @@ L2cad:
         sta  ptr24
         ldy  fac_exp
         jsr  blkcpy_b
-L2ccd:
+str_store_ptr:
         ldy  fac_exp
         ldx  #$64
         lda  varptr
@@ -2492,26 +2494,26 @@ L2ccd:
         ldx  fac_m2
         lda  varptr_hi
         iny  
-        bne  L2cdf
+        bne  str_store_ptr_1
         inc  fac_m2
-L2cdf:
+str_store_ptr_1:
         jsr  wr_zp
         stx  fac_m2
-L2ce4:
+str_store_done:
         ldy  #$02
         ldx  #$09
         jsr  ld_var
         tay  
-        beq  L2cfd
+        beq  str_store_done_2
         ldx  #$6b
         jsr  wr_zp_set
         lda  #$ff
         iny  
-        bne  L2cfa
+        bne  str_store_done_1
         inc  t6c
-L2cfa:
+str_store_done_1:
         jsr  wr_zp
-L2cfd:
+str_store_done_2:
         ldy  #$02
         ldx  #$02
         jsr  st_var
@@ -2530,7 +2532,7 @@ pop_value:
         sta  $58
         pla  
         sta  intflg
-        bne  L2d28
+        bne  pop_value_1
         sta  facov
         pla  
         sta  fac_sign
@@ -2540,18 +2542,18 @@ pop_value:
         sta  fac_m1
         pla  
         sta  fac_m2
-L2d28:
+pop_value_1:
         pla  
         sta  fac_m3
         pla  
         sta  fac_m4
         jmp  ($0057)
-L2d31:
+pop_value_2:
         ldx  #$00
         lda  fac_sign
-        bpl  L2d38
+        bpl  pop_value_3
         dex  
-L2d38:
+pop_value_3:
         stx  fac_m3
         stx  fac_m4
         lda  #$80
@@ -2568,117 +2570,117 @@ int_to_fac:
         ldx  #$90
         lda  fac_m3
         sta  fac_sign
-        bpl  L2d5a
+        bpl  int_to_fac_1
         jsr  neg_int
         lda  fac_m3
-L2d5a:
-        bne  L2d64
+int_to_fac_1:
+        bne  int_to_fac_2
         ldx  #$88
         lda  fac_m4
-        beq  L2d78
+        beq  int_to_fac_5
         sty  fac_m4
-L2d64:
-        bmi  L2d6c
-L2d66:
+int_to_fac_2:
+        bmi  int_to_fac_4
+int_to_fac_3:
         dex  
         asl  fac_m4
         rol  a
-        bpl  L2d66
-L2d6c:
+        bpl  int_to_fac_3
+int_to_fac_4:
         sta  fac_m1
         lda  fac_m4
         sta  fac_m2
         stx  fac_exp
         sty  fac_m3
         sty  fac_m4
-L2d78:
+int_to_fac_5:
         rts  
-L2d79:
+coerce_to_0e:
         lda  intflg
         and  #$80
         cmp  $0e
-        beq  L2d78
+        beq  int_to_fac_5
         tax  
         bmi  int_to_fac
 fac_to_int:
 ; fac_to_int: convert FAC1 to a 16-bit integer, error (jmp $24A3 = illegal quantity) if out of range.  [likely]
         bit  facov
-        bpl  L2d8e
+        bpl  fac_to_int_1
         jsr  round_fac
         sta  MMU_LCRA
-L2d8e:
+fac_to_int_1:
         lda  fac_exp
         cmp  #$81
-        bcc  L2d31
+        bcc  pop_value_2
         ldx  fac_sign
-        bmi  L2dc4
+        bmi  fac_to_int_8
         sbc  #$90
-        bpl  L2e19
+        bpl  get_word_illegal_quantity_1
         cmp  #$f9
-        bcs  L2db0
+        bcs  fac_to_int_4
         adc  #$07
         tax  
         lda  fac_m1
         inx  
-        beq  L2dac
-L2da8:
+        beq  fac_to_int_3
+fac_to_int_2:
         lsr  a
         inx  
-        bne  L2da8
-L2dac:
+        bne  fac_to_int_2
+fac_to_int_3:
         stx  fac_m3
-        beq  L2dbd
-L2db0:
+        beq  fac_to_int_7
+fac_to_int_4:
         tax  
         lda  fac_m1
-L2db3:
+fac_to_int_5:
         lsr  a
         ror  fac_m2
         inx  
-        bne  L2db3
-L2db9:
+        bne  fac_to_int_5
+fac_to_int_6:
         sta  fac_m3
         lda  fac_m2
-L2dbd:
+fac_to_int_7:
         sta  fac_m4
         lda  #$80
         sta  intflg
         rts  
-L2dc4:
+fac_to_int_8:
         sbc  #$90
-        bmi  L2dda
-        bne  L2e19
+        bmi  fac_to_int_9
+        bne  get_word_illegal_quantity_1
         ldx  fac_m1
         cpx  #$81
-        bcs  L2e19
+        bcs  get_word_illegal_quantity_1
         lda  fac_m2
         ora  fac_m3
         ora  fac_m4
-        beq  L2dac
-        bne  L2e19
-L2dda:
+        beq  fac_to_int_3
+        bne  get_word_illegal_quantity_1
+fac_to_int_9:
         tax  
         lda  #$02
         sta  MMU_CR
         jsr  $892c
         sta  MMU_LCRA
         lda  fac_m1
-L2de8:
+fac_to_int_10:
         sec  
         ror  a
         ror  fac_m2
         inx  
-        bne  L2de8
-        beq  L2db9
-L2df1:
-        jsr  L2e30
+        bne  fac_to_int_10
+        beq  fac_to_int_6
+fac_to_int_11:
+        jsr  fac_round_word
         sta  fac_m3
         stx  fac_m4
         jsr  neg_int
-L2dfb:
+fac_to_int_12:
         lda  fac_m3
         ldx  fac_m4
-        jmp  L2e57
+        jmp  store_word_1617
 pop_get_word:
         pla  
         sta  $47
@@ -2692,90 +2694,90 @@ pop_get_word:
 get_word:
 ; get_word: current value -> 16-bit unsigned in X(lo)/A(hi) and $16/$17; range errors jump to $24A3.  [likely]
         lda  intflg
-        bpl  L2e2c
+        bpl  get_word_signed_1
         ldx  fac_m4
         lda  fac_m3
-        bpl  L2e57
-L2e19:
+        bpl  store_word_1617
+get_word_illegal_quantity_1:
         jmp  err_illegal_quantity
         .byte $06,$80,$30,$e2,$a9,$00,$aa,$60
 get_word_signed:
         lda  intflg
-        bmi  L2dfb
+        bmi  fac_to_int_12
         lda  fac_sign
-        bmi  L2df1
-L2e2c:
+        bmi  fac_to_int_11
+get_word_signed_1:
         lda  fac_sign
-        bmi  L2e19
-L2e30:
+        bmi  get_word_illegal_quantity_1
+fac_round_word:
         bit  facov
-        bpl  L2e3a
+        bpl  fac_round_word_1
         jsr  round_fac
         sta  MMU_LCRA
-L2e3a:
+fac_round_word_1:
         lda  fac_exp
         cmp  #$81
-        bcs  L2e45
+        bcs  fac_round_word_2
         lda  #$00
         tax  
-        beq  L2e57
-L2e45:
+        beq  store_word_1617
+fac_round_word_2:
         sbc  #$91
-        bpl  L2e19
+        bpl  get_word_illegal_quantity_1
         tax  
         lda  fac_m1
         inx  
-        beq  L2e55
-L2e4f:
+        beq  fac_round_word_4
+fac_round_word_3:
         lsr  a
         ror  fac_m2
         inx  
-        bne  L2e4f
-L2e55:
+        bne  fac_round_word_3
+fac_round_word_4:
         ldx  fac_m2
-L2e57:
+store_word_1617:
         sta  $17
         stx  $16
         rts  
 get_byte:
 ; get_byte: current value -> 8-bit in X (error if > 255).  Used by nearly every statement parameter.  [sure]
         lda  intflg
-        bpl  L2e67
+        bpl  get_byte_float
         ldx  fac_m4
         lda  fac_m3
-        bne  L2e19
+        bne  get_word_illegal_quantity_1
         rts  
-L2e67:
+get_byte_float:
         bit  facov
-        bpl  L2e71
+        bpl  get_byte_float_1
         jsr  round_fac
         sta  MMU_LCRA
-L2e71:
+get_byte_float_1:
         lda  fac_sign
-        bmi  L2e19
+        bmi  get_word_illegal_quantity_1
         lda  fac_exp
         cmp  #$81
-        bcc  L2e91
+        bcc  get_byte_float_5
         sbc  #$89
-        bpl  L2e19
+        bpl  get_word_illegal_quantity_1
         tax  
         lda  fac_m1
         inx  
-        beq  L2e89
-L2e85:
+        beq  get_byte_float_3
+get_byte_float_2:
         lsr  a
         inx  
-        bne  L2e85
-L2e89:
+        bne  get_byte_float_2
+get_byte_float_3:
         tax  
-L2e8a:
+get_byte_float_4:
         stx  fac_m4
         lda  #$00
         sta  fac_m3
         rts  
-L2e91:
+get_byte_float_5:
         ldx  #$00
-        beq  L2e8a
+        beq  get_byte_float_4
 rom_function:
 ; rom_function: ops $23-$2D (USR FRE -- SQR RND LOG EXP COS SIN TAN ATN), also $24 FRE.  The op number selects a function
 ; vector in the BASIC ROM (table at $47D8, reached through $4C44 / $2AD2); the runtime only converts the argument and calls it.
@@ -2784,51 +2786,51 @@ rom_function:
         pha  
         lda  intflg
         sty  intflg
-        bpl  L2ea0
+        bpl  rom_function_1
         jsr  int_to_fac
-L2ea0:
+rom_function_1:
         pla  
         cmp  #$37
-        bcc  L2ea7
+        bcc  rom_function_2
         sbc  #$34
-L2ea7:
+rom_function_2:
         sec  
         sbc  #$20
         asl  a
         tay  
         lda  #$44
         ldx  #$4c
-        jmp  L2ad2
+        jmp  rom_ax_tail
 op21_INT:
         lda  intflg
-        bmi  L2ed5
+        bmi  op21_INT_3
         lda  fac_exp
         cmp  #$90
-        bcc  L2ed2
+        bcc  op21_INT_2
         lda  #$02
         sta  MMU_CR
         bit  facov
-        bpl  L2ec9
+        bpl  op21_INT_1
         jsr  $8c47
-L2ec9:
+op21_INT_1:
         jsr  $8cfb
         sta  MMU_LCRA
         jmp  next_inc1_y0
-L2ed2:
+op21_INT_2:
         jsr  fac_to_int
-L2ed5:
+op21_INT_3:
         jmp  next_inc1
-L2ed8:
+op21_INT_4:
         lda  ($16),y
-        jmp  L2eec
+        jmp  ret_int_ay
 op2e_PEEK:
         jsr  get_word
         ldx  $03d5
-        beq  L2ed8
+        beq  op21_INT_4
         cmp  #$04
-        bcc  L2ed8
+        bcc  op21_INT_4
         jsr  screen_call
-L2eec:
+ret_int_ay:
         sta  fac_m4
         sty  fac_m3
         lda  #$80
@@ -2839,91 +2841,91 @@ xop01_RREG:
         lda  $04,x
         dey  
         inc  bcptr
-        bne  L2eec
+        bne  ret_int_ay
         inc  bcptr_hi
-        bne  L2eec
+        bne  ret_int_ay
 op25_POS:
         lda  $ec
         sec  
         sbc  $e6
-        jmp  L2eec
-L2f0a:
+        jmp  ret_int_ay
+op25_POS_1:
         lda  fac_m3
-        jmp  L2afe
-L2f0f:
+        jmp  ret_signed_a
+op25_POS_illegal_quantity_1:
         jmp  err_illegal_quantity
-L2f12:
+op25_POS_2:
         sty  fac_m3
         sty  fac_m4
         sty  fac_sign
-L2f18:
+op25_POS_3:
         cpy  fac_exp
-        beq  L2f0a
+        beq  op25_POS_1
         jsr  rd_zp
         iny  
         cmp  #$20
-        beq  L2f18
+        beq  op25_POS_3
         inc  fac_sign
         ldx  fac_sign
         cpx  #$05
-        beq  L2f0f
+        beq  op25_POS_illegal_quantity_1
         cmp  #$30
-        bcc  L2f0f
+        bcc  op25_POS_illegal_quantity_1
         cmp  #$3a
-        bcc  L2f3e
+        bcc  op25_POS_4
         cmp  #$41
-        bcc  L2f0f
+        bcc  op25_POS_illegal_quantity_1
         cmp  #$47
-        bcs  L2f0f
+        bcs  op25_POS_illegal_quantity_1
         sbc  #$06
-L2f3e:
+op25_POS_4:
         asl  a
         asl  a
         asl  a
         asl  a
         ldx  #$04
-L2f44:
+op25_POS_5:
         asl  a
         rol  fac_m4
         rol  fac_m3
         dex  
-        bne  L2f44
-        beq  L2f18
+        bne  op25_POS_5
+        beq  op25_POS_3
 op20_SGN:
         ldx  #$ff
         lda  intflg
-        bpl  L2f65
+        bpl  op20_SGN_4
         lda  fac_m3
-        bmi  L2f5e
+        bmi  op20_SGN_2
         ora  fac_m4
-        beq  L2f5f
-L2f5c:
+        beq  op20_SGN_3
+op20_SGN_1:
         ldx  #$01
-L2f5e:
+op20_SGN_2:
         txa  
-L2f5f:
+op20_SGN_3:
         tax  
-        bpl  L2f7a
+        bpl  ret_int_a0_2
         dey  
-        bmi  L2f7a
-L2f65:
+        bmi  ret_int_a0_2
+op20_SGN_4:
         lda  fac_exp
-        beq  L2f5f
+        beq  op20_SGN_3
         bit  fac_sign
-        bpl  L2f5c
-        bmi  L2f5e
-L2f6f:
+        bpl  op20_SGN_1
+        bmi  op20_SGN_2
+op20_SGN_5:
         cpx  #$32
-        bne  L2f12
+        bne  op25_POS_2
         jsr  rd_zp
-L2f76:
+ret_int_a0:
         ldy  #$00
-L2f78:
+ret_int_a0_1:
         sty  valtyp
-L2f7a:
+ret_int_a0_2:
         sta  fac_m4
         sty  fac_m3
-L2f7e:
+ret_int_set:
         lda  #$80
         sta  intflg
         jmp  next_inc1_y0
@@ -2932,41 +2934,41 @@ op2f_LEN:
         lda  #$64
         sta  $0233
         lda  fac_m4
-        bne  L2fb0
+        bne  op2f_LEN_2
         lda  fac_m3
         sta  $18
         lda  fac_m2
         cmp  frespc_hi
-        bne  L2fb0
+        bne  op2f_LEN_2
         lda  fac_m1
         cmp  frespc
-        bne  L2fb0
+        bne  op2f_LEN_2
         lda  fac_exp
-        beq  L2f78
+        beq  ret_int_a0_1
         adc  fac_m1
         sta  frespc
-        bcc  L2faa
+        bcc  op2f_LEN_1
         inc  frespc_hi
-L2faa:
+op2f_LEN_1:
         inc  frespc
-        bne  L2fb0
+        bne  op2f_LEN_2
         inc  frespc_hi
-L2fb0:
+op2f_LEN_2:
         lda  fac_exp
-        beq  L2f78
+        beq  ret_int_a0_1
         cpx  #$31
-        bcc  L2f78
-        bne  L2f6f
+        bcc  ret_int_a0_1
+        bne  op20_SGN_5
         tay  
         cpy  #$a0
-        bcc  L2fc1
+        bcc  op2f_LEN_3
         ldy  #$a0
-L2fc1:
+op2f_LEN_3:
         dey  
         jsr  rd_zp
         sta  $1d00,y
         tya  
-        bne  L2fc1
+        bne  op2f_LEN_3
         lda  fac_exp
         jsr  val_string
         jmp  next_inc1_y0
@@ -2974,9 +2976,9 @@ fac_to_str_setup:
         lda  #$02
         sta  MMU_CR
         lda  intflg
-        bmi  L2fdf
+        bmi  fac_to_str_setup_1
         jmp  $8e42
-L2fdf:
+fac_to_str_setup_1:
         jmp  fout
 op30_STR_S:
         jsr  fac_to_str_setup
@@ -2987,33 +2989,33 @@ op30_STR_S:
         sta  t6d
         sty  intflg
         dey  
-L2ff3:
+op30_STR_S_1:
         iny  
         lda  $0100,y
-        bne  L2ff3
-L2ff9:
+        bne  op30_STR_S_1
+str_result_6c:
         lda  #$6c
         sta  $52
         sty  fac_exp
-        jmp  L316d
+        jmp  str_result
 op33_CHR_S:
         jsr  get_byte
         lda  frespc
         ldy  frespc_hi
         sec  
         sbc  #$03
-        bcs  L300f
+        bcs  op33_CHR_S_1
         dey  
-L300f:
+op33_CHR_S_1:
         cpy  fretop_hi
-        bne  L3015
+        bne  op33_CHR_S_2
         cmp  fretop
-L3015:
-        bcs  L301e
+op33_CHR_S_2:
+        bcs  op33_CHR_S_3
         lda  #$01
         sta  fac_exp
         jsr  garbage_collect
-L301e:
+op33_CHR_S_3:
         sta  frespc
         sty  frespc_hi
         sta  fac_m1
@@ -3030,16 +3032,16 @@ L301e:
         iny  
         lda  #$ff
         jsr  wr_zp
-        jmp  L31c7
+        jmp  tmpstr_push
 io_status_check:
 ; io_status_check: after CHKIN/CHKOUT/OPEN/CLOSE: error handling for device >=4, restores config A.  [likely]
         pha  
         php  
         lda  $ba
         cmp  #$04
-        bcc  L305f
+        bcc  io_status_check_1
         lda  $7a
-        beq  L305f
+        beq  io_status_check_1
         ldx  #$7b
         ldy  #$28
         tya  
@@ -3049,13 +3051,13 @@ io_status_check:
         jsr  wr_zp
         lda  #$00
         sta  $7a
-L305f:
+io_status_check_1:
         plp  
         pla  
-        bcs  L3067
+        bcs  io_status_check_2
         sta  MMU_LCRA
         rts  
-L3067:
+io_status_check_2:
         tax  
         sta  MMU_LCRA
         jmp  error_common
@@ -3074,54 +3076,54 @@ xop00_GETKEY:
 op46_GET:
 ; ---- GET / INPUT / file input ----
         sty  flags80
-L3089:
+op46_GET_1:
         lda  #$02
         sta  MMU_CR
         jsr  GETIN
-        bcs  L3067
+        bcs  io_status_check_2
         tax  
-        bne  L309a
+        bne  op46_GET_2
         ldy  flags80
-        bne  L3089
-L309a:
+        bne  op46_GET_1
+op46_GET_2:
         pha  
         jsr  CLRCHN
         sta  MMU_LCRA
         sta  $15
         ldy  valtyp
-        bmi  L30c1
+        bmi  op46_GET_6
         pla  
         cmp  #$30
-        bcc  L30b0
+        bcc  op46_GET_3
         cmp  #$3a
-        bcc  L30b1
-L30b0:
+        bcc  op46_GET_4
+op46_GET_3:
         tya  
-L30b1:
+op46_GET_4:
         and  #$0f
         sta  fac_m4
         sty  fac_m3
         bit  intflg
-        bmi  L30be
-        jmp  L2845
-L30be:
-        jmp  L2837
-L30c1:
+        bmi  op46_GET_5
+        jmp  var_store_float_conv
+op46_GET_5:
+        jmp  var_store_int2
+op46_GET_6:
         pla  
-        beq  L30d1
+        beq  op46_GET_8
         ldy  fac_exp
         dey  
-        bne  L30d9
+        bne  op46_GET_9
         ldx  #$64
         jsr  wr_zp_set
-L30ce:
+op46_GET_7:
         jmp  next
-L30d1:
+op46_GET_8:
         ldx  fac_exp
-        beq  L30ce
+        beq  op46_GET_7
         sta  fac_exp
-        bne  L310f
-L30d9:
+        bne  op46_GET_13
+op46_GET_9:
         pha  
         lda  #$01
         sta  fac_exp
@@ -3129,16 +3131,16 @@ L30d9:
         ldy  frespc_hi
         sec  
         sbc  #$03
-        bcs  L30e8
+        bcs  op46_GET_10
         dey  
-L30e8:
+op46_GET_10:
         cpy  fretop_hi
-        bne  L30ee
+        bne  op46_GET_11
         cmp  fretop
-L30ee:
-        bcs  L30f3
+op46_GET_11:
+        bcs  op46_GET_12
         jsr  garbage_collect
-L30f3:
+op46_GET_12:
         sta  frespc
         sty  frespc_hi
         sta  fac_m1
@@ -3153,89 +3155,89 @@ L30f3:
         iny  
         lda  varptr_hi
         jsr  wr_zp
-L310f:
-        jmp  L2ce4
+op46_GET_13:
+        jmp  str_store_done
 op36_MID_S:
         jsr  get_byte
         jsr  pop_byte
         txa  
-        bne  L3121
+        bne  op34_LEFT_S_1
         jmp  err_illegal_quantity
 op34_LEFT_S:
 ; shared by: $34 LEFT_S, $35 RIGHT_S
         jsr  get_byte
-L3121:
+op34_LEFT_S_1:
         pla  
         sta  intflg
         pla  
         sta  $52
         pla  
         sta  $53
-        bne  L3130
+        bne  op34_LEFT_S_2
         lda  $52
         sta  $18
-L3130:
+op34_LEFT_S_2:
         lda  #$52
         jsr  rd_zp_set
         sta  t6a
         lda  (bcptr),y
         eor  #$5a
         cmp  #$35
-        bcc  L3162
-        beq  L3157
+        bcc  op34_LEFT_S_4
+        beq  op34_LEFT_S_3
         dex  
         txa  
         sta  t6f
         ldx  #$00
         clc  
         sbc  t6a
-        bcs  L316b
+        bcs  op34_LEFT_S_7
         eor  #$ff
         tax  
         cpx  fac_m4
-        bcc  L316b
+        bcc  op34_LEFT_S_7
         ldx  fac_m4
-        bcs  L316b
-L3157:
+        bcs  op34_LEFT_S_7
+op34_LEFT_S_3:
         txa  
         clc  
         sbc  t6a
         eor  #$ff
-        bcc  L3169
+        bcc  op34_LEFT_S_6
         tya  
-        bcs  L3167
-L3162:
+        bcs  op34_LEFT_S_5
+op34_LEFT_S_4:
         tya  
         cpx  t6a
-        bcc  L3169
-L3167:
+        bcc  op34_LEFT_S_6
+op34_LEFT_S_5:
         ldx  t6a
-L3169:
+op34_LEFT_S_6:
         sta  t6f
-L316b:
+op34_LEFT_S_7:
         stx  fac_exp
-L316d:
+str_result:
         lda  fac_exp
-        beq  L31c7
+        beq  tmpstr_push
         lda  frespc
         ldy  frespc_hi
         sec  
         sbc  #$02
-        bcs  L317c
+        bcs  str_result_1
         dey  
         sec  
-L317c:
+str_result_1:
         sbc  fac_exp
-        bcs  L3181
+        bcs  str_result_2
         dey  
-L3181:
+str_result_2:
         cpy  fretop_hi
-        bne  L3187
+        bne  str_result_3
         cmp  fretop
-L3187:
-        bcs  L318c
+str_result_3:
+        bcs  str_result_4
         jsr  garbage_collect
-L318c:
+str_result_4:
         sta  fac_m1
         sta  frespc
         sta  $37
@@ -3254,7 +3256,7 @@ L318c:
         sta  ptr25
         ldy  fac_exp
         jsr  blkcpy_b
-L31b1:
+str_ret_ptr:
         lda  fac_exp
         ldx  #$64
         tay  
@@ -3262,15 +3264,15 @@ L31b1:
         ldx  fac_m2
         lda  #$ff
         iny  
-        bne  L31c2
+        bne  str_ret_ptr_1
         inc  fac_m2
-L31c2:
+str_ret_ptr_1:
         jsr  wr_zp
         stx  fac_m2
-L31c7:
+tmpstr_push:
         ldx  $18
         cpx  #$24
-        bcs  L31ea
+        bcs  tmpstr_push_formula_too_complex_1
         lda  fac_exp
         sta  $00,x
         lda  fac_m1
@@ -3286,7 +3288,7 @@ L31c7:
         adc  #$03
         sta  $18
         jmp  next_inc1
-L31ea:
+tmpstr_push_formula_too_complex_1:
         jmp  err_formula_too_complex
 op4c_WAIT:
         jsr  get_word
@@ -3294,31 +3296,31 @@ op4c_WAIT:
         stx  varptr
         jsr  pop_byte
         stx  varptr_hi
-L31fa:
+op4c_WAIT_1:
         ldx  $03d5
         jsr  screen_call
         eor  varptr_hi
         and  varptr
-        beq  L31fa
+        beq  op4c_WAIT_1
         jmp  next
 op17_POKE:
         jsr  get_word
         jsr  pop_byte
         txa  
         ldy  $03d5
-        beq  L322d
+        beq  op17_POKE_2
         ldx  $17
         cpx  #$04
-        bcc  L322b
+        bcc  op17_POKE_1
         ldx  #$16
         stx  $02b9
         ldx  $459b,y
         ldy  #$00
         jsr  $02af
         jmp  next
-L322b:
+op17_POKE_1:
         ldy  #$00
-L322d:
+op17_POKE_2:
         sta  ($16),y
         jmp  next
 screen_call:
@@ -3332,9 +3334,9 @@ op4a_READ:
         txa  
         eor  (dataptr),y
         cmp  #$ff
-        bcc  L324a
+        bcc  op4a_READ_1
         jmp  err_out_of_data
-L324a:
+op4a_READ_1:
         tay  
         lda  dataptr
         adc  #$01
@@ -3346,86 +3348,86 @@ L324a:
         adc  #$03
         adc  dataptr
         sta  dataptr
-        bcc  L3262
+        bcc  op4a_READ_2
         inc  dataptr_hi
-L3262:
+op4a_READ_2:
         sty  t6f
         bit  valtyp
-        bpl  L326b
-        jmp  L3496
-L326b:
+        bpl  op4a_READ_3
+        jmp  input_str_store
+op4a_READ_3:
         tya  
-        beq  L327e
+        beq  op4a_READ_5
         cpy  #$a0
-        bcc  L3274
+        bcc  op4a_READ_4
         ldy  #$a0
-L3274:
+op4a_READ_4:
         dey  
         txa  
         eor  (t6b),y
         sta  $1d00,y
         tya  
-        bne  L3274
-L327e:
+        bne  op4a_READ_4
+op4a_READ_5:
         lda  t6f
         jsr  val_string
-L3283:
+read_store_dispatch:
         bit  $0d
-        bmi  L328a
-        jmp  L2841
-L328a:
-        jmp  L282e
-L328d:
+        bmi  read_store_dispatch_1
+        jmp  var_store_float
+read_store_dispatch_1:
+        jmp  var_store_int
+read_store_dispatch_2:
         ldx  fac_m4
-        bne  L32b3
+        bne  read_store_dispatch_4
         lda  #$1b
         sta  $18
         ldx  fac_exp
-        beq  L32df
+        beq  op3c_PRINT_semi_4
         lda  fac_m2
         cmp  frespc_hi
-        bne  L32b3
+        bne  read_store_dispatch_4
         lda  fac_m1
         cmp  frespc
-        bne  L32b3
+        bne  read_store_dispatch_4
         adc  fac_exp
         sta  frespc
-        bcc  L32ad
+        bcc  read_store_dispatch_3
         inc  frespc_hi
-L32ad:
+read_store_dispatch_3:
         inc  frespc
-        bne  L32b3
+        bne  read_store_dispatch_4
         inc  frespc_hi
-L32b3:
+read_store_dispatch_4:
         cpy  fac_exp
-        beq  L32df
+        beq  op3c_PRINT_semi_4
         ldx  #$02
         jsr  print_str
-        beq  L32df
+        beq  op3c_PRINT_semi_4
 op3c_PRINT_semi:
 ; shared by: $3C PRINT_semi, $3D PRINT_comma, $3E PRINT_nl, $43 PRINTH_value
         stx  $3e
         lda  valtyp
-        bmi  L328d
+        bmi  read_store_dispatch_2
         jsr  fac_to_str_setup
         ldx  #$00
-L32c9:
+op3c_PRINT_semi_1:
         lda  $0100,x
-        beq  L32d4
+        beq  op3c_PRINT_semi_2
         jsr  CHROUT
         inx  
-        bne  L32c9
-L32d4:
+        bne  op3c_PRINT_semi_1
+op3c_PRINT_semi_2:
         lda  #$1d
         ldx  $15
-        beq  L32dc
+        beq  op3c_PRINT_semi_3
         lda  #$20
-L32dc:
+op3c_PRINT_semi_3:
         jsr  CHROUT
-L32df:
+op3c_PRINT_semi_4:
         ldx  $3e
         cpx  #$3d
-        bcc  L3342
+        bcc  op45_PRINT_end_1
         bne  op3f_PRINT_cr
 op3b_PRINT_comma_tab:
 ; ---- PRINT family (CHROUT/CLRCHN; $42/$44 = PRINT# via CHKOUT) ----
@@ -3433,57 +3435,57 @@ op3b_PRINT_comma_tab:
         lda  $ec
         sec  
         sbc  $e6
-L32ec:
+op3b_PRINT_comma_tab_1:
         sbc  #$0a
-        bcs  L32ec
+        bcs  op3b_PRINT_comma_tab_1
         eor  #$ff
         adc  #$01
-        bpl  L3308
+        bpl  op40_SPC_1
 op40_SPC:
 ; shared by: $40 SPC, $41 TAB
         stx  $3e
         jsr  get_byte
         txa  
         lsr  $3e
-        bcc  L3308
+        bcc  op40_SPC_1
         clc  
         adc  $e6
         sec  
         sbc  $ec
-        bcc  L3342
-L3308:
+        bcc  op45_PRINT_end_1
+op40_SPC_1:
         tax  
-        beq  L3342
+        beq  op45_PRINT_end_1
         lda  #$02
         sta  MMU_CR
         ldy  #$1d
         lda  $15
-        beq  L3318
+        beq  op40_SPC_2
         ldy  #$20
-L3318:
+op40_SPC_2:
         tya  
         jsr  CHROUT
         dex  
-        bne  L3318
-        beq  L3342
+        bne  op40_SPC_2
+        beq  op45_PRINT_end_1
 op3f_PRINT_cr:
         lda  #$02
         sta  MMU_CR
         lda  #$0d
         jsr  CHROUT
         lda  $15
-        bpl  L3334
+        bpl  op3f_PRINT_cr_1
         lda  #$0a
         jsr  CHROUT
-L3334:
+op3f_PRINT_cr_1:
         cpx  #$43
-        bcc  L3342
+        bcc  op45_PRINT_end_1
 op45_PRINT_end:
         lda  #$02
         sta  MMU_CR
         jsr  CLRCHN
         sta  $15
-L3342:
+op45_PRINT_end_1:
         sta  MMU_LCRA
         jmp  next
 op42_CHKOUT:
@@ -3521,48 +3523,48 @@ op53_INPUT_num:
         lda  #$02
         sta  MMU_CR
         lda  $15
-        bne  L3398
+        bne  op53_INPUT_num_1
         lda  #$3f
         jsr  CHROUT
         lda  #$20
         jsr  CHROUT
-L3398:
+op53_INPUT_num_1:
         ldx  #$00
-L339a:
+op53_INPUT_num_2:
         jsr  CHRIN
         cmp  #$0d
-        beq  L33ac
+        beq  op53_INPUT_num_3
         sta  $1d00,x
         inx  
         cpx  #$a1
-        bne  L339a
+        bne  op53_INPUT_num_2
         jmp  err_string_too_long
-L33ac:
+op53_INPUT_num_3:
         lda  #$00
         sta  $1d00,x
         tay  
         lda  $15
-        beq  L33d1
+        beq  op53_INPUT_num_6
         lda  $ba
         cmp  #$02
-        bne  L33c4
+        bne  op53_INPUT_num_4
         lda  $0a14
         sty  $0a14
-        bcs  L33c6
-L33c4:
+        bcs  op53_INPUT_num_5
+op53_INPUT_num_4:
         lda  $90
-L33c6:
+op53_INPUT_num_5:
         and  #$02
-        bne  L33db
+        bne  op53_INPUT_num_7
         lda  $1d00
-        bne  L342c
-        beq  L3398
-L33d1:
+        bne  op51_INPUT_str_7
+        beq  op53_INPUT_num_1
+op53_INPUT_num_6:
         lda  #$0d
         jsr  CHROUT
         lda  $1d00
-        bne  L342c
-L33db:
+        bne  op51_INPUT_str_7
+op53_INPUT_num_7:
         sty  $45
         jmp  op45_PRINT_end
 op51_INPUT_str:
@@ -3571,64 +3573,64 @@ op51_INPUT_str:
         sta  MMU_CR
         stx  $3e
         ldy  $45
-        beq  L33db
+        beq  op53_INPUT_num_7
         lda  $1d00,y
-        beq  L33f4
+        beq  op51_INPUT_str_1
         cmp  #$3a
-        bne  L342b
-L33f4:
+        bne  op51_INPUT_str_6
+op51_INPUT_str_1:
         lda  $15
-        bne  L3407
+        bne  op51_INPUT_str_2
         lda  #$3f
         jsr  CHROUT
         lda  #$3f
         jsr  CHROUT
         lda  #$20
         jsr  CHROUT
-L3407:
+op51_INPUT_str_2:
         ldx  #$00
-L3409:
+op51_INPUT_str_3:
         jsr  CHRIN
         cmp  #$0d
-        beq  L341b
+        beq  op51_INPUT_str_4
         sta  $1d00,x
         inx  
         cpx  #$a1
-        bne  L3409
+        bne  op51_INPUT_str_3
         jmp  err_string_too_long
-L341b:
+op51_INPUT_str_4:
         lda  #$00
         sta  $1d00,x
         lda  $15
-        bne  L3429
+        bne  op51_INPUT_str_5
         lda  #$0d
         jsr  CHROUT
-L3429:
+op51_INPUT_str_5:
         ldy  #$ff
-L342b:
+op51_INPUT_str_6:
         iny  
-L342c:
+op51_INPUT_str_7:
         lda  $1d00,y
         cmp  #$20
-        beq  L342b
+        beq  op51_INPUT_str_6
         ldx  #$1d
         bit  valtyp
-        bmi  L34ab
+        bmi  input_str_store_3
         tya  
         pha  
         lda  #$ff
-        jsr  L4318
+        jsr  val_start
         pla  
         clc  
         adc  ptr26
         tay  
-L3445:
+input_prompt_check:
         lda  $1d00,y
-        beq  L3466
+        beq  input_prompt_check_1
         cmp  #$3a
-        beq  L3466
+        beq  input_prompt_check_1
         cmp  #$2c
-        beq  L3466
+        beq  input_prompt_check_1
         lda  #$5b
         ldx  #$57
         jsr  rom_call_ax
@@ -3637,95 +3639,95 @@ L3445:
         sta  bcptr
         sty  bcptr_hi
         jmp  next
-L3466:
+input_prompt_check_1:
         sty  $45
         ldx  $3e
         cpx  #$55
-        bcs  L3488
+        bcs  input_prompt_check_3
         ldx  $15
-        beq  L347e
+        beq  input_prompt_check_2
         lda  #$02
         sta  MMU_CR
         jsr  CLRCHN
         lda  #$00
         sta  $15
-L347e:
+input_prompt_check_2:
         tax  
-        beq  L3488
+        beq  input_prompt_check_3
         ldx  #$57
         lda  #$b6
         jsr  rom_call_ax
-L3488:
+input_prompt_check_3:
         sta  MMU_LCRA
         bit  valtyp
-        bmi  L3492
-        jmp  L3283
-L3492:
+        bmi  input_prompt_check_4
+        jmp  read_store_dispatch
+input_prompt_check_4:
         ldx  #$00
         ldy  t6f
-L3496:
+input_str_store:
         tya  
-        beq  L34a6
+        beq  input_str_store_2
         jsr  alloc_string_x
         bit  flags80
-        bpl  L34a3
-        jmp  L2ccd
-L34a3:
+        bpl  input_str_store_1
+        jmp  str_store_ptr
+input_str_store_1:
         jmp  next
-L34a6:
+input_str_store_2:
         sta  fac_exp
-        jmp  L2ce4
-L34ab:
+        jmp  str_store_done
+input_str_store_3:
         stx  t6c
         sty  t6b
         tax  
-        beq  L34d6
+        beq  input_str_store_7
         cmp  #$22
-        bne  L34ce
+        bne  input_str_store_6
         inc  t6b
         inc  $3d
-L34ba:
+input_str_store_4:
         iny  
         lda  $1d00,y
-        beq  L34d6
+        beq  input_str_store_7
         cmp  #$22
-        bne  L34ba
+        bne  input_str_store_4
         tya  
         iny  
-        bne  L34d7
-L34c8:
+        bne  input_str_store_8
+input_str_store_5:
         iny  
         lda  $1d00,y
-        beq  L34d6
-L34ce:
+        beq  input_str_store_7
+input_str_store_6:
         cmp  #$3a
-        beq  L34d6
+        beq  input_str_store_7
         cmp  #$2c
-        bne  L34c8
-L34d6:
+        bne  input_str_store_5
+input_str_store_7:
         tya  
-L34d7:
+input_str_store_8:
         sec  
         sbc  t6b
         sta  t6f
-        jmp  L3445
+        jmp  input_prompt_check
 op12_FOR:
         lda  intflg
         and  #$80
         sta  $0e
         jsr  pop_value
-        jsr  L2d79
+        jsr  coerce_to_0e
         ldx  #$05
-L34ed:
+op12_FOR_1:
         lda  fac_exp,x
         sta  t6a,x
         dex  
-        bpl  L34ed
-        bmi  L3513
+        bpl  op12_FOR_1
+        bmi  op11_FOR_nostep_2
 op11_FOR_nostep:
         lda  #$01
         ldx  intflg
-        bmi  L3509
+        bmi  op11_FOR_nostep_1
         lda  #$81
         sta  t6a
         lda  #$80
@@ -3733,71 +3735,71 @@ op11_FOR_nostep:
         asl  a
         sta  t6f
         sta  t6c
-L3509:
+op11_FOR_nostep_1:
         sta  t6e
         lsr  a
         sta  t6d
         txa  
         and  #$80
         sta  $0e
-L3513:
+op11_FOR_nostep_2:
         jsr  pop_value
-        jsr  L2d79
+        jsr  coerce_to_0e
         lda  fstk
         sta  $3f
         lda  fstk_hi
         sta  $40
-L3521:
+op11_FOR_nostep_3:
         ldy  #$00
         lda  ($3f),y
         asl  a
-        bne  L354c
+        bne  op11_FOR_nostep_6
         ldx  #$09
-        bcs  L352e
+        bcs  op11_FOR_nostep_4
         ldx  #$10
-L352e:
+op11_FOR_nostep_4:
         iny  
         lda  varptr
         cmp  ($3f),y
-        bne  L353c
+        bne  op11_FOR_nostep_5
         iny  
         lda  varptr_hi
         cmp  ($3f),y
-        beq  L3567
-L353c:
+        beq  op11_FOR_nostep_9
+op11_FOR_nostep_5:
         txa  
         clc  
         adc  $3f
         sta  $3f
-        bcc  L3521
+        bcc  op11_FOR_nostep_3
         inc  $40
         lda  $40
         cmp  #$0a
-        bcc  L3521
-L354c:
+        bcc  op11_FOR_nostep_3
+op11_FOR_nostep_6:
         lda  #$f6
         bit  $0e
-        bmi  L3554
+        bmi  op11_FOR_nostep_7
         lda  #$ef
-L3554:
+op11_FOR_nostep_7:
         sec  
         adc  fstk
         sta  $3f
         ldx  fstk_hi
-        bcs  L3565
+        bcs  op11_FOR_nostep_8
         dex  
         cpx  #$08
-        bcs  L3565
+        bcs  op11_FOR_nostep_8
         jmp  err_out_of_memory
-L3565:
+op11_FOR_nostep_8:
         stx  $40
-L3567:
+op11_FOR_nostep_9:
         lda  $3f
         sta  fstk
         lda  $40
         sta  fstk_hi
         lda  $0e
-        beq  L358b
+        beq  op11_FOR_nostep_10
         ldy  #$08
         lda  fac_m4
         sta  (fstk),y
@@ -3811,35 +3813,35 @@ L3567:
         lda  t6d
         sta  (fstk),y
         dey  
-        bpl  L35b4
-L358b:
+        bpl  op11_FOR_nostep_14
+op11_FOR_nostep_10:
         lda  fac_sign
         ora  #$7f
         and  fac_m1
         sta  fac_m1
         ldy  #$0f
         ldx  #$04
-L3597:
+op11_FOR_nostep_11:
         lda  fac_exp,x
         sta  (fstk),y
         dey  
         dex  
-        bpl  L3597
+        bpl  op11_FOR_nostep_11
         lda  #$ff
         bit  t6f
-        bmi  L35a7
+        bmi  op11_FOR_nostep_12
         lda  #$01
-L35a7:
+op11_FOR_nostep_12:
         sta  (fstk),y
         dey  
         ldx  #$04
-L35ac:
+op11_FOR_nostep_13:
         lda  t6a,x
         sta  (fstk),y
         dey  
         dex  
-        bpl  L35ac
-L35b4:
+        bpl  op11_FOR_nostep_13
+op11_FOR_nostep_14:
         lda  bcptr_hi
         sta  (fstk),y
         dey  
@@ -3854,36 +3856,36 @@ L35b4:
         dey  
         lda  $0e
         sta  (fstk),y
-        jmp  L27d6
-L35cf:
+        jmp  next_pv
+op11_FOR_nostep_15:
         stx  fstk_hi
-L35d1:
+op11_FOR_nostep_16:
         sta  fstk
 op14_NEXT:
         ldy  #$02
         lda  varptr_hi
         cmp  (fstk),y
-        bne  L35e2
+        bne  op14_NEXT_1
         lda  varptr
         dey  
         cmp  (fstk),y
-        beq  L3608
-L35e2:
+        beq  op13_NEXT_chk_1
+op14_NEXT_1:
         ldy  #$00
         lda  (fstk),y
         asl  a
-        bne  L35fa
+        bne  op14_NEXT_next_without_for_1
         lda  #$08
-        bcs  L35ef
+        bcs  op14_NEXT_2
         lda  #$10
-L35ef:
+op14_NEXT_2:
         adc  fstk
-        bcc  L35d1
+        bcc  op11_FOR_nostep_16
         ldx  fstk_hi
         inx  
         cpx  #$0a
-        bcc  L35cf
-L35fa:
+        bcc  op11_FOR_nostep_15
+op14_NEXT_next_without_for_1:
         jmp  err_next_without_for
 op13_NEXT_chk:
         ldy  #$02
@@ -3892,23 +3894,23 @@ op13_NEXT_chk:
         dey  
         lda  (fstk),y
         sta  varptr
-L3608:
+op13_NEXT_chk_1:
         ldy  #$00
         lda  (fstk),y
         asl  a
-        bne  L35fa
-        bcc  L3614
-        jmp  L36aa
-L3614:
+        bne  op14_NEXT_next_without_for_1
+        bcc  op13_NEXT_chk_2
+        jmp  next_step_add
+op13_NEXT_chk_2:
         sty  facov
         ldy  #$0a
         ldx  #$05
-L361a:
+op13_NEXT_chk_3:
         lda  (fstk),y
         sta  fac_exp,x
         dey  
         dex  
-        bpl  L361a
+        bpl  op13_NEXT_chk_3
         ldy  #$04
         ldx  #$0b
         jsr  ld_var
@@ -3939,52 +3941,52 @@ L361a:
         ldy  #$0b
         lda  (fstk),y
         tax  
-        beq  L3692
+        beq  op13_NEXT_chk_5
         iny  
         lda  (fstk),y
         eor  fac_sign
-        bmi  L3696
+        bmi  op13_NEXT_chk_6
         cpx  fac_exp
-        bne  L368a
+        bne  op13_NEXT_chk_4
         lda  (fstk),y
         ora  #$80
         cmp  fac_m1
-        bne  L368a
+        bne  op13_NEXT_chk_4
         iny  
         lda  (fstk),y
         cmp  fac_m2
-        bne  L368a
+        bne  op13_NEXT_chk_4
         iny  
         lda  (fstk),y
         cmp  fac_m3
-        bne  L368a
+        bne  op13_NEXT_chk_4
         iny  
         lda  (fstk),y
         sbc  fac_m4
-        beq  L369f
-L368a:
+        beq  op13_NEXT_chk_8
+op13_NEXT_chk_4:
         lda  fac_sign
-        bcc  L3698
+        bcc  op13_NEXT_chk_7
         eor  #$ff
-        bcs  L3698
-L3692:
+        bcs  op13_NEXT_chk_7
+op13_NEXT_chk_5:
         lda  fac_exp
-        beq  L369f
-L3696:
+        beq  op13_NEXT_chk_8
+op13_NEXT_chk_6:
         lda  fac_sign
-L3698:
+op13_NEXT_chk_7:
         rol  a
         lda  #$ff
-        bcs  L369f
+        bcs  op13_NEXT_chk_8
         lda  #$01
-L369f:
+op13_NEXT_chk_8:
         sec  
         ldy  #$0a
         sbc  (fstk),y
-        bne  L36fa
+        bne  next_step_add_7
         lda  #$10
-        bne  L36ee
-L36aa:
+        bne  next_step_add_5
+next_step_add:
         iny  
         ldx  #$01
         jsr  ld_var
@@ -3996,9 +3998,9 @@ L36aa:
         ldx  #$01
         dey  
         lda  (fstk),y
-        bpl  L36c1
+        bpl  next_step_add_1
         dex  
-L36c1:
+next_step_add_1:
         stx  $0e
         adc  fac_exp
         sta  fac_exp
@@ -4011,29 +4013,29 @@ L36c1:
         dey  
         lda  (fstk),y
         cmp  fac_exp
-        bne  L36de
+        bne  next_step_add_2
         cpx  fac_m1
-        beq  L36fa
-L36de:
+        beq  next_step_add_7
+next_step_add_2:
         ldy  #$00
         eor  fac_exp
-        bmi  L3708
-        bcs  L36e8
-L36e6:
+        bmi  next_step_add_8
+        bcs  next_step_add_4
+next_step_add_3:
         ldy  #$01
-L36e8:
+next_step_add_4:
         cpy  $0e
-        bne  L36fa
+        bne  next_step_add_7
         lda  #$09
-L36ee:
+next_step_add_5:
         clc  
         adc  fstk
         sta  fstk
-        bcc  L36f7
+        bcc  next_step_add_6
         inc  fstk_hi
-L36f7:
+next_step_add_6:
         jmp  next
-L36fa:
+next_step_add_7:
         ldy  #$04
         lda  (fstk),y
         sta  bcptr_hi
@@ -4041,37 +4043,37 @@ L36fa:
         lda  (fstk),y
         sta  bcptr
         jmp  next
-L3708:
-        bcs  L36e6
-        bcc  L36e8
+next_step_add_8:
+        bcs  next_step_add_3
+        bcc  next_step_add_4
 op5a_JUMP_if_false:
 ; JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]
         sty  prevop
         lda  intflg
-        bpl  L371a
+        bpl  op5a_JUMP_if_false_1
         lda  fac_m3
         ora  fac_m4
-        bne  L372c
+        bne  op52_JUMP_if_true_1
         beq  op19_GOTO
-L371a:
+op5a_JUMP_if_false_1:
         lda  fac_exp
-        bne  L372c
+        bne  op52_JUMP_if_true_1
         beq  op19_GOTO
 op52_JUMP_if_true:
 ; JUMP_if_true ($52 + target word): `if a then 10`, `loop while c`, `do until c` (jump when the condition is non-zero).  [sure: Rosetta]
         sty  prevop
         lda  intflg
-        bpl  L3731
+        bpl  op52_JUMP_if_true_2
         lda  fac_m3
         ora  fac_m4
         bne  op19_GOTO
-L372c:
+op52_JUMP_if_true_1:
         lda  #$02
-        jmp  L27ec
-L3731:
+        jmp  skip_a_c
+op52_JUMP_if_true_2:
         lda  fac_exp
         bne  op19_GOTO
-        beq  L372c
+        beq  op52_JUMP_if_true_1
 op1b_ON_GOTO:
 ; shared by: $1B ON_GOTO, $1C ON_GOSUB
         sty  prevop
@@ -4082,40 +4084,40 @@ op1b_ON_GOTO:
         eor  #$5a
         sta  fac_m3
         txa  
-        beq  L374f
+        beq  op1b_ON_GOTO_1
         asl  a
-        bcs  L374f
+        bcs  op1b_ON_GOTO_1
         cmp  fac_m3
-        bcc  L3754
-L374f:
+        bcc  op1b_ON_GOTO_2
+op1b_ON_GOTO_1:
         lda  fac_m3
         jmp  skip_a
-L3754:
+op1b_ON_GOTO_2:
         tay  
         lsr  $3e
-        bcs  L3792
+        bcs  op19_GOTO_1
         dey  
         sty  fac_m2
         ldy  #$00
         dec  fac_m3
         sec  
-        bcs  L3769
+        bcs  op1a_GOSUB_1
 op1a_GOSUB:
         lda  #$02
         sta  fac_m3
         sty  fac_m2
-L3769:
+op1a_GOSUB_1:
         lda  fstk
         sbc  #$03
-        bcs  L377b
+        bcs  op1a_GOSUB_3
         ldx  fstk_hi
         dex  
         cpx  #$08
-        bcs  L3779
+        bcs  op1a_GOSUB_2
         jmp  err_out_of_memory
-L3779:
+op1a_GOSUB_2:
         stx  fstk_hi
-L377b:
+op1a_GOSUB_3:
         sta  fstk
         lda  #$8d
         sta  (fstk),y
@@ -4130,46 +4132,46 @@ L377b:
         ldy  fac_m2
 op19_GOTO:
         iny  
-L3792:
+op19_GOTO_1:
         lda  (bcptr),y
         eor  #$de
         tax  
         iny  
         lda  (bcptr),y
         eor  #$e5
-L379c:
+jump_ax:
         sta  bcptr
         stx  bcptr_hi
         ldy  #$00
         jmp  fetch
-L37a5:
+jump_ax_1:
         lda  #$08
-        bcs  L37ab
+        bcs  jump_ax_2
         lda  #$10
-L37ab:
+jump_ax_2:
         adc  fstk
-        bcc  L37b8
+        bcc  jump_ax_3
         ldx  fstk_hi
         inx  
         cpx  #$0a
-        bcs  L37c7
+        bcs  op1d_RETURN_return_without_gosub_1
         stx  fstk_hi
-L37b8:
+jump_ax_3:
         sta  fstk
 op1d_RETURN:
         lda  (fstk),y
         cmp  #$8d
-        beq  L37ce
+        beq  op1d_RETURN_2
         asl  a
-        beq  L37a5
+        beq  jump_ax_1
         cmp  #$f8
-        bcs  L37ca
-L37c7:
+        bcs  op1d_RETURN_1
+op1d_RETURN_return_without_gosub_1:
         jmp  err_return_without_gosub
-L37ca:
+op1d_RETURN_1:
         lda  (fstk),y
         and  #$03
-L37ce:
+op1d_RETURN_2:
         iny  
         tax  
         lda  (fstk),y
@@ -4180,64 +4182,64 @@ L37ce:
         lda  fstk
         adc  #$02
         sta  fstk
-        bcc  L37e3
+        bcc  op1d_RETURN_3
         inc  fstk_hi
-L37e3:
+op1d_RETURN_3:
         ldy  #$00
         txa  
-        bpl  L37eb
+        bpl  op1d_RETURN_4
         jmp  fetch
-L37eb:
-        jmp  L238b
+op1d_RETURN_4:
+        jmp  event_frame_done
 op39_FN_end:
         pla  
         sta  varptr
         pla  
         sta  varptr_hi
         ldx  #$00
-L37f6:
+op39_FN_end_1:
         pla  
         sta  t6a,x
         inx  
         cpx  #$05
-        bne  L37f6
+        bne  op39_FN_end_1
         ldx  #$0b
         ldy  #$04
         jsr  st_var
         pla  
         tax  
         pla  
-        jmp  L379c
+        jmp  jump_ax
 op58_IF_RETURN:
 ; IF_RETURN ($58): `if <cond> then return` - if the condition is non-zero jump into op1d_RETURN (pop the GOSUB frame), else continue.  Never
 ; seen in the test sources (the compiler turns `if a then return` into $1F + $1D); matches the note `X58 = IF x THEN RETURN` in blitzc/README.  [sure: code]
         sty  prevop
         lda  intflg
-        bpl  L381a
+        bpl  op58_IF_RETURN_1
         lda  fac_m3
         ora  fac_m4
         bne  op1d_RETURN
         jmp  next_inc1
-L381a:
+op58_IF_RETURN_1:
         lda  fac_exp
         bne  op1d_RETURN
         jmp  next_inc1
 op1f_IF_skip:
         sty  prevop
         lda  intflg
-        bpl  L3832
+        bpl  op1f_IF_skip_2
         lda  fac_m3
         ora  fac_m4
-        beq  L3836
-L382d:
+        beq  op1f_IF_skip_3
+op1f_IF_skip_1:
         lda  #$01
-        jmp  L27ec
-L3832:
+        jmp  skip_a_c
+op1f_IF_skip_2:
         lda  fac_exp
-        bne  L382d
-L3836:
+        bne  op1f_IF_skip_1
+op1f_IF_skip_3:
         iny  
-L3837:
+op1f_IF_skip_4:
         lda  (bcptr),y
         eor  #$5a
         jmp  skip_a
@@ -4272,7 +4274,7 @@ op37_DEF_FN:
         ldx  #$0c
         jsr  st_var
         ldy  #$05
-        bne  L3837
+        bne  op1f_IF_skip_4
 op38_FN_call:
         ldy  #$02
         lda  (bcptr),y
@@ -4295,9 +4297,9 @@ op38_FN_call:
         ldx  #$0b
         jsr  ld_var
         lda  t6b
-        bne  L38a4
+        bne  op38_FN_call_1
         jmp  err_undefd_function
-L38a4:
+op38_FN_call_1:
         sta  bcptr_hi
         lda  t6a
         sta  bcptr
@@ -4309,17 +4311,17 @@ L38a4:
         ldx  #$0b
         jsr  ld_var
         ldx  #$04
-L38bb:
+op38_FN_call_2:
         lda  t6a,x
         pha  
         dex  
-        bpl  L38bb
+        bpl  op38_FN_call_2
         lda  varptr_hi
         pha  
         lda  varptr
         pha  
-        jmp  L2841
-L38ca:
+        jmp  var_store_float
+op38_FN_call_redimd_array_1:
         jmp  err_redimd_array
 op10_DIM:
 ; ---- FOR / NEXT / flow control ----
@@ -4345,7 +4347,7 @@ op10_DIM:
         sbc  strend_hi
         sta  t6b
         ora  t6a
-        beq  L392a
+        beq  op10_DIM_1
         ldy  #$05
         clc  
         lda  (bcptr),y
@@ -4360,10 +4362,10 @@ op10_DIM:
         ldy  #$01
         lda  #$6c
         jsr  rd_zp_set
-        bne  L38ca
+        bne  op38_FN_call_redimd_array_1
         dey  
         jsr  rd_zp
-        bne  L38ca
+        bne  op38_FN_call_redimd_array_1
         lda  t6a
         ldy  #$00
         ldx  #$6c
@@ -4371,15 +4373,15 @@ op10_DIM:
         iny  
         lda  t6b
         jsr  wr_zp
-L392a:
+op10_DIM_1:
         lda  $0d
         asl  a
         adc  #$05
         adc  $61
         ldy  $62
-        bcc  L3936
+        bcc  op10_DIM_2
         iny  
-L3936:
+op10_DIM_2:
         sta  $5a
         sty  $5b
         ldx  #$17
@@ -4394,31 +4396,31 @@ L3936:
         jsr  wr_zp_set
         ldx  #$05
         lda  $47
-        bpl  L3958
+        bpl  op10_DIM_3
         dex  
-L3958:
+op10_DIM_3:
         iny  
         lda  $48
         jsr  wr_zp
-        bpl  L3962
+        bpl  op10_DIM_4
         dex  
         dex  
-L3962:
+op10_DIM_4:
         stx  $72
         lda  $0d
         ldy  #$04
         jsr  wr_zp
-        bne  L3970
-L396d:
+        bne  op10_DIM_6
+op10_DIM_5:
         jsr  pop_value
-L3970:
+op10_DIM_6:
         jsr  get_word
         iny  
         inx  
-        bne  L397a
+        bne  op10_DIM_7
         clc  
         adc  #$01
-L397a:
+op10_DIM_7:
         jsr  wr_zp
         iny  
         txa  
@@ -4430,12 +4432,12 @@ L397a:
         stx  $72
         sta  $73
         dec  $0d
-        bne  L396d
+        bne  op10_DIM_5
         inc  $0288
         ldy  #$92
         sty  rom_call_lo
         ldy  #$7d
-        jsr  L23c7
+        jsr  rom_call_y
         dec  $0288
         lda  #$06
         jmp  skip_a
@@ -4449,7 +4451,7 @@ op5d_LOAD:
         sty  $0c
 op5e_SAVE:
         jsr  file_params_init
-        beq  L39ce
+        beq  op5e_SAVE_1
         lda  fac_exp
         ldx  fac_m1
         ldy  fac_m2
@@ -4457,36 +4459,36 @@ op5e_SAVE:
         stx  $bb
         sty  $bc
         dec  $0d
-        beq  L39ce
+        beq  op5e_SAVE_1
         jsr  pop_byte
         stx  $ba
         dec  $0d
-        beq  L39ce
+        beq  op5e_SAVE_1
         jsr  pop_byte
         stx  $b9
-L39ce:
+op5e_SAVE_1:
         lda  #$33
         ldy  #$91
         ldx  $3e
         cpx  #$5e
-        bcc  L39e1
-        bne  L39de
+        bcc  op5e_SAVE_3
+        bne  op5e_SAVE_2
         lda  #$15
         ldy  #$91
-L39de:
-        jmp  L257d
-L39e1:
+op5e_SAVE_2:
+        jmp  rom_stmt
+op5e_SAVE_3:
         ldy  #$00
         ldx  $b9
-        bne  L39e9
+        bne  dos_stub_install
         inc  $b9
-L39e9:
+dos_stub_install:
         ldx  #$53
-L39eb:
+dos_stub_install_1:
         lda  $24ff,x
         sta  $011f,x
         dex  
-        bne  L39eb
+        bne  dos_stub_install_1
         jmp  $0120
 file_params_init:
 ; file_params_init: clear the KERNAL file parameters ($B7,$B9,$19,$C6,$90), default device 1, fetch next token -> $0D.  [likely]
@@ -4504,18 +4506,18 @@ file_params_init:
         lda  #$1b
         sta  $18
         inc  bcptr
-        bne  L3a17
+        bne  file_params_init_1
         inc  bcptr_hi
-L3a17:
+file_params_init_1:
         lda  (bcptr),y
         eor  #$5a
         sta  $0d
         rts  
-L3a1e:
+pop_or_get:
         lsr  $0e
         bcc  pop_byte
         jmp  get_byte
-L3a25:
+pop_or_get_illegal_quantity_1:
         jmp  err_illegal_quantity
 pop_byte:
 ; pop_byte: pop the previous stack value and convert it to a byte in X (like get_byte for a saved operand).  [likely]
@@ -4527,28 +4529,28 @@ pop_byte:
         adc  #$00
         sta  $48
         pla  
-        bpl  L3a3e
+        bpl  pop_byte_1
         pla  
-        bne  L3a25
+        bne  pop_or_get_illegal_quantity_1
         pla  
         tax  
         jmp  ($0047)
-L3a3e:
+pop_byte_1:
         pla  
-        bmi  L3a25
+        bmi  pop_or_get_illegal_quantity_1
         pla  
         sec  
         sbc  #$89
-        bpl  L3a25
+        bpl  pop_or_get_illegal_quantity_1
         tax  
         pla  
         inx  
-        beq  L3a50
-L3a4c:
+        beq  pop_byte_3
+pop_byte_2:
         lsr  a
         inx  
-        bne  L3a4c
-L3a50:
+        bne  pop_byte_2
+pop_byte_3:
         tax  
         pla  
         pla  
@@ -4560,19 +4562,19 @@ op60_OPEN:
         jsr  get_byte
         stx  $b8
         dec  $0d
-        beq  L3a93
+        beq  op60_OPEN_2
         jsr  pop_byte
         stx  $ba
         cpx  #$03
-        bcc  L3a6e
+        bcc  op60_OPEN_1
         dec  $b9
-L3a6e:
+op60_OPEN_1:
         dec  $0d
-        beq  L3a93
+        beq  op60_OPEN_2
         jsr  pop_byte
         stx  $b9
         dec  $0d
-        beq  L3a93
+        beq  op60_OPEN_2
         jsr  pop_value
         ldy  #$00
         lda  #$66
@@ -4584,7 +4586,7 @@ L3a6e:
         iny  
         jsr  rd_zp
         sta  $bc
-L3a93:
+op60_OPEN_2:
         lda  #$02
         sta  MMU_CR
         clc  
@@ -4594,19 +4596,19 @@ L3a93:
 op62_DOS:
         jsr  file_params_init
         inc  bcptr
-        bne  L3aab
+        bne  op62_DOS_1
         inc  bcptr_hi
-L3aab:
+op62_DOS_1:
         lda  (bcptr),y
         eor  #$5a
         sta  $81
         stx  $0c
         tya  
-L3ab4:
+op62_DOS_2:
         sta  $0110,y
         iny  
         cpy  #$12
-        bne  L3ab4
+        bne  op62_DOS_2
         ldx  #$08
         stx  $011c
         ldx  #$6f
@@ -4615,7 +4617,7 @@ L3ab4:
         and  #$7f
         sta  flags80
         lsr  $0d
-        bcc  L3afc
+        bcc  op62_DOS_4
         lda  fac_exp
         ldx  fac_m1
         stx  ptr24
@@ -4629,16 +4631,16 @@ L3ab4:
         ldy  #$00
         lda  #$24
         sta  $0233
-L3aee:
+op62_DOS_3:
         jsr  rd_zp
         sta  $12b7,y
         iny  
         cpy  $0111
-        bne  L3aee
+        bne  op62_DOS_3
         lsr  $0e
-L3afc:
+op62_DOS_4:
         lsr  $0d
-        bcc  L3b21
+        bcc  op62_DOS_5
         jsr  pop_value
         ldy  #$02
         lda  #$66
@@ -4650,135 +4652,135 @@ L3afc:
         dey  
         jsr  rd_zp
         sta  $0113
-        beq  L3b6e
+        beq  op62_DOS_11
         cmp  #$11
-        bcs  L3b37
-L3b21:
+        bcs  op62_DOS_7
+op62_DOS_5:
         lsr  $0d
-        bcc  L3b2e
-        jsr  L3a1e
+        bcc  op62_DOS_6
+        jsr  pop_or_get
         txa  
-        beq  L3ba3
+        beq  op62_DOS_illegal_quantity_1
         stx  $011b
-L3b2e:
+op62_DOS_6:
         lsr  $0d
-        bcc  L3b40
-        jsr  L3a1e
+        bcc  op62_DOS_8
+        jsr  pop_or_get
         cpx  #$1f
-L3b37:
-        bcs  L3ba3
+op62_DOS_7:
+        bcs  op62_DOS_illegal_quantity_1
         cpx  #$04
-        bcc  L3ba3
+        bcc  op62_DOS_illegal_quantity_1
         stx  $011c
-L3b40:
+op62_DOS_8:
         lsr  $0d
-        bcc  L3b51
-        jsr  L3a1e
+        bcc  op62_DOS_9
+        jsr  pop_or_get
         cpx  #$02
-        bcs  L3ba3
+        bcs  op62_DOS_illegal_quantity_1
         stx  $0112
         stx  $0114
-L3b51:
+op62_DOS_9:
         lsr  $0d
-        bcc  L3b5f
-        jsr  L3a1e
+        bcc  op62_DOS_10
+        jsr  pop_or_get
         cpx  #$02
-        bcs  L3ba3
+        bcs  op62_DOS_illegal_quantity_1
         stx  $0114
-L3b5f:
+op62_DOS_10:
         lsr  $0d
-        bcc  L3b73
+        bcc  op62_DOS_12
         lsr  $0d
-        bcs  L3b73
-        jsr  L3a1e
+        bcs  op62_DOS_12
+        jsr  pop_or_get
         txa  
-        beq  L3ba3
+        beq  op62_DOS_illegal_quantity_1
         inx  
-L3b6e:
-        beq  L3ba3
+op62_DOS_11:
+        beq  op62_DOS_illegal_quantity_1
         sta  $011e
-L3b73:
+op62_DOS_12:
         lsr  $0d
-        bcc  L3b84
+        bcc  op62_DOS_13
         jsr  pop_value
         ldx  fac_m3
         lda  fac_m4
         stx  $0120
         sta  $0121
-L3b84:
+op62_DOS_13:
         ldy  $81
-        bmi  L3ba9
-L3b88:
+        bmi  op62_DOS_16
+op62_DOS_14:
         lda  flags80
-        bpl  L3b90
+        bpl  op62_DOS_15
         cpy  #$03
-        bcs  L3ba6
-L3b90:
+        bcs  op62_DOS_syntax_1
+op62_DOS_15:
         cpy  #$11
-        bcs  L3bee
+        bcs  op62_DOS_22
         ldx  $4579,y
         stx  rom_call_lo
         ldx  $458a,y
         jsr  rom_call_x
         jmp  next
-L3ba3:
+op62_DOS_illegal_quantity_1:
         jmp  err_illegal_quantity
-L3ba6:
+op62_DOS_syntax_1:
         jmp  err_syntax
-L3ba9:
+op62_DOS_16:
         sty  $0d
         lda  #$ff
         ldy  #$03
-L3baf:
+op62_DOS_17:
         sta  $0117,y
         dey  
-        bpl  L3baf
+        bpl  op62_DOS_17
         ldy  #$02
-L3bb7:
+op62_DOS_18:
         asl  $81
-        bpl  L3bcc
+        bpl  op62_DOS_20
         lsr  $0e
-        bcs  L3bc2
+        bcs  op62_DOS_19
         jsr  pop_value
-L3bc2:
+op62_DOS_19:
         jsr  get_word
         sta  $0118,y
         txa  
         sta  $0117,y
-L3bcc:
+op62_DOS_20:
         dey  
         dey  
-        bpl  L3bb7
+        bpl  op62_DOS_18
         lda  #$00
         ldx  $03d5
         asl  $81
-        bpl  L3be2
-        jsr  L3a1e
+        bpl  op62_DOS_21
+        jsr  pop_or_get
         cpx  #$10
-        bcs  L3ba3
+        bcs  op62_DOS_illegal_quantity_1
         lda  #$01
-L3be2:
+op62_DOS_21:
         sta  $81
         stx  $011f
         lda  $0d
         and  #$0f
         tay  
-        bpl  L3b88
-L3bee:
-        beq  L3bf2
+        bpl  op62_DOS_14
+op62_DOS_22:
+        beq  op62_DOS_23
         lsr  $7f
-L3bf2:
+op62_DOS_23:
         ldy  #$00
         sty  $0c
         iny  
         sty  $011d
-        jmp  L39e9
+        jmp  dos_stub_install
 op63_RECORD:
         jsr  get_byte
         txa  
-        beq  L3ba3
+        beq  op62_DOS_illegal_quantity_1
         inx  
-        beq  L3ba3
+        beq  op62_DOS_illegal_quantity_1
         tay  
         dey  
         jsr  pop_value
@@ -4790,11 +4792,11 @@ op64:
         stx  $011b
         lda  #$f9
         ldy  #$a2
-        jmp  L257d
+        jmp  rom_stmt
 xop28_GRAPHIC_split:
         jsr  pop_byte
         cpx  #$1a
-        bcs  L3c9b
+        bcs  op65_CHAR_illegal_quantity_1
         txa  
         asl  a
         asl  a
@@ -4804,23 +4806,23 @@ xop28_GRAPHIC_split:
 xop27_GRAPHIC_clr:
         jsr  get_byte
         cpx  #$02
-        bcs  L3c9b
+        bcs  op65_CHAR_illegal_quantity_1
         txa  
-        beq  L3c42
+        beq  xop27_GRAPHIC_clr_1
         ldx  $77
         lda  #$92
         ldy  #$6a
         jsr  rom_call_ay
-L3c42:
+xop27_GRAPHIC_clr_1:
         jmp  next_y0
 op65_CHAR:
         jsr  pop_byte
         cpx  #$02
         ldy  $d8
-        bpl  L3c50
+        bpl  op65_CHAR_1
         cpx  #$04
-L3c50:
-        bcs  L3c9b
+op65_CHAR_1:
+        bcs  op65_CHAR_illegal_quantity_1
         stx  $83
         jsr  pop_byte
         stx  $115e
@@ -4829,18 +4831,18 @@ L3c50:
         ldx  #$28
         lda  #$19
         dey  
-        bpl  L3c71
+        bpl  op65_CHAR_2
         sec  
         lda  $e7
         sbc  $e6
         tax  
         lda  $e4
         sbc  $e5
-L3c71:
+op65_CHAR_2:
         cmp  $115f
-        bcc  L3c9b
+        bcc  op65_CHAR_illegal_quantity_1
         cpx  $115e
-        bcc  L3c9b
+        bcc  op65_CHAR_illegal_quantity_1
         jsr  pop_byte
         txa  
         ror  a
@@ -4855,14 +4857,14 @@ L3c71:
         sta  ptr25
         lda  #$2d
         ldy  #$68
-        jmp  L257d
-L3c9b:
+        jmp  rom_stmt
+op65_CHAR_illegal_quantity_1:
         jmp  err_illegal_quantity
 op66_SOUND:
         jsr  get_byte
         dex  
         cpx  #$03
-        bcs  L3c9b
+        bcs  op65_CHAR_illegal_quantity_1
         stx  $1281
         jsr  pop_get_word
         stx  $12a5
@@ -4871,12 +4873,12 @@ op66_SOUND:
         sta  $12ad
         jsr  pop_get_word
         tay  
-        bmi  L3c9b
+        bmi  op65_CHAR_illegal_quantity_1
         stx  $12a3
         sta  $12a4
         jsr  pop_byte
         cpx  #$03
-        bcs  L3c9b
+        bcs  op65_CHAR_illegal_quantity_1
         stx  $12a9
         txa  
         tay  
@@ -4885,7 +4887,7 @@ op66_SOUND:
         sta  $12a8
         jsr  pop_get_word
         dey  
-        bne  L3cec
+        bne  op66_SOUND_1
         txa  
         eor  #$ff
         clc  
@@ -4894,12 +4896,12 @@ op66_SOUND:
         lda  $17
         eor  #$ff
         adc  #$00
-L3cec:
+op66_SOUND_1:
         stx  $12aa
         sta  $12ab
         jsr  pop_byte
         cpx  #$04
-        bcs  L3c9b
+        bcs  op65_CHAR_illegal_quantity_1
         lda  $45b3,x
         sta  $12b0
         jsr  pop_get_word
@@ -4925,7 +4927,7 @@ op54_MOVSPR:
         ldx  #$e3
         stx  rom_call_lo
         ldx  #$6c
-        jmp  L240f
+        jmp  rom_x_tail
 xop26_GRAPHIC:
         lda  #$a1
         ldx  #$1d
@@ -4934,35 +4936,35 @@ xop26_GRAPHIC:
         jsr  get_byte
         stx  $77
         txa  
-        beq  L3d55
+        beq  xop26_GRAPHIC_1
         cmp  #$05
-        beq  L3d55
+        beq  xop26_GRAPHIC_1
         ldy  $76
-        bmi  L3d55
+        bmi  xop26_GRAPHIC_1
         jmp  err_no_graphics_area
-L3d55:
+xop26_GRAPHIC_1:
         lda  #$6c
         ldy  #$6b
-        jmp  L40bf
+        jmp  rom_ay_tail
 xop2e_ATTACK:
         iny  
 xop2f:
         lda  $77
-        bpl  L3d67
+        bpl  xop31_1
 xop30:
         iny  
 xop31:
         lda  #$0a
         clc  
         adc  $77
-L3d67:
+xop31_1:
         sty  ptr24
         tay  
         jsr  get_byte
         txa  
         dec  ptr24
-        bne  L3d7f
-L3d72:
+        bne  nibble_pack_1
+nibble_pack:
         asl  a
         asl  a
         asl  a
@@ -4970,13 +4972,13 @@ L3d72:
         sta  ptr24
         lda  $123f,y
         and  #$0f
-        bpl  L3d88
-L3d7f:
+        bpl  nibble_pack_2
+nibble_pack_1:
         and  #$0f
         sta  ptr24
         lda  $123f,y
         and  #$f0
-L3d88:
+nibble_pack_2:
         ora  ptr24
         sta  $123f,y
         jmp  next_y0
@@ -4985,12 +4987,12 @@ xop33_PW:
         ldy  $77
         lda  $1253,y
         asl  a
-        bpl  L3da4
+        bpl  xop33_PW_1
         lda  $17
         sta  $1267,y
         txa  
         sta  $125d,y
-L3da4:
+xop33_PW_1:
         jmp  next_y0
 xop2a_FAST:
         ldx  #$02
@@ -5000,12 +5002,12 @@ xop2a_FAST:
         lda  $d011
         and  #$6f
         dex  
-        bne  L3dbb
+        bne  xop29_SLOW_1
         ora  #$10
-L3dbb:
+xop29_SLOW_1:
         sta  $d011
         stx  $d030
-        jmp  L27e7
+        jmp  skip2
 op6d_POT:
         jsr  get_byte
         lda  #$53
@@ -5028,26 +5030,26 @@ xop0f_SPRCOLOR_1:
         jsr  get_byte
         dex  
         cpx  #$10
-        bcs  L3dfa
+        bcs  xop0f_SPRCOLOR_1_illegal_quantity_1
         lda  #$02
         sta  MMU_CR
         txa  
         sta  $d024,y
         sta  MMU_LCRA
         jmp  next_y0
-L3dfa:
+xop0f_SPRCOLOR_1_illegal_quantity_1:
         jmp  err_illegal_quantity
 xop0b_WIDTH:
         jsr  get_byte
         dex  
         cpx  #$02
-        bcs  L3dfa
+        bcs  xop0f_SPRCOLOR_1_illegal_quantity_1
         stx  $116b
-        jmp  L27e5
+        jmp  skip2_pv
 op71_INSTR:
         jsr  get_byte
         txa  
-        beq  L3dfa
+        beq  xop0f_SPRCOLOR_1_illegal_quantity_1
         pla  
         sta  intflg
         pla  
@@ -5069,10 +5071,10 @@ op71_INSTR:
         tya  
         tax  
         jmp  binop_dispatch
-L3e37:
+instr_core:
         lda  fac_exp
         beq  *+61
-L3e3b:
+instr_core_1:
         lda  #$00
         sta  fac_m4
         clc  
@@ -5080,12 +5082,12 @@ L3e3b:
         adc  $52
         bcs  *+50
         cmp  t6a
-        bcc  L3e4c
+        bcc  instr_core_2
         bne  *+44
-L3e4c:
+instr_core_2:
         ldy  fac_m4
         cpy  fac_exp
-        beq  L3e71
+        beq  instr_core_4
         tya  
         clc  
         adc  $52
@@ -5097,28 +5099,28 @@ L3e4c:
         lda  #$64
         jsr  rd_zp_set
         cmp  ptr24
-        beq  L3e6d
+        beq  instr_core_3
         inc  $52
-        bne  L3e3b
-L3e6d:
+        bne  instr_core_1
+instr_core_3:
         inc  fac_m4
-        bne  L3e4c
-L3e71:
+        bne  instr_core_2
+instr_core_4:
         inc  $52
         lda  $52
         bit  a:$a9
-        jmp  L2f76
+        jmp  ret_int_a0
 xop34_FILTER_cutoff:
         jsr  get_word
         cmp  #$08
-        bcs  L3edc
+        bcs  xop2d_ENV_num_illegal_quantity_1
         stx  ptr24
         iny  
-L3e85:
+xop34_FILTER_cutoff_1:
         lsr  a
         ror  ptr24
         dey  
-        bpl  L3e85
+        bpl  xop34_FILTER_cutoff_1
         lda  ptr24
         sta  $1272
         stx  $1271
@@ -5130,26 +5132,26 @@ xop35_FILTER_lp:
         jsr  get_byte
         txa  
         lsr  a
-        bne  L3edc
+        bne  xop2d_ENV_num_illegal_quantity_1
         sty  ptr24
         lda  $1274
         ora  ptr24
-        bcs  L3eb0
+        bcs  xop37_1
         eor  ptr24
-L3eb0:
+xop37_1:
         sta  $1274
         jmp  next_y0
 xop38_FILTER_res:
-        jsr  L2e67
+        jsr  get_byte_float
         cpx  #$10
-        bcs  L3edc
+        bcs  xop2d_ENV_num_illegal_quantity_1
         txa  
         ldy  #$34
-        jmp  L3d72
+        jmp  nibble_pack
 xop32_WAVE:
         jsr  get_byte
         cpx  #$04
-        bcs  L3edc
+        bcs  xop2d_ENV_num_illegal_quantity_1
         lda  $45b3,x
         ldx  $77
         sta  $1253,x
@@ -5157,15 +5159,15 @@ xop32_WAVE:
 xop2d_ENV_num:
         jsr  get_byte
         cpx  #$0a
-        bcc  L3ee7
-L3edc:
+        bcc  xop17_obj_select_1
+xop2d_ENV_num_illegal_quantity_1:
         jmp  err_illegal_quantity
 xop17_obj_select:
         jsr  get_byte
         dex  
         cmp  #$08
-        bcs  L3edc
-L3ee7:
+        bcs  xop2d_ENV_num_illegal_quantity_1
+xop17_obj_select_1:
         stx  $77
         jmp  next_y0
 xop18_SPRITE_enable:
@@ -5183,15 +5185,15 @@ xop18_SPRITE_enable:
         jsr  get_byte
         txa  
         lsr  a
-        bne  L3edc
+        bne  xop2d_ENV_num_illegal_quantity_1
         ldx  $77
         lda  #$02
         sta  MMU_CR
         lda  $45ab,x
         ora  $d000,y
-        bcs  L3f13
+        bcs  xop1d_1
         eor  $45ab,x
-L3f13:
+xop1d_1:
         sta  $d000,y
         sta  MMU_LCRA
         jmp  next_y0
@@ -5200,7 +5202,7 @@ op6e_JOY:
         jsr  get_byte
         dex  
         cpx  #$02
-        bcs  L3edc
+        bcs  xop2d_ENV_num_illegal_quantity_1
         txa  
         eor  #$01
         tax  
@@ -5210,10 +5212,10 @@ op6e_JOY:
         ldy  $dc00
         lda  #$ff
         sta  $dc00
-L3f36:
+op6e_JOY_1:
         lda  $dc00,x
         cmp  $dc00,x
-        bne  L3f36
+        bne  op6e_JOY_1
         sty  $dc00
         cli  
         and  #$1f
@@ -5222,27 +5224,27 @@ L3f36:
         tay  
         lda  $823d,y
         sta  MMU_LCRA
-        bcs  L3f53
+        bcs  op6e_JOY_2
         ora  #$80
-L3f53:
-        jmp  L2f76
+op6e_JOY_2:
+        jmp  ret_int_a0
 op77_PUDEF:
         lda  #$1b
         sta  $18
         ldy  fac_exp
-        beq  L3f70
+        beq  op77_PUDEF_3
         cpy  #$04
-        bcc  L3f64
+        bcc  op77_PUDEF_1
         ldy  #$04
-L3f64:
+op77_PUDEF_1:
         dey  
-L3f65:
+op77_PUDEF_2:
         lda  #$64
         jsr  rd_zp_set
         sta  $1204,y
         dey  
-        bpl  L3f65
-L3f70:
+        bpl  op77_PUDEF_2
+op77_PUDEF_3:
         jmp  next
 op75_TRAP_off:
         lda  #$ff
@@ -5260,13 +5262,13 @@ op74_TRAP:
         sta  $120b
         lda  #$03
         jmp  skip_a
-L3f90:
+op74_TRAP_cant_resume_1:
         jmp  err_cant_resume
 collision_reset:
 ; collision_reset: $120C..$120D := $FF (COLLISION / event handler bookkeeping)  [open]
         ldx  $120d
         inx  
-        beq  L3f90
+        beq  op74_TRAP_cant_resume_1
         dex  
         stx  $120c
         ldx  #$ff
@@ -5289,11 +5291,11 @@ op7d_RESUME_next:
         lda  $120f
         sta  bcptr_hi
         iny  
-        beq  L3fca
+        beq  op7d_RESUME_next_1
         lda  (bcptr),y
         eor  #$5a
         jmp  skip_a
-L3fca:
+op7d_RESUME_next_1:
         jmp  fetch
 op18_SYS_x:
 ; SYS (op $4E, and op $18 which first skips one token): get_word -> $03/$04 target address, $03D5 -> $02 (bank
@@ -5314,11 +5316,11 @@ op4e_SYS:
         ldy  bcptr_hi
         sty  $3e
         jsr  rom_call_ax
-        jmp  L27cc
+        jmp  jump_3d3e
 xop11_SPRSAV_to_str:
-; SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from L406e); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]
+; SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from sprite_addr); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]
         jsr  get_byte
-        jsr  L406e
+        jsr  sprite_addr
         sta  t6b
         sty  t6c
         lda  #$43
@@ -5338,13 +5340,13 @@ xop11_SPRSAV_to_str:
         ldy  #$3f
         jsr  wr_zp
         inc  bcptr
-        bne  L4025
+        bne  xop11_SPRSAV_to_str_1
         inc  bcptr_hi
-L4025:
-        jmp  L31b1
+xop11_SPRSAV_to_str_1:
+        jmp  str_ret_ptr
 xop12_SPRSAV_from_str:
         jsr  pop_byte
-        jsr  L406e
+        jsr  sprite_addr
         sta  t6d
         sty  t6e
         lda  #$1b
@@ -5352,87 +5354,87 @@ xop12_SPRSAV_from_str:
         lda  #$64
         sta  $0233
         ldy  #$00
-L403d:
+xop12_SPRSAV_from_str_1:
         cpy  fac_exp
-        beq  L404b
+        beq  xop12_SPRSAV_from_str_2
         jsr  rd_zp
         sta  (t6d),y
         iny  
         cpy  #$3f
-        bcc  L403d
-L404b:
+        bcc  xop12_SPRSAV_from_str_1
+xop12_SPRSAV_from_str_2:
         jmp  next_y0
 xop13_SPRSAV_copy:
         jsr  get_byte
-        jsr  L406e
+        jsr  sprite_addr
         sta  fac_m3
         sty  fac_m4
         jsr  pop_byte
-        jsr  L406e
+        jsr  sprite_addr
         sta  t6d
         sty  t6e
         ldy  #$3e
-L4064:
+xop13_SPRSAV_copy_1:
         lda  (fac_m3),y
         sta  (t6d),y
         dey  
-        bpl  L4064
+        bpl  xop13_SPRSAV_copy_1
         jmp  next_y0
-L406e:
+sprite_addr:
         dex  
         cpx  #$08
-        bcs  L4089
+        bcs  xop23_TEMPO_illegal_quantity_1
         txa  
         lsr  a
         ror  a
         ror  a
         ldy  #$0e
-        bcc  L407c
+        bcc  sprite_addr_1
         iny  
-L407c:
+sprite_addr_1:
         rts  
 xop23_TEMPO:
         jsr  get_byte
         txa  
-        beq  L4089
+        beq  xop23_TEMPO_illegal_quantity_1
         stx  $1222
         jmp  next_y0
-L4089:
+xop23_TEMPO_illegal_quantity_1:
         jmp  err_illegal_quantity
 xop16_WINDOW:
         jsr  get_byte
-L408f:
+xop16_WINDOW_1:
         cpx  #$28
         bit  $d7
-        bpl  L4097
+        bpl  xop16_WINDOW_2
         cpx  #$50
-L4097:
-        bcs  L4089
+xop16_WINDOW_2:
+        bcs  xop23_TEMPO_illegal_quantity_1
         txa  
         sta  $12b2,y
         cmp  $12b3
-        bcc  L4089
+        bcc  xop23_TEMPO_illegal_quantity_1
         jsr  pop_byte
         cpx  #$19
-        bcs  L4089
+        bcs  xop23_TEMPO_illegal_quantity_1
         txa  
         sta  $12b3,y
         cmp  $12b4
-        bcc  L4089
+        bcc  xop23_TEMPO_illegal_quantity_1
         jsr  pop_byte
         iny  
         iny  
         cpy  #$03
-        beq  L408f
+        beq  xop16_WINDOW_1
         lda  #$0d
         ldy  #$73
-L40bf:
+rom_ay_tail:
         jsr  rom_call_ay
         jmp  next_y0
 xop2c_KEY_list:
         lda  #$21
         ldy  #$61
-        bne  L40bf
+        bne  rom_ay_tail
 op5c_COLOR:
         lda  #$a1
         ldx  #$1d
@@ -5440,38 +5442,38 @@ op5c_COLOR:
         stx  $3e
         jsr  pop_byte
         cpx  #$07
-        bcs  L4089
+        bcs  xop23_TEMPO_illegal_quantity_1
         stx  $77
         jsr  get_byte
         lda  #$ee
         ldy  #$69
-        jmp  L257d
+        jmp  rom_stmt
 xop0d_RSPPOS:
         lda  #$b0
         ldx  #$83
         ldy  #$03
-        bne  L40f4
+        bne  xop0e_RSPRITE_1
 xop0e_RSPRITE:
         lda  #$37
         ldx  #$83
         ldy  #$06
-L40f4:
+xop0e_RSPRITE_1:
         sty  $0d
         sta  rom_call_lo
         stx  rom_call_hi
         jsr  pop_byte
         dex  
         cpx  #$08
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         txa  
         tay  
         jsr  get_byte
         cpx  $0d
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         jsr  rom_call
-L4110:
+fac_to_int_skip2:
         jsr  fac_to_int
-        jmp  L27e7
+        jmp  skip2
 op73_MID_S_assign:
         jsr  pop_byte
         dex  
@@ -5497,38 +5499,38 @@ op73_MID_S_assign:
         sbc  #$00
         sta  t6c
         cpx  t6a
-        bcc  L4148
+        bcc  op73_MID_S_assign_1
         ldx  t6a
-L4148:
+op73_MID_S_assign_1:
         txa  
-        beq  L416c
+        beq  op73_MID_S_assign_4
         clc  
         adc  t6f
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         cmp  fac_exp
-        bcc  L4156
-        bne  L416f
-L4156:
+        bcc  op73_MID_S_assign_2
+        bne  op73_MID_S_assign_illegal_quantity_1
+op73_MID_S_assign_2:
         ldy  t6f
         lda  #$6b
         sta  $0233
         lda  #$64
         sta  $0265
-L4162:
+op73_MID_S_assign_3:
         jsr  rd_zp
         jsr  wr_zp
         iny  
         dex  
-        bne  L4162
-L416c:
+        bne  op73_MID_S_assign_3
+op73_MID_S_assign_4:
         jmp  next
-L416f:
+op73_MID_S_assign_illegal_quantity_1:
         jmp  err_illegal_quantity
 op69_BUMP:
         jsr  get_byte
         dex  
         cpx  #$02
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         sei  
         lda  $11e7,x
         pha  
@@ -5536,48 +5538,48 @@ op69_BUMP:
         sta  $11e7,x
         cli  
         pla  
-        jmp  L2eec
+        jmp  ret_int_ay
 op67_BANK:
         jsr  get_byte
         cpx  #$10
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         stx  $03d5
-        jmp  L27d6
+        jmp  next_pv
 op6a_RSPCOLOR:
         jsr  get_byte
         dex  
         cpx  #$02
-        bcs  L416f
+        bcs  op73_MID_S_assign_illegal_quantity_1
         lda  #$02
         sta  MMU_CR
         lda  $d025,x
         sta  MMU_LCRA
         and  #$0f
         adc  #$01
-        jmp  L2eec
+        jmp  ret_int_ay
 op7a_RWINDOW:
         jsr  get_byte
         cpx  #$02
-        beq  L41c9
-L41b6:
-        bcs  L416f
+        beq  op7a_RWINDOW_4
+op7a_RWINDOW_1:
+        bcs  op73_MID_S_assign_illegal_quantity_1
         sec  
         dex  
-        beq  L41c2
+        beq  op7a_RWINDOW_2
         lda  $e4
         sbc  $e5
-        bcs  L41c6
-L41c2:
+        bcs  op7a_RWINDOW_3
+op7a_RWINDOW_2:
         lda  $e7
         sbc  $e6
-L41c6:
-        jmp  L2eec
-L41c9:
+op7a_RWINDOW_3:
+        jmp  ret_int_ay
+op7a_RWINDOW_4:
         lda  #$28
         bit  $d7
-        bpl  L41c6
+        bpl  op7a_RWINDOW_3
         asl  a
-        bne  L41c6
+        bne  op7a_RWINDOW_3
 xop1f_DMA_stash:
 ; shared by: $00,$1F DMA_stash, $00,$20 ?, $00,$21 ?
 ; DMA statements ($00,$1F / $20 / $21 share this body; $77 := x + $65 is the command passed to the KERNAL DMA call $FF50 in Y, bank from $03D5).
@@ -5591,25 +5593,25 @@ xop1f_DMA_stash:
         ldy  #$07
         lda  #$02
         sta  MMU_CR
-L41df:
+xop1f_DMA_stash_1:
         jsr  get_word
         sta  $dc00,y
         txa  
         sta  $dc01,y
         jsr  pop_value
         cpy  #$07
-        bne  L41f4
+        bne  xop1f_DMA_stash_2
         ldy  #$02
-        bne  L41df
-L41f4:
+        bne  xop1f_DMA_stash_1
+xop1f_DMA_stash_2:
         cpy  #$02
-        bne  L41fc
+        bne  xop1f_DMA_stash_3
         ldy  #$04
-        bne  L41df
-L41fc:
+        bne  xop1f_DMA_stash_1
+xop1f_DMA_stash_3:
         jsr  get_byte
         cpx  #$10
-        bcs  L41b6
+        bcs  op7a_RWINDOW_1
         stx  $dc06
         ldy  $77
         ldx  $03d5
@@ -5624,34 +5626,34 @@ op6b_RGR:
         rol  a
         adc  #$00
         bit  $d7
-        bpl  L4222
+        bpl  op6b_RGR_1
         adc  #$05
-L4222:
-        jmp  L2eec
+op6b_RGR_1:
+        jmp  ret_int_ay
 garbage_collect:
 ; garbage_collect: string heap compaction ($35/$36 = current heap top, $33/$34 = bound).  [likely]
         lda  $39
         ldy  $3a
-L4229:
+garbage_collect_1:
         sty  ptr25
-L422b:
+garbage_collect_2:
         sta  ptr24
         cpy  frespc_hi
-        bne  L4235
+        bne  garbage_collect_3
         cmp  frespc
-        beq  L4293
-L4235:
-        bcc  L4293
+        beq  gc_compact_3
+garbage_collect_3:
+        bcc  gc_compact_3
         sbc  #$02
         sta  ptr24
-        bcs  L423f
+        bcs  garbage_collect_4
         dec  ptr25
-L423f:
+garbage_collect_4:
         ldy  #$01
         lda  #$24
         jsr  rd_zp_set
         cmp  #$ff
-        beq  L4263
+        beq  garbage_collect_5
         sta  $51
         dey  
         jsr  rd_zp
@@ -5662,77 +5664,77 @@ L423f:
         sec  
         adc  ptr24
         ldy  ptr25
-        bcs  L422b
+        bcs  garbage_collect_2
         dey  
-        bcc  L4229
-L4263:
+        bcc  garbage_collect_1
+garbage_collect_5:
         lda  ptr24
         adc  #$01
         sta  $37
         lda  ptr25
         adc  #$00
         sta  $38
-L426f:
+garbage_collect_6:
         dey  
         jsr  rd_zp
         eor  #$ff
         sec  
         adc  ptr24
         ldy  ptr25
-        bcs  L427f
+        bcs  garbage_collect_7
         dey  
         sty  ptr25
-L427f:
+garbage_collect_7:
         sta  ptr24
-L4281:
+gc_compact:
         cpy  frespc_hi
-        bne  L4289
+        bne  gc_compact_1
         cmp  frespc
-        beq  L428b
-L4289:
-        bcs  L42ab
-L428b:
+        beq  gc_compact_2
+gc_compact_1:
+        bcs  gc_compact_7
+gc_compact_2:
         lda  $37
         ldy  $38
         sta  frespc
         sty  frespc_hi
-L4293:
+gc_compact_3:
         sec  
         sbc  #$02
-        bcs  L429a
+        bcs  gc_compact_4
         dey  
         sec  
-L429a:
+gc_compact_4:
         sbc  fac_exp
-        bcs  L429f
+        bcs  gc_compact_5
         dey  
-L429f:
+gc_compact_5:
         cpy  fretop_hi
-        bne  L42a5
+        bne  gc_compact_6
         cmp  fretop
-L42a5:
-        bcc  L42a8
+gc_compact_6:
+        bcc  gc_compact_out_of_memory_1
         rts  
-L42a8:
+gc_compact_out_of_memory_1:
         jmp  err_out_of_memory
-L42ab:
+gc_compact_7:
         sbc  #$02
         sta  ptr24
-        bcs  L42b3
+        bcs  gc_compact_8
         dec  ptr25
-L42b3:
+gc_compact_8:
         ldy  #$01
         lda  #$24
         jsr  rd_zp_set
         cmp  #$ff
-        beq  L426f
+        beq  garbage_collect_6
         sta  $51
         lda  $37
         sbc  #$01
         sta  $37
-        bcs  L42ca
+        bcs  gc_compact_9
         dec  $38
-L42ca:
+gc_compact_9:
         lda  #$37
         sta  $0265
         lda  $51
@@ -5749,9 +5751,9 @@ L42ca:
         sec  
         adc  ptr24
         sta  ptr24
-        bcs  L42ef
+        bcs  gc_compact_10
         dec  ptr25
-L42ef:
+gc_compact_10:
         lda  #$50
         sta  $0265
         pla  
@@ -5770,12 +5772,12 @@ L42ef:
         jsr  blkcpy_b
         lda  ptr24
         ldy  ptr25
-        jmp  L4281
+        jmp  gc_compact
 val_string:
 ; val_string: Blitz's own VAL; collects the digits 16-bit wise, then calls the BASIC ROM multiply/divide-by-10 routines.  [sure, see blitzc README]
         ldy  #$00
         ldx  #$1d
-L4318:
+val_start:
         sta  ptr26
         stx  ptr25
         sty  ptr24
@@ -5784,40 +5786,40 @@ L4318:
         ldy  #$0a
         ldx  #$00
         stx  valtyp
-L4328:
+val_start_1:
         stx  $5f,y
         dey  
-        bpl  L4328
+        bpl  val_start_1
         lda  #$80
         sta  intflg
-L4331:
+val_start_2:
         iny  
         cpy  ptr26
-        beq  L438a
+        beq  val_start_7
         lda  (ptr24),y
         cmp  #$20
-        beq  L4331
+        beq  val_start_2
         cmp  #$2b
-        beq  L4346
+        beq  val_start_3
         cmp  #$2d
-        bne  L4351
+        bne  val_start_4
         dec  $69
-L4346:
+val_start_3:
         iny  
         cpy  ptr26
-        beq  L438a
+        beq  val_start_7
         lda  (ptr24),y
         cmp  #$20
-        beq  L4346
-L4351:
+        beq  val_start_3
+val_start_4:
         cmp  #$30
-        bcc  L4386
+        bcc  val_start_6
         cmp  #$3a
-        bcs  L4394
+        bcs  val_start_9
         pha  
         ldx  fac_m3
         cpx  #$0c
-        bcs  L4381
+        bcs  val_start_5
         lda  fac_m4
         asl  a
         rol  fac_m3
@@ -5834,58 +5836,58 @@ L4351:
         and  #$0f
         adc  fac_m4
         sta  fac_m4
-        bcc  L4346
+        bcc  val_start_3
         inc  fac_m3
-        bne  L4346
-L4381:
-        jsr  L4448
-        bcs  L43be
-L4386:
+        bne  val_start_3
+val_start_5:
+        jsr  int_to_fac_keep_y
+        bcs  val_skip_space_1
+val_start_6:
         cmp  #$2e
-        beq  L439b
-L438a:
+        beq  val_start_10
+val_start_7:
         sty  ptr26
         bit  $69
-        bpl  L4393
+        bpl  val_start_8
         jsr  neg_int
-L4393:
+val_start_8:
         rts  
-L4394:
+val_start_9:
         cmp  #$45
-        bne  L438a
-        jmp  L43fe
-L439b:
-        jsr  L4448
-L439e:
+        bne  val_start_7
+        jmp  val_exponent
+val_start_10:
+        jsr  int_to_fac_keep_y
+val_start_11:
         ror  $61
         bit  $61
-        bvs  L43f5
-L43a4:
+        bvs  val_skip_space_5
+val_skip_space:
         iny  
         cpy  ptr26
-        beq  L43f5
+        beq  val_skip_space_5
         lda  (ptr24),y
         cmp  #$20
-        beq  L43a4
+        beq  val_skip_space
         cmp  #$2e
-        beq  L439e
+        beq  val_start_11
         cmp  #$30
-        bcc  L43f5
+        bcc  val_skip_space_5
         cmp  #$3a
-        bcs  L43f1
+        bcs  val_skip_space_4
         pha  
         sty  ptr27
-L43be:
+val_skip_space_1:
         bit  $61
-        bpl  L43c4
+        bpl  val_skip_space_2
         inc  $5f
-L43c4:
+val_skip_space_2:
         lda  #$17
         ldx  #$8b
         jsr  rom_call_ax
         pla  
         and  #$0f
-        beq  L43ec
+        beq  val_skip_space_3
         tax  
         lda  $4566,x
         sta  t6a
@@ -5899,53 +5901,53 @@ L43c4:
         lda  #$b8
         ldx  #$8d
         jsr  rom_call_ax
-L43ec:
+val_skip_space_3:
         ldy  ptr27
-        jmp  L43a4
-L43f1:
+        jmp  val_skip_space
+val_skip_space_4:
         cmp  #$45
-        beq  L4401
-L43f5:
+        beq  val_exponent_1
+val_skip_space_5:
         sty  ptr26
         lda  #$67
         ldx  #$8d
         jmp  rom_call_ax
-L43fe:
-        jsr  L4448
-L4401:
+val_exponent:
+        jsr  int_to_fac_keep_y
+val_exponent_1:
         iny  
         cpy  ptr26
-        beq  L43f5
+        beq  val_skip_space_5
         lda  (ptr24),y
         cmp  #$20
-        beq  L4401
+        beq  val_exponent_1
         cmp  #$2b
-        beq  L4416
+        beq  val_exponent_2
         cmp  #$2d
-        bne  L4421
+        bne  val_exponent_3
         dec  $62
-L4416:
+val_exponent_2:
         iny  
         cpy  ptr26
-        beq  L43f5
+        beq  val_skip_space_5
         lda  (ptr24),y
         cmp  #$20
-        beq  L4416
-L4421:
+        beq  val_exponent_2
+val_exponent_3:
         cmp  #$30
-        bcc  L43f5
+        bcc  val_skip_space_5
         cmp  #$3a
-        bcs  L43f5
+        bcs  val_skip_space_5
         and  #$0f
         sta  ptr27
         lda  $60
         cmp  #$0a
-        bcc  L443c
+        bcc  val_exponent_4
         lda  #$64
         bit  $62
         bmi  op_hi_tab
         jmp  err_overflow
-L443c:
+val_exponent_4:
         asl  a
         asl  a
         adc  $60
@@ -5956,15 +5958,20 @@ op_hi_tab:
 ; Opcode dispatch tables are indexed by the opcode itself: op_hi_tab+x / op_lo_tab+x (valid x = $0E..$7F,
 ; so the real data starts 14 bytes after the labelled base).  Ext table: x = 0..$44.
         .byte $85,$60,$4c,$16,$44
-L4448:
-        .byte $84,$27,$20,$41,$2d,$a4,$27,$38,$60,$1e,$1e,$38,$34,$34,$35,$35
-        .byte $21,$22,$32,$3f,$37,$37,$37,$37,$37,$22,$38,$2f,$2e,$1e,$2e,$2e
-        .byte $2f,$2e,$2e,$2e,$2e,$2e,$2e,$2e,$2e,$2e,$2f,$2f,$2f
-L4475:
-        .byte $2f,$30,$31,$31,$31,$38,$38,$37,$27,$32,$32,$32,$32,$33,$32,$32
-        .byte $33,$32,$33,$33,$30,$27,$30,$23,$32,$25,$31,$2b,$3f,$23,$33,$33
-        .byte $37,$33,$3d,$33,$25,$33,$38,$25,$37,$25,$40,$39,$39,$39,$3a,$33
-        .byte $3a,$3b,$3c,$3c,$3c,$41,$25,$41,$41,$42,$2e,$3d,$3f,$2e,$2f,$3e
+int_to_fac_keep_y:
+; int_to_fac_keep_y: a 9-byte helper that lives in the unused first slots of op_hi_tab (opcodes < $0E have no handler).  [sure: code]
+        sty  ptr27
+        jsr  int_to_fac
+        ldy  ptr27
+        sec  
+        rts  
+        .byte $1e,$1e,$38,$34,$34,$35,$35,$21,$22,$32,$3f,$37,$37,$37,$37,$37
+        .byte $22,$38,$2f,$2e,$1e,$2e,$2e,$2f,$2e,$2e,$2e,$2e,$2e,$2e,$2e,$2e
+        .byte $2e,$2f,$2f,$2f,$2f,$30,$31,$31,$31,$38,$38,$37,$27,$32,$32,$32
+        .byte $32,$33,$32,$32,$33,$32,$33,$33,$30,$27,$30,$23,$32,$25,$31,$2b
+        .byte $3f,$23,$33,$33,$37,$33,$3d,$33,$25,$33,$38,$25,$37,$25,$40,$39
+        .byte $39,$39,$3a,$33,$3a,$3b,$3c,$3c,$3c,$41,$25,$41,$41,$42,$2e,$3d
+        .byte $3f,$2e,$2f,$3e
 op_lo_tab:
         .byte $3d,$41,$3f,$3f,$3f,$3f,$25,$25,$41,$21,$25,$3f,$3f,$23,$71,$82
         .byte $cd,$f6,$df,$fd,$d3,$f2,$81,$09,$cd,$91,$63,$37,$37,$ba,$4a,$21

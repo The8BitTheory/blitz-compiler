@@ -61,6 +61,8 @@ for x in range(0x0e, 0x80): entries.append(g(main_tab_lo + x) | g(main_tab_hi + 
 for x in range(0, 0x45):    entries.append(g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8)
 LO, HI = sh(0x1c2f), sh(0x4443)          # code lives here; tables from $4443 on
 code = disasm([e for e in entries if LO <= e < HI], LO, HI)
+for _s, _e in getattr(names, 'EXTRA_CODE_RANGES', []):      # small code islands inside the tables
+    code.update(disasm([sh(_s)], sh(_s), sh(_e)))
 
 # trampolines $1C5E..$1CFD are copied to $0202 at run time: shown as data (+ disassembly in comments)
 TR_LO, TR_HI = sh(0x1c5e), sh(0x1cfe)
@@ -124,6 +126,19 @@ for x, txt in getattr(names, 'OP_COMMENT', {}).items():
 for x, txt in getattr(names, 'XOP_COMMENT', {}).items():
     a = g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8
     names.COMMENT_BEFORE[a] = (names.COMMENT_BEFORE[a] + '\n' if a in names.COMMENT_BEFORE else '') + txt
+# anonymous labels (branch targets inside routines) get the name of the routine they belong to plus a counter
+_owner = None; _cnt = {}
+for _a in sorted(labels):
+    _n = labels[_a]
+    if _n.startswith('L') and len(_n) == 5 and all(c in '0123456789abcdef' for c in _n[1:]):
+        if _owner:
+            _c = code.get(_a)
+            _err = names.SYMS.get(_c[3]) if _c and _c[1] == 'JMP' else None      # label that only raises an error
+            _key = _owner + ('_' + _err[4:] if _err and _err.startswith('err_') else '')
+            _cnt[_key] = _cnt.get(_key, 0) + 1
+            labels[_a] = '%s_%d' % (_key, _cnt[_key])
+    else:
+        _owner = _n
 def sym(a):
     if a in names.SYMS: return names.SYMS[a]
     if a in labels and a in starts and LO <= a < END: return labels[a]

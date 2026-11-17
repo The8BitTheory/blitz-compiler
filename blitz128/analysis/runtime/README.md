@@ -22,9 +22,9 @@ assembles back to exactly the bytes of `../run_1c01.bin`:
 | Ext. opcodes (`$00 xx`) | labelled `xopXX`; fully named except `1F-21`, `25` (alias into DRAW) and main `58` |
 | Operator handlers `$01-$0D` (int/float/string arithmetic, compare, AND/OR) | analysed: stack model, operand typing, int/float/string paths named and commented [sure]/[likely] |
 | Copied BASIC ROM arithmetic (FOUT etc.) | labelled only where referenced |
-| Remaining anonymous `Lxxxx` labels | generated, not yet named |
+| Labels | no anonymous `Lxxxx` left: ~70 entry points and shared tails named by reading the code (`var_store`, `ret_int_ay`, `rom_stmt`, `tmpstr_push`, ...), the ~540 local branch targets are named `<routine>_<n>` mechanically (labels that only raise an error: `<routine>_<error>_<n>`) |
 
-Anonymous labels are named by address (`L2d79`), so the file stays diff-able while names are added to `names.py`.
+The mechanical local names (`op2f_LEN_3`) are numbered in address order and change when a label is named by hand; the hand-made names live in `names.py` (`LABELS`).
 Names with a guessed meaning carry a confidence tag in the comment; handler names such as `op3c_PRINT_str` come from
 the KERNAL calls the handler makes (CHROUT, GETIN, ...) and from the operand handling, not from the original source.
 

@@ -15,7 +15,7 @@ ZP = {
     0x63: 'fac_exp', 0x64: 'fac_m1', 0x65: 'fac_m2', 0x66: 'fac_m3', 0x67: 'fac_m4', 0x68: 'fac_sign',
     0x2f: 'vbase', 0x30: 'vbase_hi',       # base of the variable-slot area (7 bytes per variable) in bank 1
     0x31: 'strend', 0x32: 'strend_hi', 0x33: 'fretop', 0x34: 'fretop_hi', 0x35: 'frespc', 0x36: 'frespc_hi',  # string heap limits (BASIC names)
-    0x71: 'facov',       # FAC rounding byte; bit7 set => round before use (calls ROM $8C47 via L1e42)
+    0x71: 'facov',       # FAC rounding byte; bit7 set => round before use (calls ROM $8C47 via round_fac)
     0x6a: 't6a', 0x6b: 't6b', 0x6c: 't6c', 0x6d: 't6d', 0x6e: 't6e', 0x6f: 't6f',  # scratch; at start-up the six header words / patch keys
     0x7d: 'fstk', 0x7e: 'fstk_hi',         # FOR/GOSUB stack pointer (in bank 1) [likely]
     0x80: 'flags80',
@@ -86,7 +86,7 @@ EXT_OPS = {    # opcode $00 xx
     0x38: 'FILTER_res', 0x39: 'SCALE', 0x3a: 'SCALE_off', 0x44: 'reinstall',
 }
 EXTRA_CODE = [0x2500, 0x27b2]   # reachable only by pushed addresses / vectors
-REF_LABELS = [0x4475]
+REF_LABELS = []
 HANDLER_NAMES = {}
 
 # ---- section comments -----------------------------------------------------
@@ -231,7 +231,7 @@ code is a `ldy #reg` hidden behind `bit abs` opcodes ($2C), so the entries sit i
 The body sets/clears the bit of sprite $77 (mask table at $45AB) in $D000,y.  [sure]""",
     0x2465: """COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
 $127F is the enable bitmask (masks at $45AB).  [likely]""",
-    0x3ff1: "SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from L406e); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]",
+    0x3ff1: "SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from sprite_addr); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]",
 })
 COMMENT_BEFORE.pop(0x3eec+0) if False else None
 
@@ -351,3 +351,78 @@ Compile mode 4 ('overlay') exists to make every module's table identical (see OV
 OP_COMMENT[0x5d] = """LOAD / SAVE / VERIFY.  LOAD inside a running program is the module-chaining primitive: after the ROM LOAD (stub copied from $2500 to $0120)
 the BASIC text pointer is set to the loaded file and the BASIC ROM restarts the program at $5AA6; the new module's BASIC stub does `SYS` ->
 `start` -> `init` -> init_vars in check mode, so variables are KEPT when the variable tables are compatible (OVERLAY.md).  [sure: experiments]"""
+
+# ---- entry points and shared tails that used to be anonymous (names describe what the code does; [likely] throughout) ----------------
+EXTRA_CODE_RANGES = [(0x4448, 0x4451)]     # a 9-byte helper sits in the unused first slots of op_hi_tab
+LABELS.update({
+    0x1c46: 'copy_up_loop',            # loader: copy the program page by page up to $1C00
+    0x238b: 'event_frame_done',        # after RETURN from a collision/event frame: clear the "handler running" bit in $127F
+    0x23c7: 'rom_call_y',              # rom_call with the high byte in Y (low byte already set)
+    0x23d2: 'trampoline_copy_loop',
+    0x240f: 'rom_x_tail',              # jsr rom_call_x ; jmp next_y0
+    0x2497: 'error_entries',           # first of the BIT-hidden `ldx #errnum` entries (see ERR_ENTRIES)
+    0x2500: 'load_stub_src',           # code copied by op5d/5e/5f to $0120: ROM LOAD/VERIFY, then restart the program ($5AA6)
+    0x255d: 'rom_stmt_18',             # jsr rom_call_ay ; $18 := $1B ; jmp next
+    0x257d: 'rom_stmt',                # jsr rom_call_ay ; jmp next      (statement implemented entirely by a ROM routine)
+    0x25c9: 'hex_byte_2',              # hex_byte body: high nibble, then low
+    0x25d2: 'hex_nibble',              # low nibble of A -> ASCII hex digit at $0100,y
+    0x261a: 'int_result_store',        # fac_m3 := A ; overflow -> float, else next
+    0x27cc: 'jump_3d3e',               # bytecode pointer := $3D/$3E
+    0x27d6: 'next_pv',                 # prevop := Y, then advance one byte
+    0x27e5: 'skip2_pv',                # prevop := Y, skip 2 bytes
+    0x27e7: 'skip2',                   # skip 2 bytes
+    0x27eb: 'skip_a_keep_y',           # skip A bytes (Y unchanged)
+    0x27ec: 'skip_a_c',                # bcptr += A + carry
+    0x27ee: 'set_bcptr_lo',            # bcptr lo := A (carry from the caller propagates)
+    0x2825: 'var_store',               # tokens $C0-$DF: store FAC into the variable slot at ($61)   [assignment]
+    0x282e: 'var_store_int',           # slot is integer: convert FAC to integer if needed
+    0x2837: 'var_store_int2',
+    0x2841: 'var_store_float',         # slot is float: convert integer FAC to float, round, store
+    0x2845: 'var_store_float_conv',
+    0x2923: 'var_load',                # tokens $80-$9F: load the variable slot at ($61) into FAC (typed)
+    0x292c: 'var_load_int',
+    0x2942: 'var_load_str',
+    0x296c: 'var_load_float',
+    0x2a89: 'const_ops',               # operand tokens $A0..: constants / ROM-assisted operands
+    0x2ad2: 'rom_ax_tail',             # jsr rom_call_ax ; jmp next_inc1_y0
+    0x2aea: 'const_int16',             # 16-bit constant -> fac_m3/m4
+    0x2afe: 'ret_signed_a',            # finish a signed 8-bit result
+    0x2b3d: 'var_long_ref',            # tokens $E0-$E5: variable with long index / array element
+    0x2b46: 'var_long_ref2',
+    0x2c7a: 'str_store',               # store a string value into a string variable (copy + descriptor)
+    0x2ccd: 'str_store_ptr',
+    0x2ce4: 'str_store_done',
+    0x2d79: 'coerce_to_0e',            # make FAC integer/float as requested by flag $0E
+    0x2e30: 'fac_round_word',
+    0x2e57: 'store_word_1617',         # $16/$17 := X/A
+    0x2e67: 'get_byte_float',
+    0x2eec: 'ret_int_ay',              # result integer: fac_m4 := A, fac_m3 := Y, intflg := $80, next
+    0x2f76: 'ret_int_a0',              # same with Y := 0
+    0x2f7e: 'ret_int_set',
+    0x2ff9: 'str_result_6c',
+    0x316d: 'str_result',              # allocate a string and copy the text at $0100 (STR$/HEX$ ...)
+    0x31b1: 'str_ret_ptr',
+    0x31c7: 'tmpstr_push',             # push a string descriptor on the temporary-string stack at $00,x
+    0x3283: 'read_store_dispatch',
+    0x3445: 'input_prompt_check',
+    0x3496: 'input_str_store',
+    0x36aa: 'next_step_add',           # NEXT: add the STEP value to the loop variable
+    0x379c: 'jump_ax',                 # bytecode pointer := A/X (lo/hi), Y := 0, fetch
+    0x39e9: 'dos_stub_install',        # copy 83 bytes (load_stub_src) to $0120 and run them
+    0x3a1e: 'pop_or_get',
+    0x3d72: 'nibble_pack',
+    0x3e37: 'instr_core',
+    0x406e: 'sprite_addr',             # sprite number (X) -> data pointer $0E00 + n*64 in A/Y
+    0x40bf: 'rom_ay_tail',             # jsr rom_call_ay ; jmp next_y0   ( = image 2 $6650)
+    0x4110: 'fac_to_int_skip2',
+    0x4281: 'gc_compact',
+    0x4318: 'val_start',
+    0x43a4: 'val_skip_space',
+    0x43fe: 'val_exponent',
+    0x4448: 'int_to_fac_keep_y',       # sty $27 ; jsr int_to_fac ; ldy $27 ; sec ; rts
+})
+COMMENT_BEFORE.update({
+    0x2825: "var_store ($C0-$DF): the token after an expression assigns the value in FAC to the variable (Rosetta: `b1 c0` = a=1).  $80-$9F load the same slots as second operands.  [sure: Rosetta, likely: details]",
+    0x4448: "int_to_fac_keep_y: a 9-byte helper that lives in the unused first slots of op_hi_tab (opcodes < $0E have no handler).  [sure: code]",
+    0x2500: "load_stub_src: copied to $0120 by op5d/5e/5f (83 bytes).  Calls the ROM LOAD ($A1B8) or VERIFY ($9133) in config C, then looks at the load end address ($AC/$AD): $40 -> graphics-area program ($4000 := 0, $76 := $FF), $1C -> normal ($1C00 := 0, $76 := 0), sets the BASIC pointer $2E and restarts the program through the ROM ($5AA6).  [likely]",
+})
