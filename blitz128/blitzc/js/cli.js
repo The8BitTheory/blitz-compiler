@@ -2,14 +2,16 @@
 // blitzc - Blitz!128 compiler port, command line.
 //   node js/cli.js <in.prg> <outdir> [--no-runtime] [--full] [--blitz BLITZ!.128.prg] [--name PROG] [--like ref_c.prg] [--keys 7b,cb,84,6d,96,a8 --pad 8b,eb,..]
 //   --plain a.prg,b.prg: further programs, always compiled WITHOUT runtime (<in.prg> may then be '-' = none); --d81 out.d81: all C/ and Z/ files as disk image
+//   --overlay: with --plain, compile all programs in ONE run like menu item 4 of the original ("overlay"): one common variable table, first
+//              program with runtime; files are named like the programs (<name>.prg, no C/ prefix, no Z/ file) - chain them with LOAD "NAME",8
 //   --no-runtime: C/ without runtime routines; --full: RESUME and COLLISION with full syntax (original menu 4-6)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { compile, compileMany, d81Of, keysOf, validKey } from './blitzc.js';
+import { compile, compileMany, compileOverlay, d81Of, keysOf, validKey } from './blitzc.js';
 import { basename } from 'node:path';
 
 const a = process.argv.slice(2); const opt = {}; const pos = [];
-const FLAGS = ['no-runtime', 'full'];
+const FLAGS = ['no-runtime', 'full', 'overlay'];
 const stem = f => basename(f).replace(/\.[^.]*$/, '').toUpperCase();
 for (let i = 0; i < a.length; i++) if (a[i].startsWith('--')) opt[a[i].slice(2)] = FLAGS.includes(a[i].slice(2)) ? true : a[++i]; else pos.push(a[i]);
 if (pos.length < 2) { console.error('usage: cli.js in.prg outdir [--no-runtime] [--full] [--blitz file] [--name N] [--like c.prg | --keys k0,..,k5 [--pad b,..]]'); process.exit(2); }
@@ -27,10 +29,13 @@ if (plain.length || opt.d81) {
   const progs = [];
   if (pos[0] !== '-') progs.push({ src: readFileSync(pos[0]), name: opt.name || stem(pos[0]), runtime: !opt['no-runtime'] });
   for (const f of plain) progs.push({ src: readFileSync(f), name: stem(f), runtime: false });
-  const res = compileMany(progs, blitz, common, ev => { if (ev.type === 'program') console.log(`${ev.index + 1}/${ev.count} ${ev.name} (${ev.runtime ? 'with' : 'without'} runtime)`); });
+  if (opt.overlay && progs.length < 2) { console.error('--overlay needs at least two programs'); process.exit(2); }
+  const res = opt.overlay
+    ? compileOverlay(progs, blitz, common, ev => { if (ev.type === 'program') console.log(`${ev.index + 1}/${ev.count} ${ev.name}${ev.runtime ? ' (with runtime)' : ''}`); })
+    : compileMany(progs, blitz, common, ev => { if (ev.type === 'program') console.log(`${ev.index + 1}/${ev.count} ${ev.name} (${ev.runtime ? 'with' : 'without'} runtime)`); });
   let bad = 0;
   for (const x of res) {
-    if (x.c) writeFileSync(`${pos[1]}/c-${x.name.toLowerCase()}.prg`, x.c);
+    if (x.c) writeFileSync(`${pos[1]}/${opt.overlay ? '' : 'c-'}${x.name.toLowerCase()}.prg`, x.c);
     if (x.z) writeFileSync(`${pos[1]}/z-${x.name.toLowerCase()}.prg`, x.z);
     console.log(`  ${x.name}: errors ${x.errors}  C/ ${x.c ? x.c.length : '-'} B  Z/ ${x.z ? x.z.length : '-'} B${x.error ? '  ' + x.error : ''}`);
     bad += x.errors;

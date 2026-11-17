@@ -1,0 +1,1 @@
+{"order":["f1","f2"],"full":false,"note":"FN defined in module 1, called in module 2: same slot, but the definition does not survive the LOAD (error 14 at run time)"}
