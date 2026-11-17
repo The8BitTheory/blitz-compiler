@@ -20,7 +20,7 @@ export function makeD81(diskName, diskId, files) {
       if (t < 1 || t > D81_TRACKS) continue;
       for (let s = 0; s < D81_SECTORS; s++) if (!used[t][s]) { used[t][s] = true; return [t, s]; }
     }
-    throw new Error('Image voll');
+    throw new Error('Disk image full');
   };
   const entries = [];
   for (const { name, data } of files) {

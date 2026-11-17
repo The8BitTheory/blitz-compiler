@@ -17,6 +17,6 @@ page = page.replace("const makeWorker = () => new Worker('./worker.js', { type: 
 page = page.replace("const runInline = async (job, post) => (await import('./blitzc.js')).compileJob(job, post);",
   "const runInline = async (job, post) => new Function(WSRC + '\\nreturn compileJob;')()(job, post);")
 page = re.sub(r'<span id="srvhint">.*?</span>', '', page, flags=re.S)
-page = page.replace('Alles läuft lokal im Browser.', 'Alles läuft lokal im Browser, die Datei lässt sich direkt per Doppelklick öffnen.')
+page = page.replace('Everything runs locally in the browser.', 'Everything runs locally in the browser, and the file opens directly with a double click.')
 open(os.path.join(J, 'blitzc.html'), 'w').write(page)
 print('js/blitzc.html', len(page), 'bytes')
