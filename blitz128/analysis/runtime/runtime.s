@@ -187,6 +187,7 @@ gfx_ext_hook:
 ; PAINT $42, BOX $43; $3C [open]).  In THIS runtime image they just raise error 35 NO GRAPHICS AREA (jmp err_no_graphics_area).
 ; Programs that use graphics are compiled with the $4001 runtime (image 2, +401 bytes of inserted code) - presumably that image
 ; fills these table slots.  [sure for the error; image-2 role likely]
+; DRAW_alt: enters the DRAW body at `lda fac_m4` (skips the flag-byte fetch).  Never emitted by the compiler in any test; image 1 answers it with error 35.  [open]
         jmp  err_no_graphics_area
 fout:
 ; FOUT: FAC1 -> string at $0100 (copy of the BASIC ROM routine).  [sure per ANALYSE section 4.2]
@@ -4201,7 +4202,9 @@ L37f6:
         tax  
         pla  
         jmp  L379c
-op58:
+op58_IF_RETURN:
+; IF_RETURN ($58): `if <cond> then return` - if the condition is non-zero jump into op1d_RETURN (pop the GOSUB frame), else continue.  Never
+; seen in the test sources (the compiler turns `if a then return` into $1F + $1D); matches the note `X58 = IF x THEN RETURN` in blitzc/README.  [sure: code]
         sty  prevop
         lda  intflg
         bpl  L381a
@@ -5566,8 +5569,12 @@ L41c9:
         bpl  L41c6
         asl  a
         bne  L41c6
-xop1f:
-; shared by: $00,$1F ?, $00,$20 ?, $00,$21 ?
+xop1f_DMA_stash:
+; shared by: $00,$1F DMA_stash, $00,$20 ?, $00,$21 ?
+; DMA statements ($00,$1F / $20 / $21 share this body; $77 := x + $65 is the command passed to the KERNAL DMA call $FF50 in Y, bank from $03D5).
+; It reads three 16-bit values (get_word -> $DC07/$DC08, $DC02/$DC03, $DC04/$DC05 via the I/O area) and a byte < 16 ($DC06): the STASH / FETCH / SWAP
+; family of BASIC 7 (the REC registers).  Order stash, fetch, swap is [likely] (BASIC keyword order); the compiler never emits these opcodes - it
+; compiles `stash 100,4096,0,0` etc. to a bare `b0` (checked with the original compiler).
         txa  
         clc  
         adc  #$65

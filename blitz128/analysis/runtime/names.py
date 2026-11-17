@@ -69,7 +69,7 @@ MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/
     0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_cr', 0x45: 'PRINT_end',
     0x46: 'GET', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
     0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'JUMP_if_true', 0x53: 'INPUT_num',
-    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x59: 'HEX_S', 0x5a: 'JUMP_if_false', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
+    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x58: 'IF_RETURN', 0x59: 'HEX_S', 0x5a: 'JUMP_if_false', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
     0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY', 0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'DOS', 0x63: 'RECORD',
     0x65: 'CHAR', 0x66: 'SOUND', 0x67: 'BANK', 0x68: 'XOR', 0x69: 'BUMP', 0x6a: 'RSPCOLOR', 0x6b: 'RGR',
     0x6c: 'RCLR', 0x6d: 'POT', 0x6e: 'JOY', 0x6f: 'RDOT', 0x70: 'DEC', 0x71: 'INSTR', 0x72: 'ERR_S',
@@ -77,7 +77,7 @@ MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/
     0x7a: 'RWINDOW', 0x7b: 'STR_ARG', 0x7c: 'USING_end', 0x7d: 'RESUME_next', 0x7e: 'RESUME', 0x7f: 'STMT_HEAD',
 }
 EXT_OPS = {    # opcode $00 xx
-    0x00: 'GETKEY', 0x01: 'RREG', 0x05: 'SYS_arg', 0x09: 'PEN', 0x0a: 'PLAY', 0x0b: 'WIDTH', 0x0c: 'SPRDEF',
+    0x00: 'GETKEY', 0x1f: 'DMA_stash', 0x25: 'DRAW_alt', 0x01: 'RREG', 0x05: 'SYS_arg', 0x09: 'PEN', 0x0a: 'PLAY', 0x0b: 'WIDTH', 0x0c: 'SPRDEF',
     0x0d: 'RSPPOS', 0x0e: 'RSPRITE', 0x0f: 'SPRCOLOR_1', 0x10: 'SPRCOLOR_2', 0x11: 'SPRSAV_to_str',
     0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy', 0x14: 'COLLISION_off', 0x15: 'COLLISION_on', 0x2c: 'KEY_list', 0x16: 'WINDOW', 0x17: 'obj_select',
     0x18: 'SPRITE_enable', 0x19: 'SPRITE_color', 0x1e: 'NEW', 0x22: 'GO64', 0x23: 'TEMPO', 0x24: 'SLEEP',
@@ -327,4 +327,14 @@ jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised
     0x5a: "JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]",
     0x3b: "PRINT_comma_tab ($3B): a bare comma in PRINT (`print ,\"x\"`, `print a,,b`): tab to the next 10-column zone.  [sure: Rosetta]",
     0x44: "CHKOUT_cr ($44): `print#1,` with nothing to print: select the channel (like $42), then CR and CLRCHN.  [sure: Rosetta]",
+}
+
+OP_COMMENT[0x58] = """IF_RETURN ($58): `if <cond> then return` - if the condition is non-zero jump into op1d_RETURN (pop the GOSUB frame), else continue.  Never
+seen in the test sources (the compiler turns `if a then return` into $1F + $1D); matches the note `X58 = IF x THEN RETURN` in blitzc/README.  [sure: code]"""
+XOP_COMMENT = {
+    0x1f: """DMA statements ($00,$1F / $20 / $21 share this body; $77 := x + $65 is the command passed to the KERNAL DMA call $FF50 in Y, bank from $03D5).
+It reads three 16-bit values (get_word -> $DC07/$DC08, $DC02/$DC03, $DC04/$DC05 via the I/O area) and a byte < 16 ($DC06): the STASH / FETCH / SWAP
+family of BASIC 7 (the REC registers).  Order stash, fetch, swap is [likely] (BASIC keyword order); the compiler never emits these opcodes - it
+compiles `stash 100,4096,0,0` etc. to a bare `b0` (checked with the original compiler).""",
+    0x25: "DRAW_alt: enters the DRAW body at `lda fac_m4` (skips the flag-byte fetch).  Never emitted by the compiler in any test; image 1 answers it with error 35.  [open]",
 }
