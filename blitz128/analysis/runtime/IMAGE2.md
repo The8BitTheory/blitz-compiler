@@ -1,0 +1,18 @@
+# Image 2 ($4001 runtime) - what the inserted code is
+
+`../run_4001.bin` (21 900 bytes of runtime-as-executed) is the variant used for programs that contain graphics statements.
+A diff against image 1 (`../run_1c01.bin`, `runtime.s`) shows one large insertion: **`$41A3-$4336` (404 bytes)** at the place
+of image 1's `$1DA3`; everything behind it is shifted by `+$2591` (instead of the plain relocation `+$2400`).
+
+What it is (read from the disassembly, not yet annotated line by line):
+- Handlers for the graphics statements. The extended-opcode table of image 2 (`xop_hi/lo_tab + $2591`) sends
+  `$00,$3B -> $41A3`, `$3C -> $41B9`, `$3D -> $41BE`, `$3E -> $41CC`, `$3F -> $41E0`, `$40 -> $4218` (first entries checked) -
+  exactly the opcodes that image 1 answers with error 35 NO GRAPHICS AREA (DRAW, DRAW-TO, LOCATE, GSHAPE, SSHAPE, ...).
+  Entries `$41-$43` came out inside instructions with this offset, so the table arithmetic for those still has to be redone.
+- Each handler collects its parameters (`$431C` reads the first one and checks it against 2 or 4 depending on the screen mode in
+  `$D8`; `$42D5`/`$42C1`/`$42B3` store coordinate pairs in a parameter block at `$1131..`), then ends with
+  `jmp $6650` and the address of a graphics-ROM routine in A/Y (`$9BFB`, `$9B30`, `$9DF2`, `$65A5`, `$61B6`, `$644B`, `$62D0`, ...).
+- Other variables: `$1131-$1179` (graphics parameter block), `$1153-$1160`, `$80` (flag byte).
+
+Consequence: image 1 and image 2 share the whole interpreter; image 2 only adds the graphics statement front ends, which hand
+over to the C128's own graphics ROM. Programs without graphics never need it.

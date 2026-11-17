@@ -46,3 +46,6 @@ reassembly is machine-checked.
 bank from `$03D5`, which `op67` = BANK sets). `$80F9` checks an error number `< $29` = `ERR$` (op `$72`, confirmed by `ROSETTA.md`).
 `$4BD4` stores the BASIC text pointer in `$1200` = STOP (op `$49`).
 The remaining targets are BASIC statement/function implementations (sprite, sound, graphics area `$6xxx-$8xxx`); their names are still open.
+
+## Image 2
+`IMAGE2.md`: the `$4001` runtime differs from image 1 by a 404-byte insertion (`$41A3-$4336`) that implements the graphics statements which image 1 rejects with error 35.
