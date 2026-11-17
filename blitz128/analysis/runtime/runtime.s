@@ -315,7 +315,8 @@ L1e98:
         jmp  L31c7
 L1e9b:
         jmp  $24b2
-L1e9e:
+str_concat:
+; str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]
         tax  
         bne  L1ea5
         ldx  $70
@@ -391,7 +392,8 @@ L1f09:
         jsr  blkcpy_b
 L1f1f:
         jmp  L31b1
-L1f22:
+str_compare:
+; str_compare: string vs string, $3E<7.  Compares the common length with cmp_b, then the lengths; result -1/0 via mask.  [likely]
         ldx  fac_m4
         bne  L1f48
         ldx  fac_m3
@@ -444,10 +446,10 @@ L1f79:
         inc  frespc_hi
 L1f7f:
         lda  $3e
-        bne  L1f88
+        bne  str_compare_len
         stx  t6a
         jmp  L3e37
-L1f88:
+str_compare_len:
         cpx  fac_exp
         beq  L1f94
         ldy  #$04
@@ -478,7 +480,8 @@ L1faa:
 L1fb9:
         lda  fac_sign
         bpl  L1fa4
-L1fbd:
+fcmp:
+; fcmp: compare ARG with FAC1 (float), produce -1/0 as integer using the operator mask in $3E.  [sure]
         ldy  t6a
         bne  L1fe3
         ldy  fac_exp
@@ -532,7 +535,8 @@ L1fed:
 L2013:
         bcc  L1fc5
         bcs  L1fe7
-L2017:
+int_left_to_arg:
+; int_left_to_arg: left operand integer but the operation needs floats ('/' '^' or float right): convert t6d/t6e to a float in ARG.  [likely]
         ldy  #$00
         sty  t6a
         sty  t6b
@@ -555,7 +559,7 @@ L2039:
         bne  L2043
         ldx  #$88
         lda  t6e
-        beq  L2057
+        beq  right_to_fac
         sty  t6e
 L2043:
         bmi  L204b
@@ -571,16 +575,18 @@ L204b:
         stx  t6a
         sty  t6d
         sty  t6e
-L2057:
+right_to_fac:
+; right_to_fac: float left operand; make the right operand float (int_to_fac) and go to fcmp ($3E<7) or float_arith_rom.  [likely]
         lda  intflg
         bpl  L205e
         jsr  int_to_fac
 L205e:
         ldy  $3e
         cpy  #$07
-        bcs  L2067
-        jmp  L1fbd
-L2067:
+        bcs  float_arith_rom
+        jmp  fcmp
+float_arith_rom:
+; float_arith_rom: float + - * / ^ are done by BASIC ROM routines; address from the tables at $4556 (lo) / $455B (hi) indexed by the operator.  [likely]
         lda  $4556,y
         sta  rom_call_lo
         ldx  $455b,y
@@ -590,7 +596,8 @@ L2067:
         lda  fac_exp
         jsr  rom_call_x
         jmp  next_inc1_y0
-L207e:
+icmp:
+; icmp: signed 16-bit compare of t6d/t6e with fac_m3/fac_m4, result -1/0 via mask $3E.  [sure]
         ldx  #$02
         lda  t6d
         cmp  fac_m3
@@ -617,7 +624,8 @@ L209c:
 L20a3:
         bcs  L2093
         bcc  L2095
-L20a7:
+right_float_to_int:
+; right_float_to_int: right operand is float; if it is integral and in range convert it to integer and stay on the integer path, else to_float_path.  [likely]
         lda  fac_exp
         bne  L20af
         sta  fac_m3
@@ -630,24 +638,24 @@ L20af:
 L20b9:
         lda  fac_m3
         ora  fac_m4
-        bne  L210f
+        bne  to_float_path
         lda  fac_exp
         cmp  #$81
-        bcc  L210f
+        bcc  to_float_path
         sbc  #$90
-        bpl  L210f
+        bpl  to_float_path
         cmp  #$f9
         bcs  L20e3
         adc  #$07
         tax  
         lda  fac_m2
-        bne  L210f
+        bne  to_float_path
         lda  fac_m1
         inx  
         beq  L20df
 L20d9:
         lsr  a
-        bcs  L210f
+        bcs  to_float_path
         inx  
         bne  L20d9
 L20df:
@@ -661,7 +669,7 @@ L20e3:
 L20ea:
         lsr  a
         ror  $2a
-        bcs  L210f
+        bcs  to_float_path
         inx  
         bne  L20ea
         sta  fac_m3
@@ -677,14 +685,15 @@ L20ff:
         ldx  $3e
         cpx  #$07
         bcs  L210c
-        jmp  L207e
+        jmp  icmp
 L210c:
-        jmp  L25fc
-L210f:
-        jmp  L2017
-L2112:
-        jsr  L2144
-L2115:
+        jmp  int_addsub_mul
+to_float_path:
+        jmp  int_left_to_arg
+bitop_left_float:
+        jsr  fac_to_int_arg
+bitop:
+; bitop: AND / OR of two 16-bit integers (lsr $3E: carry set = OR).  Operands that are float are converted with fac_to_int first.  [sure]
         lda  intflg
         bmi  L211c
         jsr  fac_to_int
@@ -712,7 +721,7 @@ L213e:
         lda  #$00
         sta  t6c
         beq  L2157
-L2144:
+fac_to_int_arg:
         lda  t6a
         cmp  #$81
         bcc  L213e
@@ -1376,17 +1385,18 @@ op68_XOR_int:
         sta  fac_m4
         lda  fac_m3
         jmp  L2afe
-L25fc:
-        beq  L260f
+int_addsub_mul:
+; int_addsub_mul: $07 add, $08 subtract, else multiply; overflow (V flag) falls back to float via ROM call $8D0A.  [likely]
+        beq  int_add
         cpx  #$08
-        bne  L2657
+        bne  int_mul
         lda  t6e
         sbc  fac_m4
         sta  fac_m4
         lda  t6d
         sbc  fac_m3
         jmp  L261a
-L260f:
+int_add:
         clc  
         lda  t6e
         adc  fac_m4
@@ -1395,9 +1405,9 @@ L260f:
         adc  fac_m3
 L261a:
         sta  fac_m3
-        bvs  L2621
+        bvs  int_overflow_to_float
         jmp  next_inc1_y0
-L2621:
+int_overflow_to_float:
         ldx  #$00
         stx  fac_m1
         stx  fac_m2
@@ -1414,7 +1424,7 @@ L2630:
         ldx  #$8d
         jsr  rom_call_x
         jmp  next_inc1_y0
-L2643:
+int_mul_check:
         lda  fac_m1
         ora  fac_m2
         bne  L2630
@@ -1425,7 +1435,8 @@ L2643:
         jsr  neg_int
 L2654:
         jmp  next_inc1_y0
-L2657:
+int_mul:
+; int_mul: 16x16 shift-and-add multiply into a 32-bit accumulator (fac_m1..fac_m4); result outside 16 bit -> float.  [likely]
         lda  fac_m3
         eor  t6d
         sta  fac_sign
@@ -1470,7 +1481,7 @@ L269f:
         lda  $2a
         ora  $2b
 L26a3:
-        beq  L2643
+        beq  int_mul_check
         lsr  $2a
         ror  $2b
         bcc  L26c4
@@ -1548,10 +1559,18 @@ op47:
         stx  $1203
         jmp  tr_call_user
 binop_dispatch:
+; binop_dispatch: entered with X = operator $01-$0D (also saved in $3E).  The left operand sits on the 6502 stack,
+; topped by its TYPE byte (pushed by push_float / push_int):
+;     $00        float  -> popped into ARG (t6f,t6a..t6e);  right in FAC
+;     bit7 set   integer-> popped into t6d/t6e
+;     other      string -> popped into $70/$71 (descriptor)
+; Operator codes: $01-$06 = comparisons, the code is a MASK  1 = less, 2 = equal, 4 = greater  (so $03 '<=', $05 '<>', $06 '>=');
+; $07 '+', $08 '-', $09 '*', $0A/$0B = float-only ('/', '^'), $0C = AND, $0D = OR (bit0 of $3E selects OR).  [sure from code]
+; Result of a comparison: -1 ($FFFF) or 0 as an integer, i.e. BASIC truth values.
         sta  $3e
         pla  
-        bmi  L2758
-        bne  L277d
+        bmi  binop_int_left
+        bne  binop_str_left
         pla  
         sta  t6f
         pla  
@@ -1566,10 +1585,10 @@ binop_dispatch:
         sta  t6e
         cpx  #$0c
         bcs  L2755
-        jmp  L2057
+        jmp  right_to_fac
 L2755:
-        jmp  L2112
-L2758:
+        jmp  bitop_left_float
+binop_int_left:
         pla  
         sta  t6d
         pla  
@@ -1582,25 +1601,25 @@ L2758:
         bpl  L277a
         cpx  #$07
         bcs  L2771
-        jmp  L207e
+        jmp  icmp
 L2771:
-        jmp  L25fc
+        jmp  int_addsub_mul
 L2774:
-        jmp  L2017
+        jmp  int_left_to_arg
 L2777:
-        jmp  L2115
+        jmp  bitop
 L277a:
-        jmp  L20a7
-L277d:
+        jmp  right_float_to_int
+binop_str_left:
         pla  
         sta  $70
         pla  
         sta  facov
         cpx  #$07
         bcs  L278a
-        jmp  L1f22
+        jmp  str_compare
 L278a:
-        jmp  L1e9e
+        jmp  str_concat
 main_op:
         tax  
         cmp  #$0e
@@ -1643,7 +1662,9 @@ next:
 ;     $00        extended opcode: next byte x -> handler xop_hi_tab/xop_lo_tab[x]          (ext_op)
 ;     $01-$0D    binary operators, chosen by the operand type found on the stack            (binop_dispatch)
 ;     $0E-$7F    main opcode: handler op_hi_tab/op_lo_tab[A]                                (main_op)
-;     $80-$BF    constants ($B0-$BF = integer 0-15, $A7/$A8/$A9 = 2/5/n-byte constants)     (const_or_op)
+;     $80-$BF    SECOND-OPERAND tokens (operand_push): if a left operand is already in FAC (prevop != 0) it is
+;                pushed on the 6502 stack first.  $80-$9F = variable (slot offset varslot_tab[A-$80]),
+;                $A0-$A6/$B0-$BF = small constants ($B0-$BF = integer 0-15), $A7/$A8 = 2/5-byte constants
 ;     $C0-$DF    short variable reference, slot offset = varslot_tab[A-$C0]
 ;     $E0-$E5    variable with long (10-bit) index / array element                          (var_long_or_const)
 ; Handlers finish with `jmp next` ($27D4: advance 1 byte), `next_inc1`, `skip_a` (advance by A) or by loading
@@ -1686,7 +1707,7 @@ fetch:
         beq  ext_op
         bpl  main_op
         cmp  #$c0
-        bcc  const_or_op
+        bcc  operand_push
         cmp  #$e0
         bcs  var_long_or_const
         tax  
@@ -1745,7 +1766,7 @@ L2861:
         jmp  L2c7a
 var_long_or_const:
         cmp  #$e6
-        bcs  const_or_op
+        bcs  operand_push
         sta  prevop
         inc  bcptr
         beq  L2878
@@ -1758,44 +1779,47 @@ L2875:
 L2878:
         inc  bcptr_hi
         bne  L286e
-const_or_op:
+operand_push:
+; operand_push: tokens $80-$BF and $E6+.  prevop != 0 means FAC already holds a left operand: push it (push_left).
+; A float that is a whole number in 16 bit range is narrowed to an integer first (push_narrow_try) so integer arithmetic stays on the
+; fast path; otherwise the 5-byte float + sign + type go on the stack (push_float / push_int).  Then operand_load fetches the operand.  [likely]
         ldx  prevop
         sta  prevop
-        bne  L2885
-        jmp  L2906
-L2885:
+        bne  push_left
+        jmp  operand_load
+push_left:
         ldy  intflg
-        bne  L28fc
+        bne  push_int
         lda  fac_exp
         bne  L2891
         sta  fac_m3
         beq  L28d8
 L2891:
         bit  facov
-        bpl  L289b
+        bpl  push_narrow_try
         jsr  round_fac
         sta  MMU_LCRA
-L289b:
+push_narrow_try:
         lda  fac_m3
         ora  fac_m4
-        bne  L28e6
+        bne  push_float
         lda  fac_exp
         cmp  #$81
-        bcc  L28e6
+        bcc  push_float
         sbc  #$90
-        bpl  L28e6
+        bpl  push_float
         cmp  #$f9
         bcs  L28c5
         adc  #$07
         tax  
         lda  fac_m2
-        bne  L28e6
+        bne  push_float
         lda  fac_m1
         inx  
         beq  L28c1
 L28bb:
         lsr  a
-        bcs  L28e6
+        bcs  push_float
         inx  
         bne  L28bb
 L28c1:
@@ -1809,7 +1833,7 @@ L28c5:
 L28cc:
         lsr  a
         ror  $2a
-        bcs  L28e6
+        bcs  push_float
         inx  
         bne  L28cc
         sta  fac_m3
@@ -1820,8 +1844,8 @@ L28d8:
         bit  fac_sign
         bpl  L28fe
         jsr  neg_int
-        jmp  L28fc
-L28e6:
+        jmp  push_int
+push_float:
         lda  fac_m4
         pha  
         lda  fac_m3
@@ -1837,7 +1861,7 @@ L28e6:
         tya  
         pha  
         beq  L2904
-L28fc:
+push_int:
         lda  fac_m4
 L28fe:
         pha  
@@ -1847,9 +1871,9 @@ L28fe:
         pha  
 L2904:
         lda  prevop
-L2906:
+operand_load:
         cmp  #$a0
-        bcs  L295b
+        bcs  operand_const
         tax  
         lda  op_lo_tab,x
         ldx  vbase_hi
@@ -1897,7 +1921,7 @@ L2942:
 L2957:
         inc  bcptr_hi
         bne  L2963
-L295b:
+operand_const:
         cmp  #$a6
         bcs  L29d5
         inc  bcptr
@@ -2145,7 +2169,7 @@ L2afe:
         jmp  L2f7e
 L2b05:
         clc  
-        jmp  L2621
+        jmp  int_overflow_to_float
 L2b09:
         stx  facov
         ldx  #$05
@@ -2228,7 +2252,7 @@ L2b58:
         sta  t6c
         pla  
         pla  
-        jsr  L2144
+        jsr  fac_to_int_arg
         lda  t6e
         pha  
         lda  t6d
@@ -2270,7 +2294,7 @@ L2bc1:
         sta  t6c
         pla  
         pla  
-        jsr  L2144
+        jsr  fac_to_int_arg
         lda  t6e
         pha  
         lda  t6d

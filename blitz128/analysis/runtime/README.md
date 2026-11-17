@@ -20,7 +20,7 @@ assembles back to exactly the bytes of `../run_1c01.bin`:
 | Shared helpers (get_byte, get_word, pop_value, int<->fac, rom_call, GC, VAL, ...) | named, tagged [sure]/[likely] |
 | ~90 opcode handlers | labelled `opXX_NAME` where the function is clear, otherwise `opXX` |
 | Ext. opcodes (`$00 xx`) | labelled `xopXX`, few named |
-| Operator handlers `$01-$0D` (int/float/string arithmetic and compare) | **not yet analysed** (`L1f22`, `L1e9e`, `L2017`, `L2057`, `L207E`, `L20A7`, `L2112`, `L2115`, `L25FC`) |
+| Operator handlers `$01-$0D` (int/float/string arithmetic, compare, AND/OR) | analysed: stack model, operand typing, int/float/string paths named and commented [sure]/[likely] |
 | Copied BASIC ROM arithmetic (FOUT etc.) | labelled only where referenced |
 | Remaining anonymous `Lxxxx` labels | generated, not yet named |
 

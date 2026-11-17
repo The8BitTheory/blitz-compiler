@@ -52,7 +52,7 @@ LABELS = {
     # dispatcher
     0x27d0: 'bc_jump_ax', 0x27d4: 'next', 0x27e3: 'next_y0', 0x27e9: 'skip_a', 0x27f6: 'next_inc1_y0',
     0x27f8: 'next_inc1', 0x27fc: 'fetch', 0x2735: 'binop_dispatch', 0x278d: 'main_op', 0x279f: 'ext_op',
-    0x287c: 'const_or_op', 0x2864: 'var_long_or_const', 0x2992: 'const_small',
+    0x287c: 'operand_push', 0x2864: 'var_long_or_const', 0x2992: 'const_small',
     0x27b2: 'user_return',
     0x4443: 'op_hi_tab', 0x44b5: 'op_lo_tab', 0x4535: 'varslot_tab',
     0x45b8: 'xop_hi_tab', 0x4665: 'xop_lo_tab', 0x45fc: 'decrypt_tab',
@@ -121,7 +121,9 @@ bcptr ($3B/$3C) walks the bytecode.  Each byte is XORed with the per-compile key
     $00        extended opcode: next byte x -> handler xop_hi_tab/xop_lo_tab[x]          (ext_op)
     $01-$0D    binary operators, chosen by the operand type found on the stack            (binop_dispatch)
     $0E-$7F    main opcode: handler op_hi_tab/op_lo_tab[A]                                (main_op)
-    $80-$BF    constants ($B0-$BF = integer 0-15, $A7/$A8/$A9 = 2/5/n-byte constants)     (const_or_op)
+    $80-$BF    SECOND-OPERAND tokens (operand_push): if a left operand is already in FAC (prevop != 0) it is
+               pushed on the 6502 stack first.  $80-$9F = variable (slot offset varslot_tab[A-$80]),
+               $A0-$A6/$B0-$BF = small constants ($B0-$BF = integer 0-15), $A7/$A8 = 2/5-byte constants
     $C0-$DF    short variable reference, slot offset = varslot_tab[A-$C0]
     $E0-$E5    variable with long (10-bit) index / array element                          (var_long_or_const)
 Handlers finish with `jmp next` ($27D4: advance 1 byte), `next_inc1`, `skip_a` (advance by A) or by loading
@@ -171,3 +173,38 @@ FAMILY_COMMENT = {
     0x6e: "---- hardware access: joystick, sprite colour ----",
     0x74: "---- TRAP / RESUME / DO ----",
 }
+
+LABELS.update({
+    0x2885: 'push_left', 0x289b: 'push_narrow_try', 0x28e6: 'push_float', 0x28fc: 'push_int',
+    0x2906: 'operand_load', 0x295b: 'operand_const',
+    0x2758: 'binop_int_left', 0x277d: 'binop_str_left',
+    0x1f22: 'str_compare', 0x1f88: 'str_compare_len', 0x1e9e: 'str_concat',
+    0x1fbd: 'fcmp', 0x2017: 'int_left_to_arg', 0x2057: 'right_to_fac', 0x2067: 'float_arith_rom',
+    0x207e: 'icmp', 0x20a7: 'right_float_to_int', 0x210f: 'to_float_path', 0x2112: 'bitop_left_float',
+    0x2115: 'bitop', 0x25fc: 'int_addsub_mul', 0x260f: 'int_add', 0x2621: 'int_overflow_to_float',
+    0x2643: 'int_mul_check', 0x2657: 'int_mul', 0x2144: 'fac_to_int_arg',
+})
+COMMENT_BEFORE.update({
+    0x2735: """binop_dispatch: entered with X = operator $01-$0D (also saved in $3E).  The left operand sits on the 6502 stack,
+topped by its TYPE byte (pushed by push_float / push_int):
+    $00        float  -> popped into ARG (t6f,t6a..t6e);  right in FAC
+    bit7 set   integer-> popped into t6d/t6e
+    other      string -> popped into $70/$71 (descriptor)
+Operator codes: $01-$06 = comparisons, the code is a MASK  1 = less, 2 = equal, 4 = greater  (so $03 '<=', $05 '<>', $06 '>=');
+$07 '+', $08 '-', $09 '*', $0A/$0B = float-only ('/', '^'), $0C = AND, $0D = OR (bit0 of $3E selects OR).  [sure from code]
+Result of a comparison: -1 ($FFFF) or 0 as an integer, i.e. BASIC truth values.""",
+    0x287c: """operand_push: tokens $80-$BF and $E6+.  prevop != 0 means FAC already holds a left operand: push it (push_left).
+A float that is a whole number in 16 bit range is narrowed to an integer first (push_narrow_try) so integer arithmetic stays on the
+fast path; otherwise the 5-byte float + sign + type go on the stack (push_float / push_int).  Then operand_load fetches the operand.  [likely]""",
+    0x2057: "right_to_fac: float left operand; make the right operand float (int_to_fac) and go to fcmp ($3E<7) or float_arith_rom.  [likely]",
+    0x2067: "float_arith_rom: float + - * / ^ are done by BASIC ROM routines; address from the tables at $4556 (lo) / $455B (hi) indexed by the operator.  [likely]",
+    0x1fbd: "fcmp: compare ARG with FAC1 (float), produce -1/0 as integer using the operator mask in $3E.  [sure]",
+    0x207e: "icmp: signed 16-bit compare of t6d/t6e with fac_m3/fac_m4, result -1/0 via mask $3E.  [sure]",
+    0x20a7: "right_float_to_int: right operand is float; if it is integral and in range convert it to integer and stay on the integer path, else to_float_path.  [likely]",
+    0x2017: "int_left_to_arg: left operand integer but the operation needs floats ('/' '^' or float right): convert t6d/t6e to a float in ARG.  [likely]",
+    0x2115: "bitop: AND / OR of two 16-bit integers (lsr $3E: carry set = OR).  Operands that are float are converted with fac_to_int first.  [sure]",
+    0x25fc: "int_addsub_mul: $07 add, $08 subtract, else multiply; overflow (V flag) falls back to float via ROM call $8D0A.  [likely]",
+    0x2657: "int_mul: 16x16 shift-and-add multiply into a 32-bit accumulator (fac_m1..fac_m4); result outside 16 bit -> float.  [likely]",
+    0x1f22: "str_compare: string vs string, $3E<7.  Compares the common length with cmp_b, then the lengths; result -1/0 via mask.  [likely]",
+    0x1e9e: "str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]",
+})
