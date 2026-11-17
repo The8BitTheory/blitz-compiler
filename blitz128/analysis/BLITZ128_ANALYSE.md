@@ -231,12 +231,3 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (superseded:) `runtime_1c01.asm` is data garbage in the range `$23D0–$2437`. The range has to be decrypted with `EOR $45FC,y`. One should also check whether `JSR $1E2A` encrypts further code elsewhere (especially in the compiler part and in image 2).
 
 Setup to reproduce: VICE 3.9 from source, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, monitor `trace store 27ff`.
-
----
-
-## 12. Defect: image 2 is 10 bytes short (found 17.11.2026)
-The `$4001` runtime appended to `BLITZ!.128` ends at `$6C36`, but the runtime needs it up to `$6C40`. The compiler copies the full
-11 328 bytes, so the last 10 bytes of every `$4001` output come from RAM behind the compiler (`00 00 00 FF FF FF FF 00 00 00` in VICE).
-They are the last four entries (`$41-$44`) of the extended-opcode low-byte table (CIRCLE, PAINT, BOX, `$44`) and the constant PI.
-Result: CIRCLE/PAINT/BOX call uninitialised RAM at `$0142`, `π` is garbage. Fix: `fixed/` (see `fixed/README.md`), appended bytes
-`38 03 91 71 82 C9 0F DA A1 00`. Earlier statements here about image 2 and the "RAM pattern behind the template" describe the symptom.

@@ -231,12 +231,3 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (überholt:) `runtime_1c01.asm` ist im Bereich `$23D0–$2437` Datenmüll. Der Bereich muss mit `EOR $45FC,y` entschlüsselt werden. Außerdem sollte man prüfen, ob `JSR $1E2A` noch an anderen Stellen (insbesondere im Compiler-Teil und in Image 2) weiteren Code verschlüsselt.
 
 Aufbau zum Nachstellen: VICE 3.9 aus dem Quellcode, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, Monitor `trace store 27ff`.
-
----
-
-## 12. Fehler: Image 2 ist 10 Bytes zu kurz (gefunden 17.11.2026)
-Die an `BLITZ!.128` angehängte `$4001`-Runtime endet bei `$6C36`, braucht aber Daten bis `$6C40`. Der Compiler kopiert die vollen
-11 328 Bytes, die letzten 10 Bytes jeder `$4001`-Ausgabe stammen daher aus dem RAM hinter dem Compiler (in VICE `00 00 00 FF FF FF FF 00 00 00`).
-Es sind die letzten vier Einträge (`$41-$44`) der Low-Byte-Tabelle der erweiterten Opcodes (CIRCLE, PAINT, BOX, `$44`) und die Konstante PI.
-Folge: CIRCLE/PAINT/BOX rufen nicht initialisiertes RAM bei `$0142` auf, `π` ist Müll. Korrektur: `fixed/` (siehe `fixed/README.md`),
-angehängt werden `38 03 91 71 82 C9 0F DA A1 00`.
