@@ -205,7 +205,7 @@ export function d81Of(results, diskName = 'BLITZC') {
 export function compileJob(job, post) {
   try {
     const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
-    const overlay = !!job.overlay && programs.length > 1;   // "Gemeinsame Variablentabelle": original menu item 4
+    const overlay = !!job.overlay && programs.length > 1;   // "Shared variable table" checkbox: original menu item 4
     const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
       : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
