@@ -33,3 +33,8 @@ reassembly is machine-checked.
 
 ## Verified dynamically
 - MMU pre-configurations (VICE 3.10, `x128`, breakpoint `27FC` while the compiler runs, `bank io; m d500 d50b`): LCRA=$3F, LCRB=$7F, LCRC=$01, LCRD=$41. So A = bank 0 all RAM, B = bank 1 all RAM, C = bank 0 + ROMs.
+- `rom_call` targets actually observed (VICE, breakpoint `$0287`, reading `$028B/$028C`, running the compiled test programs `expr`, `floats`, `func`, `cov2`, `ctrl` from `blitzc/tests/expected/`):
+  `$4BD4` (matches `op49`, static analysis), `$4C44`, `$4C8B`, `$5017`, `$7D92`, `$7E3E`, `$A349`, `$A5BF`.
+  All lie in the BASIC ROM ranges, confirming that `rom_call` is a ROM-call gateway. The addresses with no static counterpart
+  (everything except `$4BD4`) come from computed targets (operator tables at `$4556/$455B`, handlers that load A/X at run time);
+  they are not yet tied to individual BASIC routines. Not exhaustive: only seven short programs, first hit per run.
