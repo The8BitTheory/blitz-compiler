@@ -42,3 +42,15 @@ loaded with `load"prog",8` + `run` in VICE 3.10, breakpoints on the handlers, on
 So the assignment CIRCLE=`$4238`, PAINT=`$4203`, BOX=`$4291` is confirmed, and compiled programs from this compiler version that use
 these three statements run into uninitialised memory unless the table is patched. (Why: unknown - a build defect is the simplest reading;
 I did not look for another mechanism that could fix the slots up at run time, and in my runs none did.)
+
+### Follow-up checks (is it a bug?)
+- **Unpatched run executes garbage.** Breakpoint on `$0142`: the bytes there are `FF FF FF 00 00 ...` (power-up RAM pattern), i.e.
+  `ISB $FFFF,X` (illegal opcode), then `BRK`s. Not a deliberately installed stub.
+- **Patched run draws correctly.** With the slots set to `$4238/$4203/$4291`, the bitmap at `$2000-$3FFF` after `graphic 1,1 : circle 1,100,100,20,10 :
+  box 1,10,10,50,50` (dumped with the monitor at END) contains a rectangle (10,10)-(50,50) and an ellipse around (100,100); a program with only
+  `graphic 1,1` leaves the bitmap all zero. (Rendered as ASCII from the dump; the headless screenshot is black.)
+- **No second source.** The repository holds only this one compiler version (V860929). The only graphics-capable program compiled by the
+  original author on this disk (`C_CRAWL`, load `$4001`) has the same `$4200` in the three slots, but its source uses none of the graphics
+  statements (it drives the VDC), so it does not show the failure either way. No documentation is available here.
+- **Verdict:** a defect of this build is by far the simplest explanation (slots point into the middle of another handler, the right handlers
+  exist and work, nothing refers to them). It is not proven that no run-time mechanism ever patches the slots; none showed up in my runs.
