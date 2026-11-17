@@ -120,9 +120,12 @@ L1c5b:
         jmp  init
 ; TRAMPOLINES ($1C5E-$1CFD, 160 bytes).  Copied to $0202.. in common RAM by install_trampolines.
 ; MMU facts (C128): a STORE to $FF01..$FF04 (any value) selects pre-configuration A..D.
-;   A = normal system view (the code & bytecode live in bank 0)             [likely]
-;   B = bank 1 (variables, strings, arrays)                                  [likely]
-;   C = ROM/KERNAL view for calls into the BASIC ROM / KERNAL                [likely]
+;   A = $3F  bank 0, all RAM, no I/O, no ROM  (the runtime and the bytecode are the only visible code)   [sure, VICE]
+;   B = $7F  bank 1, all RAM                    (variables, strings, arrays)                              [sure, VICE]
+;   C = $01  bank 0, all ROMs (BASIC/KERNAL), no I/O   (used by rom_call and the $0300 vector)            [sure, VICE]
+;   D = $41  bank 1 with ROMs                   (not used by the stubs shown here)
+;   (values read from $D501-$D504 while the compiler runs; they are the C128 defaults.)  I/O is reached with
+;   `STA MMU_CR` = $02 (bank 0, I/O on, KERNAL visible) before CHROUT/GETIN/VIC/CIA access, then config A again.
 ; They exist because the runtime executes in bank 0 but keeps all data in bank 1; every access to
 ; variables/strings goes through one of these stubs.  Relocated listing (run-time addresses):
 ;   0202 tr_cfgA_jmp   STA $FF01 / JMP $24C0                      back to config A, then continue at $24C0

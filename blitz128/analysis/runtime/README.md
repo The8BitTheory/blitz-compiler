@@ -30,3 +30,6 @@ the KERNAL calls the handler makes (CHROUT, GETIN, ...) and from the operand han
 
 Not verified dynamically: the semantic comments were derived by reading the code; only the byte-exact
 reassembly is machine-checked.
+
+## Verified dynamically
+- MMU pre-configurations (VICE 3.10, `x128`, breakpoint `27FC` while the compiler runs, `bank io; m d500 d50b`): LCRA=$3F, LCRB=$7F, LCRC=$01, LCRD=$41. So A = bank 0 all RAM, B = bank 1 all RAM, C = bank 0 + ROMs.
