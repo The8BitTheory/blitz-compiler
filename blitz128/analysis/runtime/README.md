@@ -60,3 +60,6 @@ Image 2 in `BLITZ!.128` is 10 bytes short, so CIRCLE/PAINT/BOX/`$44` dispatch sl
 
 ## Overlay / chain mode
 `OVERLAY.md`: what compile mode 4 (PASS0) and `LOAD` chaining do, how PASS0 merges arrays, DEF FN and `**FI`, with the VICE experiments; plus a side finding (array assignment with constant index and value raises error 18). The JS port implements mode 4 (branch `overlay-mode`).
+
+## Manual
+`MANUAL.md`: notes on the 1985 instruction manual (directives NG/RI/FI/NE and `::`, menu, overlay, limits, `z*%` array, machine-language rules) and a table of cross-checks against our findings.
