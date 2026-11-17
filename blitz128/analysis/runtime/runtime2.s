@@ -188,59 +188,220 @@ gfx_xop3b_DRAW:
 ; Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
 ; $1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
 ; table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
-; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 in this template (a
-; placeholder / patched at compile time - [open]); the three remaining handlers $4203, $4238, $4291 are presumably those.
+; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 = the final `jmp $6650` of gfx_xop3f_GSHAPE ($6650 = `jsr rom_call_ay /
+; jmp next_y0`).  Entered through the dispatcher, A = $42 (hi byte just loaded from the table) and Y = 1, so rom_call_ay calls
+; $0142: the RAM stub area at $0140 that op $7B fills with a graphics-ROM routine (it copies 36 bytes there).  The static template and
+; a compiled program (blitzc/tests/expected/stmt7a) both have $4200 in these slots, so it is not a compile-time patch.  [likely]
+; The three handlers at $4203, $4238, $4291 have no static reference (no table slot, no jsr/jmp) - [open], maybe dead code.
 ; The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].
-        .byte $20,$1c,$43,$90,$02
+        jsr  gfx_param_first
+        bcc  L41aa
 gfx_xop25:
-        .byte $a5,$67,$a0,$04,$20,$d5,$42,$20,$d9,$41,$a9,$fb,$a0,$9b,$4c,$50
-        .byte $66
+        lda  fac_m4
+L41aa:
+        ldy  #$04
+        jsr  gfx_param_pair
+        jsr  gfx_rom_9df2
+        lda  #$fb
+        ldy  #$9b
+        jmp  L6650
 gfx_xop3c:
-        .byte $20,$1c,$43,$90,$02
+        jsr  gfx_param_first
+        bcc  L41c0
 gfx_xop3d_DRAWTO:
-        .byte $a5,$67,$a0,$04,$20,$d5,$42,$a9,$30,$a0,$9b,$4c,$50,$66
+        lda  fac_m4
+L41c0:
+        ldy  #$04
+        jsr  gfx_param_pair
+        lda  #$30
+        ldy  #$9b
+        jmp  L6650
 gfx_xop3e_LOCATE:
-        .byte $a5,$67,$a0,$04,$20,$d5,$42,$20,$d9,$41,$4c,$74,$4d
-gfx_rom_6650_a:
-        .byte $a9,$f2,$a0,$9d,$4c,$55,$49
+        lda  fac_m4
+        ldy  #$04
+        jsr  gfx_param_pair
+        jsr  gfx_rom_9df2
+        jmp  next_y0
+gfx_rom_9df2:
+        lda  #$f2
+        ldy  #$9d
+        jmp  rom_call_ay
 gfx_xop3f_GSHAPE:
-        .byte $a9,$1b,$85,$18,$a5,$63,$8d,$53,$11,$a5,$64,$85,$26,$a5,$65,$85
-        .byte $27,$20,$2b,$43,$a0,$04,$20,$c1,$42,$20,$b9,$5f,$a9,$a5,$a0,$65
-xop41:
+        lda  #$1b
+        sta  $18
+        lda  fac_exp
+        sta  $1153
+        lda  fac_m1
+        sta  ptr26
+        lda  fac_m2
+        sta  ptr27
+        jsr  gfx_next_token
+        ldy  #$04
+        jsr  gfx_param_copy
+        jsr  pop_byte
+        lda  #$a5
+        ldy  #$65
+gfx_call_stub_0142:
 ; shared by: $00,$41 ?, $00,$42 ?, $00,$43 ?
-        .byte $4c,$50,$66
-gfx_h4203:
-        .byte $20,$1c,$43,$a0,$04,$20,$c1,$42,$20,$d9,$41,$20,$b9,$5f,$a9,$b6
-        .byte $a0,$61,$4c,$50,$66
+        jmp  L6650
+gfx_unref_4203:
+        jsr  gfx_param_first
+        ldy  #$04
+        jsr  gfx_param_copy
+        jsr  gfx_rom_9df2
+        jsr  pop_byte
+        lda  #$b6
+        ldy  #$61
+        jmp  L6650
 gfx_xop40_SSHAPE:
-        .byte $a5,$4b,$8d,$5f,$11,$a5,$4c,$8d,$60,$11,$20,$2b,$43,$85,$80,$a0
-        .byte $28,$20,$d5,$42,$a0,$04,$20,$b3,$42,$a9,$4b,$a0,$64,$4c,$50,$66
-gfx_h4238:
-        .byte $20,$1c,$43,$85,$80,$a0,$1f,$20,$bd,$42,$a0,$00,$20,$ad,$53,$99
-        .byte $55,$11,$8a,$99,$54,$11,$c8,$c8,$c0,$04,$f0,$18,$c0,$0c,$d0,$ec
-        .byte $20,$93,$53,$85,$77,$20,$9b,$52,$20,$e0,$43,$a4,$16,$a9,$dc,$a2
-        .byte $66,$4c,$aa,$49,$a2,$23,$a9,$4a,$a0,$9d,$20,$55,$49,$24,$80,$30
-        .byte $11,$ad,$54,$11,$8d,$56,$11,$ad,$55,$11,$24,$d8,$10,$04,$0e,$56
-        .byte $11,$2a,$8d,$57,$11,$a0,$08,$d0,$b3
-gfx_h4291:
-        .byte $20,$1c,$43,$85,$80,$a0,$1f,$20,$d5,$42,$a0,$2b,$20,$b3,$42,$20
-        .byte $ad,$53,$8d,$55,$11,$8e,$54,$11,$20,$b9,$5f,$a9,$d0,$a0,$62,$4c
-        .byte $50,$66
+        lda  varptr
+        sta  $115f
+        lda  varptr_hi
+        sta  $1160
+        jsr  gfx_next_token
+        sta  flags80
+        ldy  #$28
+        jsr  gfx_param_pair
+        ldy  #$04
+        jsr  gfx_param_mode
+        lda  #$4b
+        ldy  #$64
+        jmp  L6650
+gfx_unref_4238:
+        jsr  gfx_param_first
+        sta  flags80
+        ldy  #$1f
+        jsr  L42bd
+        ldy  #$00
+L4244:
+        jsr  L53ad
+        sta  $1155,y
+        txa  
+        sta  $1154,y
+        iny  
+        iny  
+        cpy  #$04
+        beq  L426c
+        cpy  #$0c
+        bne  L4244
+        jsr  pop_get_word
+        sta  $77
+        jsr  pop_value
+        jsr  fout_int
+        ldy  $16
+        lda  #$dc
+        ldx  #$66
+        jmp  L49aa
+L426c:
+        ldx  #$23
+        lda  #$4a
+        ldy  #$9d
+        jsr  rom_call_ay
+        bit  flags80
+        bmi  L428a
+        lda  $1154
+        sta  $1156
+        lda  $1155
+        bit  $d8
+        bpl  L428a
+        asl  $1156
+        rol  a
+L428a:
+        sta  $1157
+        ldy  #$08
+        bne  L4244
+gfx_unref_4291:
+        jsr  gfx_param_first
+        sta  flags80
+        ldy  #$1f
+        jsr  gfx_param_pair
+        ldy  #$2b
+        jsr  gfx_param_mode
+        jsr  L53ad
+        sta  $1155
+        stx  $1154
+        jsr  pop_byte
+        lda  #$d0
+        ldy  #$62
+        jmp  L6650
 gfx_param_mode:
-        .byte $a5,$80,$4a,$4a,$06,$80,$10,$02,$09,$80,$06,$80,$30,$04
+        lda  flags80
+        lsr  a
+        lsr  a
+        asl  flags80
+        bpl  L42bd
+        ora  #$80
+L42bd:
+        asl  flags80
+        bmi  L42c5
 gfx_param_copy:
-        .byte $aa,$0a,$10,$0f,$a2,$00,$bd,$31,$11,$99,$31,$11,$c8,$e8,$e0,$04
-        .byte $d0,$f4,$60,$8a
+        tax  
+        asl  a
+        bpl  L42d4
+L42c5:
+        ldx  #$00
+L42c7:
+        lda  $1131,x
+        sta  $1131,y
+        iny  
+        inx  
+        cpx  #$04
+        bne  L42c7
+        rts  
+L42d4:
+        txa  
 gfx_param_pair:
-        .byte $8d,$79,$11,$68,$85,$47,$68,$85,$48,$8c,$78,$11,$20,$9b,$52,$20
-        .byte $b5,$53,$99,$32,$11,$8a,$99,$31,$11,$20,$9b,$52,$a5,$48,$48,$a5
-        .byte $47,$48,$20,$b5,$53,$2c,$79,$11,$30,$12,$c8,$c8,$8c,$78,$11,$99
-        .byte $32,$11,$8a,$99,$31,$11,$a9,$df,$a2,$9e,$d0,$08,$85,$77,$a4,$16
-        .byte $a9,$8c,$a2,$9e,$4c,$3f,$49
+        sta  $1179
+        pla  
+        sta  $47
+        pla  
+        sta  $48
+        sty  $1178
+        jsr  pop_value
+        jsr  get_word_signed
+        sta  $1132,y
+        txa  
+        sta  $1131,y
+        jsr  pop_value
+        lda  $48
+        pha  
+        lda  $47
+        pha  
+        jsr  get_word_signed
+        bit  $1179
+        bmi  L4311
+        iny  
+        iny  
+        sty  $1178
+        sta  $1132,y
+        txa  
+        sta  $1131,y
+        lda  #$df
+        ldx  #$9e
+        bne  L4319
+L4311:
+        sta  $77
+        ldy  $16
+        lda  #$8c
+        ldx  #$9e
+L4319:
+        jmp  rom_call_ax
 gfx_param_first:
-        .byte $20,$ed,$53,$e0,$02,$a5,$d8,$10,$02,$e0,$04,$b0,$0b,$86,$83
+        jsr  get_byte
+        cpx  #$02
+        lda  $d8
+        bpl  L4327
+        cpx  #$04
+L4327:
+        bcs  range_error
+        stx  $83
 gfx_next_token:
-        .byte $e6,$3b,$d0,$02,$e6,$3c,$b1,$3b,$60
+        inc  bcptr
+        bne  L4331
+        inc  bcptr_hi
+L4331:
+        lda  (bcptr),y
+        rts  
 range_error:
 ; range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]
         jmp  err_illegal_quantity
@@ -2742,7 +2903,12 @@ get_word:
         bpl  L53e8
 L53aa:
         jmp  err_illegal_quantity
-        .byte $06,$80,$30,$e2,$a9,$00,$aa,$60
+L53ad:
+        asl  flags80
+        bmi  pop_get_word
+        lda  #$00
+        tax  
+        rts  
 get_word_signed:
         lda  intflg
         bmi  L538c

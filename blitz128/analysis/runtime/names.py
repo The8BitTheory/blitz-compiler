@@ -278,8 +278,8 @@ IMG2_LABELS = {
     0x4334: 'range_error',
     0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c', 0x41be: 'gfx_xop3d_DRAWTO',
     0x41cc: 'gfx_xop3e_LOCATE', 0x41e0: 'gfx_xop3f_GSHAPE', 0x4218: 'gfx_xop40_SSHAPE',
-    0x4203: 'gfx_h4203', 0x4238: 'gfx_h4238', 0x4291: 'gfx_h4291',
-    0x41d9: 'gfx_rom_6650_a', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
+    0x4203: 'gfx_unref_4203', 0x4238: 'gfx_unref_4238', 0x4291: 'gfx_unref_4291', 0x4200: 'gfx_call_stub_0142',
+    0x41d9: 'gfx_rom_9df2', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
     0x42b3: 'gfx_param_mode', 0x432b: 'gfx_next_token',
 }
 IMG2_COMMENT_BEFORE = {
@@ -287,8 +287,13 @@ IMG2_COMMENT_BEFORE = {
 Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
 $1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
 table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
-$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 in this template (a
-placeholder / patched at compile time - [open]); the three remaining handlers $4203, $4238, $4291 are presumably those.
+$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 = the final `jmp $6650` of gfx_xop3f_GSHAPE ($6650 = `jsr rom_call_ay /
+jmp next_y0`).  Entered through the dispatcher, A = $42 (hi byte just loaded from the table) and Y = 1, so rom_call_ay calls
+$0142: the RAM stub area at $0140 that op $7B fills with a graphics-ROM routine (it copies 36 bytes there).  The static template and
+a compiled program (blitzc/tests/expected/stmt7a) both have $4200 in these slots, so it is not a compile-time patch.  [likely]
+The three handlers at $4203, $4238, $4291 have no static reference (no table slot, no jsr/jmp) - [open], maybe dead code.
 The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
     0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
 }
+
+IMG2_EXTRA_CODE = [0x4203, 0x4238, 0x4291]   # no static reference found (not in any dispatch table, no jsr/jmp)

@@ -56,7 +56,7 @@ if IMG == 2:
 # ---- entry points -------------------------------------------------------
 main_tab_hi, main_tab_lo = sh(0x4443), sh(0x44b5)     # opcodes $0e..$7f
 ext_tab_hi, ext_tab_lo = sh(0x45b8), sh(0x4665)       # extended opcodes $00 xx, xx = 0..$44
-entries = [sh(0x1c2f), sh(0x2221)] + [sh(a) for a in names.EXTRA_CODE]
+entries = [sh(0x1c2f), sh(0x2221)] + [sh(a) for a in names.EXTRA_CODE] + (list(names.IMG2_EXTRA_CODE) if IMG == 2 else [])
 for x in range(0x0e, 0x80): entries.append(g(main_tab_lo + x) | g(main_tab_hi + x) << 8)
 for x in range(0, 0x45):    entries.append(g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8)
 LO, HI = sh(0x1c2f), sh(0x4443)          # code lives here; tables from $4443 on
@@ -66,7 +66,7 @@ code = disasm([e for e in entries if LO <= e < HI], LO, HI)
 TR_LO, TR_HI = sh(0x1c5e), sh(0x1cfe)
 for a in [a for a in code if TR_LO <= a < TR_HI]: del code[a]
 # $1D00..$1DA2: DOS status buffer / fill
-for a in [a for a in code if sh(0x1d00) <= a < sh(0x1da3)]: del code[a]
+for a in [a for a in code if sh(0x1d00) <= a < sh(0x1d00) + 0xa3]: del code[a]
 
 # ---- data blocks (explicit layout, see names.DATA) ----------------------
 data = {}   # start -> (kind, length)

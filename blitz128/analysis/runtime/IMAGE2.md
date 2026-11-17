@@ -8,7 +8,7 @@ What it is (read from the disassembly, not yet annotated line by line):
 - Handlers for the graphics statements. The extended-opcode table of image 2 (`xop_hi/lo_tab + $2591`) sends
   `$00,$3B -> $41A3`, `$3C -> $41B9`, `$3D -> $41BE`, `$3E -> $41CC`, `$3F -> $41E0`, `$40 -> $4218` (first entries checked) -
   exactly the opcodes that image 1 answers with error 35 NO GRAPHICS AREA (DRAW, DRAW-TO, LOCATE, GSHAPE, SSHAPE, ...).
-  Entries `$41-$43` came out inside instructions with this offset, so the table arithmetic for those still has to be redone.
+  Entries `$41-$43` all hold `$4200` (see below), which is not an instruction boundary problem: it is the `jmp $6650` at the end of the GSHAPE handler.
 - Each handler collects its parameters (`$431C` reads the first one and checks it against 2 or 4 depending on the screen mode in
   `$D8`; `$42D5`/`$42C1`/`$42B3` store coordinate pairs in a parameter block at `$1131..`), then ends with
   `jmp $6650` and the address of a graphics-ROM routine in A/Y (`$9BFB`, `$9B30`, `$9DF2`, `$65A5`, `$61B6`, `$644B`, `$62D0`, ...).
@@ -17,4 +17,4 @@ What it is (read from the disassembly, not yet annotated line by line):
 Consequence: image 1 and image 2 share the whole interpreter; image 2 only adds the graphics statement front ends, which hand
 over to the C128's own graphics ROM. Programs without graphics never need it.
 
-See `runtime2.s` (generated with `python3 mkasm.py --img2`): the whole image 2 as re-assemblable source. Table slots `$41-$43` hold `$4200` in the static template; the handlers `$4203/$4238/$4291` are presumably CIRCLE/PAINT/BOX (open).
+See `runtime2.s` (generated with `python3 mkasm.py --img2`): the whole image 2 as re-assemblable source. Table slots `$41-$43` (CIRCLE/PAINT/BOX) hold `$4200` both in the template and in a compiled program (`stmt7a`): the `jmp $6650` at `$4200` is entered with A=$42, Y=1 and so calls the RAM stub at `$0142` (filled by op `$7B`). The handlers at `$4203/$4238/$4291` have no static reference (open, maybe dead code).
