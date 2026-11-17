@@ -2,7 +2,7 @@
 
 # blitzc – Nachbau des Blitz! 128 Compilers (Skyles, V860929)
 
-> **Korrigierte Fassung V261117.** Die originale `BLITZ!.128` (V860929) ist 10 Bytes zu kurz; Programme mit Grafikbefehlen (Runtime `$4001`) enthalten dadurch RAM-Müll statt des Tabellenendes (CIRCLE, PAINT, BOX, `$44`) und der Konstante PI. `tools/patch_blitz128.py` hängt die fehlenden Bytes an (`fixed/blitz!.128.prg`, Version V261117); dieser Port bettet die korrigierte Fassung ein.
+> **Korrigierte Fassung V261117.** Die `BLITZ!.128` dieses Repositorys (V860929, eine gecrackte Kopie) ist 10 Bytes zu kurz (ob die ungecrackte Skyles-Distribution es auch ist, ist unbekannt); Programme mit Grafikbefehlen (Runtime `$4001`) enthalten dadurch RAM-Müll statt des Tabellenendes (CIRCLE, PAINT, BOX, `$44`) und der Konstante PI. `tools/patch_blitz128.py` hängt die fehlenden Bytes an (`fixed/blitz!.128.prg`, Version V261117); dieser Port bettet die korrigierte Fassung ein.
 
 Ziel: Der Compiler läuft ohne Emulator (Node und Browser). Eingabe ist ein getokentes BASIC-7-PRG, Ausgabe `C/`, `Z/` und `D/`, byte-identisch zum Original bei denselben sechs Zufallsschlüsseln.
 

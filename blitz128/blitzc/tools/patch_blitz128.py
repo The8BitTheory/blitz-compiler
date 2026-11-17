@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make the fixed Blitz!128 compiler from the original BLITZ!.128 (Skyles, V860929).
+"""Make the fixed Blitz!128 compiler from the BLITZ!.128 of this repository (Skyles V860929, a cracked copy with the dongle check disabled).
 
 usage: patch_blitz128.py [in.prg [out.prg [yymmdd]]]
   defaults: ../../blitz!.128.prg  ../../fixed/blitz!.128.prg  <today as yymmdd>
@@ -24,7 +24,7 @@ ver = sys.argv[3] if len(sys.argv) > 3 else time.strftime('%y%m%d')
 assert len(ver) == 6 and ver.isdigit(), 'version must be yymmdd'
 d = bytearray(open(src, 'rb').read())
 assert len(d) == 45212 and hashlib.sha1(d).hexdigest() == 'de85d69906c2d9fba070a5ceaa30013bb00641f9', \
-    'input is not the original BLITZ!.128 (V860929)'
+    'input is not the untouched BLITZ!.128 (V860929) of this repository'
 IMG2 = 2 + (0xa065 - 0x1c01)                         # file offset of the $4001 image
 assert len(d) - IMG2 == 0x6c37 - 0x4001, 'image 2 is expected to end at $6C36'
 d += bytes([0x38, 0x03, 0x91, 0x71,  0x82, 0xc9, 0x0f, 0xda, 0xa1, 0x00])

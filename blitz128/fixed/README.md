@@ -1,8 +1,8 @@
 # Fixed Blitz!128 compiler (V261117)
 
-`blitz!.128.prg` here is the original Skyles `BLITZ!.128` (V860929) with one defect repaired. It is made by
-`../blitzc/tools/patch_blitz128.py` (which checks that its input is the untouched original, sha1 `de85d699...`).
-The title screen shows **V261117** (yymmdd of the fix); the original shows V860929. The original file is left untouched.
+`blitz!.128.prg` here is the `BLITZ!.128` of this repository (Skyles V860929) with one defect repaired. That copy is a **cracked version** (the dongle check is disabled; stated by the repository owner). The fix is made by
+`../blitzc/tools/patch_blitz128.py` (which checks that its input is the untouched file, sha1 `de85d699...`).
+The title screen shows **V261117** (yymmdd of the fix); the untouched file shows V860929. The untouched file is left in place.
 
 ## The defect
 `BLITZ!.128` contains two runtime images that the compiler copies into every compiled `C/` file: image 1 for normal programs and
@@ -18,6 +18,8 @@ Those 10 bytes are:
 | `$6C3B-$6C40` | the 5-byte float constant PI (`82 C9 0F DA A1`) plus `00`, loaded by the PI handler | `π` evaluates to garbage in every program that uses graphics statements |
 
 Image 1 (programs without graphics) is complete and unaffected.
+
+**Provenance.** Because the file is a cracked copy, it is unknown whether the uncracked Skyles distribution has the same truncation or whether the crack (or copying) introduced it. "Original" in this document means the untouched file of this repository.
 
 ## The fix
 Append the missing bytes `38 03 91 71 82 C9 0F DA A1 00` (file size 45 222):
