@@ -46,4 +46,4 @@ are not implemented in this runtime image: they raise error 35 (NO GRAPHICS AREA
 compiled with the `$4001` runtime (image 2), which has ~401 bytes of inserted code.
 Corrections to earlier guesses: `xop09` is PEN (not RSPRITE), `op10` is DIM (not FOR), `op17` is POKE, `op69` is BUMP.
 
-Image 2 detail: ext `41` CIRCLE -> handler `$4238`, `42` PAINT -> `$4203`, `43` BOX -> `$4291` (the shipped table has `$4200` in these slots; see `IMAGE2.md`).
+Image 2 detail: ext `41` CIRCLE -> handler `$4238`, `42` PAINT -> `$4203`, `43` BOX -> `$4291`. The compiled programs of the ORIGINAL BLITZ!.128 have `$4200` in these slots because the compiler file is 10 bytes short (see `IMAGE2.md`, fixed build in branch `fix-graphics-slots`).

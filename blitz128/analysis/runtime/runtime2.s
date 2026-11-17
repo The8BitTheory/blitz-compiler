@@ -186,14 +186,11 @@ L405b:
 gfx_xop3b_DRAW:
 ; ==== IMAGE 2 ONLY: graphics statement front ends ($41A3-$4336, 404 bytes inserted at image-1 $1DA3) ====
 ; Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
-; $1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
-; table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
-; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 hold $4200 (= the final `jmp $6650` of gfx_xop3f_GSHAPE).  That is WRONG wiring in this build: entered
-; through the dispatcher it calls $0142, which is uninitialised RAM (VICE: A=$42 X=$41 Y=1, $0142 = power-up pattern; the program does
-; not reach END within 400M cycles).  The correct handlers are present but not referenced:
-;     xop $41 CIRCLE -> $4238     xop $42 PAINT -> $4203     xop $43 BOX -> $4291
-; [sure, differential test in IMAGE2.md: with the three slots patched to these addresses the compiled program runs through CIRCLE,
-; BOX, PAINT to END; with the slots rotated it stops with error 14 ILLEGAL QUANTITY.]
+; $1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
+; Extended-opcode table entries:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
+; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE)  $41 -> $4238 (CIRCLE)  $42 -> $4203 (PAINT)  $43 -> $4291 (BOX).
+; NOTE: the original BLITZ!.128 is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
+; are RAM garbage; run_4001_fixed.bin / this listing contain the intended values (see ../../fixed/README.md).
 ; The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].
         jsr  gfx_param_first
         bcc  L41aa
@@ -242,8 +239,7 @@ gfx_xop3f_GSHAPE:
         jsr  pop_byte
         lda  #$a5
         ldy  #$65
-gfx_call_stub_0142:
-; shared by: $00,$41 ?, $00,$42 ?, $00,$43 ?
+gfx_GSHAPE_tail:
         jmp  L6650
 gfx_xop42_PAINT:
         jsr  gfx_param_first
@@ -1924,6 +1920,7 @@ L4d67:
         bne  fetch
         inc  bcptr_hi
         bne  fetch
+xop44_reinstall:
         jsr  install_trampolines
 next_y0:
         ldy  #$00
@@ -2017,7 +2014,7 @@ var_long_or_const:
         sta  prevop
         inc  bcptr
         beq  L4e09
-xop44_reinstall:
+L4dff:
         cmp  #$e4
         bcc  L4e06
         jmp  L50ce
@@ -2025,7 +2022,7 @@ L4e06:
         jmp  const_small
 L4e09:
         inc  bcptr_hi
-        bne  xop44_reinstall
+        bne  L4dff
 operand_push:
 ; operand_push: tokens $80-$BF and $E6+.  prevop != 0 means FAC already holds a left operand: push it (push_left).
 ; A float that is a whole number in 16 bit range is narrowed to an integer first (push_narrow_try) so integer arithmetic stays on the
@@ -2353,7 +2350,7 @@ L501a:
         bcs  L5032
         cmp  #$ab
         beq  L5069
-        bcc  L509a
+        bcc  pi_load
         lda  #$11
         ldx  #$7a
         bne  L5063
@@ -2417,11 +2414,12 @@ L508f:
 L5096:
         clc  
         jmp  int_overflow_to_float
-L509a:
+pi_load:
+; pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]
         stx  facov
         ldx  #$05
 L509e:
-        lda  $6c3b,x
+        lda  pi_const,x
         sta  fac_exp,x
         dex  
         bpl  L509e
@@ -6199,5 +6197,8 @@ xop_lo_tab:
         .byte $73,$82,$b9,$df,$f6,$f7,$1d,$70,$7d,$6f,$80,$83,$86,$89,$86,$63
         .byte $63,$63,$e4,$0e,$77,$a8,$cb,$c0,$b0,$3b,$38,$85,$56,$66,$ed,$ee
         .byte $f2,$f3,$54,$21,$0c,$27,$2a,$2d,$47,$b0,$b1,$a3,$b9,$be,$cc,$e0
-        .byte $18,$00,$00,$00,$ff,$ff,$ff,$ff,$00,$00,$00
+        .byte $18,$38,$03,$91,$71
+pi_const:
+; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.
+        .byte $82,$c9,$0f,$da,$a1,$00
 

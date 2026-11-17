@@ -278,23 +278,27 @@ IMG2_LABELS = {
     0x4334: 'range_error',
     0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c', 0x41be: 'gfx_xop3d_DRAWTO',
     0x41cc: 'gfx_xop3e_LOCATE', 0x41e0: 'gfx_xop3f_GSHAPE', 0x4218: 'gfx_xop40_SSHAPE',
-    0x4203: 'gfx_xop42_PAINT', 0x4238: 'gfx_xop41_CIRCLE', 0x4291: 'gfx_xop43_BOX', 0x4200: 'gfx_call_stub_0142',
+    0x4203: 'gfx_xop42_PAINT', 0x4238: 'gfx_xop41_CIRCLE', 0x4291: 'gfx_xop43_BOX', 0x4200: 'gfx_GSHAPE_tail',
     0x41d9: 'gfx_rom_9df2', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
     0x42b3: 'gfx_param_mode', 0x432b: 'gfx_next_token',
 }
 IMG2_COMMENT_BEFORE = {
     0x41a3: """==== IMAGE 2 ONLY: graphics statement front ends ($41A3-$4336, 404 bytes inserted at image-1 $1DA3) ====
 Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
-$1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
-table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
-$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 hold $4200 (= the final `jmp $6650` of gfx_xop3f_GSHAPE).  That is WRONG wiring in this build: entered
-through the dispatcher it calls $0142, which is uninitialised RAM (VICE: A=$42 X=$41 Y=1, $0142 = power-up pattern; the program does
-not reach END within 400M cycles).  The correct handlers are present but not referenced:
-    xop $41 CIRCLE -> $4238     xop $42 PAINT -> $4203     xop $43 BOX -> $4291
-[sure, differential test in IMAGE2.md: with the three slots patched to these addresses the compiled program runs through CIRCLE,
-BOX, PAINT to END; with the slots rotated it stops with error 14 ILLEGAL QUANTITY.]
+$1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
+Extended-opcode table entries:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
+$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE)  $41 -> $4238 (CIRCLE)  $42 -> $4203 (PAINT)  $43 -> $4291 (BOX).
+NOTE: the original BLITZ!.128 is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
+are RAM garbage; run_4001_fixed.bin / this listing contain the intended values (see ../../fixed/README.md).
 The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
     0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
 }
 
-IMG2_EXTRA_CODE = [0x4203, 0x4238, 0x4291]   # no static reference found (not in any dispatch table, no jsr/jmp)
+IMG2_EXTRA_CODE = []   # (CIRCLE/PAINT/BOX are reached through the table once its truncated tail is restored, see run_4001_fixed.bin)
+
+# PI: the constant lives behind the extended-opcode tables (5-byte float 82 C9 0F DA A1 + 00), loaded by the handler at $2B09
+LABELS.update({0x46aa: 'pi_const', 0x2b09: 'pi_load'})
+COMMENT_BEFORE.update({
+    0x2b09: "pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]",
+    0x46aa: "pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.",
+})

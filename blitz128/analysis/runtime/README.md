@@ -54,3 +54,6 @@ The remaining targets are BASIC statement/function implementations (sprite, soun
 The image-1 names are carried over by address shift ($+2400 before the insertion, $+2591 after) and checked: of 76 labelled
 routines only 5 differ in their first instructions, all benign (key operands, buffer address); the graphics front ends are
 named in `names.py` (`IMG2_*`).
+
+## Defect found in the original compiler
+Image 2 in `BLITZ!.128` is 10 bytes short, so CIRCLE/PAINT/BOX/`$44` dispatch slots and the constant PI are RAM garbage in every compiled graphics program. Details: `IMAGE2.md`; fix and fixed compiler (V261117): branch `fix-graphics-slots`, folder `blitz128/fixed/`. `runtime2.s` describes image 2 with the missing bytes restored (`fix4001.py`).

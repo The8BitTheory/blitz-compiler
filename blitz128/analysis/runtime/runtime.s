@@ -2136,7 +2136,7 @@ L2a89:
         bcs  L2aa1
         cmp  #$ab
         beq  L2ad8
-        bcc  L2b09
+        bcc  pi_load
         lda  #$11
         ldx  #$7a
         bne  L2ad2
@@ -2200,11 +2200,12 @@ L2afe:
 L2b05:
         clc  
         jmp  int_overflow_to_float
-L2b09:
+pi_load:
+; pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]
         stx  facov
         ldx  #$05
 L2b0d:
-        lda  $46aa,x
+        lda  pi_const,x
         sta  fac_exp,x
         dex  
         bpl  L2b0d
@@ -5977,5 +5978,8 @@ xop_lo_tab:
         .byte $e2,$f1,$28,$4e,$65,$66,$8c,$df,$ec,$de,$ef,$f2,$f5,$f8,$f5,$d2
         .byte $d2,$d2,$53,$7d,$e6,$a3,$3a,$2f,$1f,$aa,$a7,$f4,$c5,$d5,$5c,$5d
         .byte $61,$62,$c3,$90,$7b,$96,$99,$9c,$b6,$1f,$20,$a3,$a3,$a3,$a3,$a3
-        .byte $a3,$a3,$a3,$a3,$e0,$82,$c9,$0f,$da,$a1,$00
+        .byte $a3,$a3,$a3,$a3,$e0
+pi_const:
+; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.
+        .byte $82,$c9,$0f,$da,$a1,$00
 

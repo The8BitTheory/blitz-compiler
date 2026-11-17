@@ -20,7 +20,7 @@ def sh(a):
 if IMG == 1:
     BASE, END, IMGFILE, OUTFILE = 0x1c01, 0x46b0, 'run_1c01.bin', 'runtime.s'
 else:
-    BASE, END, IMGFILE, OUTFILE = 0x4001, 0x46b0 + 0x2591, 'run_4001.bin', 'runtime2.s'
+    BASE, END, IMGFILE, OUTFILE = 0x4001, 0x46b0 + 0x2591, 'runtime/run_4001_fixed.bin', 'runtime2.s'
 img = open(os.path.join(HERE, '..', IMGFILE), 'rb').read()
 M = img[2:2 + END - BASE]           # runtime proper
 g = lambda a: M[a - BASE]
