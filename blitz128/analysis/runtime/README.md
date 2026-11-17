@@ -19,7 +19,7 @@ assembles back to exactly the bytes of `../run_1c01.bin`:
 | Dispatcher / token classes / operand classes | documented [sure] |
 | Shared helpers (get_byte, get_word, pop_value, int<->fac, rom_call, GC, VAL, ...) | named, tagged [sure]/[likely] |
 | ~90 opcode handlers | named from the compiler's own output, see `ROSETTA.md` (statement/function -> opcode map, verified against the original compiler's tests) |
-| Ext. opcodes (`$00 xx`) | labelled `xopXX`; fully named except `1F-21`, `25`, `2C`, `3C`, `44` |
+| Ext. opcodes (`$00 xx`) | labelled `xopXX`; fully named except `1F-21`, `25` (alias into DRAW) and main `58` |
 | Operator handlers `$01-$0D` (int/float/string arithmetic, compare, AND/OR) | analysed: stack model, operand typing, int/float/string paths named and commented [sure]/[likely] |
 | Copied BASIC ROM arithmetic (FOUT etc.) | labelled only where referenced |
 | Remaining anonymous `Lxxxx` labels | generated, not yet named |

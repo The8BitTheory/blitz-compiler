@@ -65,21 +65,21 @@ MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/
     0x23: 'USR', 0x24: 'FRE', 0x25: 'POS', 0x26: 'SQR', 0x27: 'RND', 0x28: 'LOG', 0x29: 'EXP', 0x2a: 'COS',
     0x2b: 'SIN', 0x2c: 'TAN', 0x2d: 'ATN', 0x2e: 'PEEK', 0x2f: 'LEN', 0x30: 'STR_S', 0x31: 'VAL', 0x32: 'ASC',
     0x33: 'CHR_S', 0x34: 'LEFT_S', 0x35: 'RIGHT_S', 0x36: 'MID_S', 0x37: 'DEF_FN', 0x38: 'FN_call', 0x39: 'FN_end',
-    0x3b: 'PRINT_3b', 0x3c: 'PRINT_semi', 0x3d: 'PRINT_comma', 0x3e: 'PRINT_nl', 0x3f: 'PRINT_cr', 0x40: 'SPC',
-    0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_b', 0x45: 'PRINT_end',
+    0x3b: 'PRINT_comma_tab', 0x3c: 'PRINT_semi', 0x3d: 'PRINT_comma', 0x3e: 'PRINT_nl', 0x3f: 'PRINT_cr', 0x40: 'SPC',
+    0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_cr', 0x45: 'PRINT_end',
     0x46: 'GET', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
-    0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'IF_THEN_line', 0x53: 'INPUT_num',
-    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x59: 'HEX_S', 0x5a: 'IF_begin', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
+    0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'JUMP_if_true', 0x53: 'INPUT_num',
+    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x59: 'HEX_S', 0x5a: 'JUMP_if_false', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
     0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY', 0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'DOS', 0x63: 'RECORD',
     0x65: 'CHAR', 0x66: 'SOUND', 0x67: 'BANK', 0x68: 'XOR', 0x69: 'BUMP', 0x6a: 'RSPCOLOR', 0x6b: 'RGR',
     0x6c: 'RCLR', 0x6d: 'POT', 0x6e: 'JOY', 0x6f: 'RDOT', 0x70: 'DEC', 0x71: 'INSTR', 0x72: 'ERR_S',
     0x73: 'MID_S_assign', 0x74: 'TRAP', 0x75: 'TRAP_off', 0x77: 'PUDEF', 0x78: 'USING', 0x79: 'VOL',
-    0x7a: 'RWINDOW', 0x7b: 'STR_ARG', 0x7c: 'USING_end', 0x7d: 'RESUME', 0x7e: 'RESUME_next',
+    0x7a: 'RWINDOW', 0x7b: 'STR_ARG', 0x7c: 'USING_end', 0x7d: 'RESUME_next', 0x7e: 'RESUME', 0x7f: 'STMT_HEAD',
 }
 EXT_OPS = {    # opcode $00 xx
     0x00: 'GETKEY', 0x01: 'RREG', 0x05: 'SYS_arg', 0x09: 'PEN', 0x0a: 'PLAY', 0x0b: 'WIDTH', 0x0c: 'SPRDEF',
     0x0d: 'RSPPOS', 0x0e: 'RSPRITE', 0x0f: 'SPRCOLOR_1', 0x10: 'SPRCOLOR_2', 0x11: 'SPRSAV_to_str',
-    0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy', 0x14: 'COLLISION', 0x16: 'WINDOW', 0x17: 'obj_select',
+    0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy', 0x14: 'COLLISION_off', 0x15: 'COLLISION_on', 0x2c: 'KEY_list', 0x16: 'WINDOW', 0x17: 'obj_select',
     0x18: 'SPRITE_enable', 0x19: 'SPRITE_color', 0x1e: 'NEW', 0x22: 'GO64', 0x23: 'TEMPO', 0x24: 'SLEEP',
     0x26: 'GRAPHIC', 0x27: 'GRAPHIC_clr', 0x28: 'GRAPHIC_split', 0x29: 'SLOW', 0x2a: 'FAST', 0x2b: 'KEY_def',
     0x2d: 'ENV_num', 0x2e: 'ATTACK', 0x32: 'WAVE', 0x33: 'PW', 0x34: 'FILTER_cutoff', 0x35: 'FILTER_lp',
@@ -184,7 +184,7 @@ FAMILY_COMMENT = {
     0x5d: "---- LOAD / SAVE / VERIFY (device in $BA, secondary in $B9, name in $B7/$BB/$BC) ----",
     0x60: "---- OPEN / CLOSE and disk-command blocks ----",
     0x6e: "---- hardware access: joystick, sprite colour ----",
-    0x74: "---- TRAP / RESUME / DO ----",
+    0x74: "---- TRAP / RESUME ----",
 }
 
 LABELS.update({
@@ -273,16 +273,26 @@ fills these table slots.  [sure for the error; image-2 role likely]""",
 })
 
 # ---- image 2 specifics (absolute image-2 addresses; applied after the image-1 names were translated) ----------
+FLAGBYTE_DOC = """GRAPHICS STATEMENT FLAG BYTE.  DRAW ($3B), DRAW TO ($3C), GSHAPE ($3F), SSHAPE ($40), CIRCLE ($41), PAINT ($42), BOX ($43)
+are followed by ONE extra byte in the bytecode.  The compiler stores it UNENCRYPTED (all other bytes are XORed with the program key), the
+handler reads it raw (gfx_param_first -> A -> $80) and the dispatcher skips it (the handler ends in next_y0 = advance 2).
+Bits (values observed with the original compiler, see ROSETTA.md):  bits 1-0 = x/y of the first coordinate pair are relative (+n/-n),
+bits 3-2 = the same for the second pair, bit 7 = polar form  x;angle ($80),  bits 5-4 = how many of the optional parameters are present
+(BOX: $00 all four corner values, $20 only the first corner, $10 with angle; CIRCLE: $20 radius only, $30 radius+yradius, $3C with arc
+angles;  SSHAPE: $00 two corners, $20 one).  gfx_param_mode / gfx_param_copy consume the bits MSB first and copy defaults ($1131..) for the
+omitted values.  DRAW TO continuation ($3D) and LOCATE ($3E) have no flag byte: their flags are an ordinary integer constant operand."""
+
 IMG2_DROP = [0x4334, 0x4334 - 0x2591 + 0x2591]          # old gfx_ext_hook name does not apply: $4334 is `jmp err_illegal_quantity`
 IMG2_LABELS = {
     0x4334: 'range_error',
-    0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c', 0x41be: 'gfx_xop3d_DRAWTO',
+    0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c_DRAWTO_first', 0x41be: 'gfx_xop3d_DRAWTO',
     0x41cc: 'gfx_xop3e_LOCATE', 0x41e0: 'gfx_xop3f_GSHAPE', 0x4218: 'gfx_xop40_SSHAPE',
     0x4203: 'gfx_xop42_PAINT', 0x4238: 'gfx_xop41_CIRCLE', 0x4291: 'gfx_xop43_BOX', 0x4200: 'gfx_GSHAPE_tail',
     0x41d9: 'gfx_rom_9df2', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
     0x42b3: 'gfx_param_mode', 0x432b: 'gfx_next_token',
 }
 IMG2_COMMENT_BEFORE = {
+    0x431c: FLAGBYTE_DOC if 'FLAGBYTE_DOC' in globals() else '',
     0x41a3: """==== IMAGE 2 ONLY: graphics statement front ends ($41A3-$4336, 404 bytes inserted at image-1 $1DA3) ====
 Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
 $1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
@@ -302,3 +312,19 @@ COMMENT_BEFORE.update({
     0x2b09: "pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]",
     0x46aa: "pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.",
 })
+
+COMMENT_BEFORE.update({
+    0x41a3: COMMENT_BEFORE.get(0x41a3, ''),
+})
+
+OP_COMMENT = {   # main opcode -> comment above its handler
+    0x7f: """STMT_HEAD ($7F nn): emitted before every statement ONLY in full-syntax mode (menu 4-6; needed for COLLISION/RESUME).  nn = length of the
+statement in bytes (incl. these two).  The handler polls the collision/event flags ($127F, $1276..) and, if one fired, pushes a return frame and
+jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised the error.  [sure: op/length from the compiler's output; poll [likely]]""",
+    0x7d: "RESUME NEXT ($7D): continue behind the statement that caused the error ($120E/$120F = position, statement length via the $7F head).  [sure: `resume next` -> $7D]",
+    0x7e: "RESUME ($7E): continue AT the statement that caused the error.  [sure: `resume` -> $7E]",
+    0x52: "JUMP_if_true ($52 + target word): `if a then 10`, `loop while c`, `do until c` (jump when the condition is non-zero).  [sure: Rosetta]",
+    0x5a: "JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]",
+    0x3b: "PRINT_comma_tab ($3B): a bare comma in PRINT (`print ,\"x\"`, `print a,,b`): tab to the next 10-column zone.  [sure: Rosetta]",
+    0x44: "CHKOUT_cr ($44): `print#1,` with nothing to print: select the channel (like $42), then CR and CLRCHN.  [sure: Rosetta]",
+}

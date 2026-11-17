@@ -203,7 +203,7 @@ L41aa:
         lda  #$fb
         ldy  #$9b
         jmp  L6650
-gfx_xop3c:
+gfx_xop3c_DRAWTO_first:
         jsr  gfx_param_first
         bcc  L41c0
 gfx_xop3d_DRAWTO:
@@ -384,6 +384,14 @@ L4311:
 L4319:
         jmp  rom_call_ax
 gfx_param_first:
+; GRAPHICS STATEMENT FLAG BYTE.  DRAW ($3B), DRAW TO ($3C), GSHAPE ($3F), SSHAPE ($40), CIRCLE ($41), PAINT ($42), BOX ($43)
+; are followed by ONE extra byte in the bytecode.  The compiler stores it UNENCRYPTED (all other bytes are XORed with the program key), the
+; handler reads it raw (gfx_param_first -> A -> $80) and the dispatcher skips it (the handler ends in next_y0 = advance 2).
+; Bits (values observed with the original compiler, see ROSETTA.md):  bits 1-0 = x/y of the first coordinate pair are relative (+n/-n),
+; bits 3-2 = the same for the second pair, bit 7 = polar form  x;angle ($80),  bits 5-4 = how many of the optional parameters are present
+; (BOX: $00 all four corner values, $20 only the first corner, $10 with angle; CIRCLE: $20 radius only, $30 radius+yradius, $3C with arc
+; angles;  SSHAPE: $00 two corners, $20 one).  gfx_param_mode / gfx_param_copy consume the bits MSB first and copy defaults ($1131..) for the
+; omitted values.  DRAW TO continuation ($3D) and LOCATE ($3E) have no flag byte: their flags are an ordinary integer constant operand.
         jsr  get_byte
         cpx  #$02
         lda  $d8
@@ -1243,7 +1251,10 @@ data_ptr_init:
         eor  #$79
         sta  dataptr_hi
         rts  
-op7f:
+op7f_STMT_HEAD:
+; STMT_HEAD ($7F nn): emitted before every statement ONLY in full-syntax mode (menu 4-6; needed for COLLISION/RESUME).  nn = length of the
+; statement in bytes (incl. these two).  The handler polls the collision/event flags ($127F, $1276..) and, if one fired, pushes a return frame and
+; jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised the error.  [sure: op/length from the compiler's output; poll [likely]]
         lda  $127f
         bmi  L4927
         ldx  #$02
@@ -1401,11 +1412,11 @@ xop09_PEN:
         ldy  #$82
         jsr  rom_call_ay
         jmp  L66a1
-xop14_COLLISION:
+xop14_COLLISION_off:
 ; COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
 ; $127F is the enable bitmask (masks at $45AB).  [likely]
         clc  
-xop15:
+xop15_COLLISION_on:
         php  
         jsr  get_byte
         dex  
@@ -3636,8 +3647,9 @@ L5870:
         cpx  #$3d
         bcc  L58d3
         bne  op3f_PRINT_cr
-op3b_PRINT_3b:
+op3b_PRINT_comma_tab:
 ; ---- PRINT family (CHROUT/CLRCHN; $42/$44 = PRINT# via CHKOUT) ----
+; PRINT_comma_tab ($3B): a bare comma in PRINT (`print ,"x"`, `print a,,b`): tab to the next 10-column zone.  [sure: Rosetta]
         lda  $ec
         sec  
         sbc  $e6
@@ -3695,7 +3707,8 @@ L58d3:
         sta  MMU_LCRA
         jmp  next
 op42_CHKOUT:
-; shared by: $42 CHKOUT, $44 CHKOUT_b
+; shared by: $42 CHKOUT, $44 CHKOUT_cr
+; CHKOUT_cr ($44): `print#1,` with nothing to print: select the channel (like $42), then CR and CLRCHN.  [sure: Rosetta]
         stx  $3e
         jsr  get_byte
         stx  $15
@@ -4251,7 +4264,8 @@ L5c8b:
 L5c99:
         bcs  L5c77
         bcc  L5c79
-op5a_IF_begin:
+op5a_JUMP_if_false:
+; JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]
         sty  prevop
         lda  intflg
         bpl  L5cab
@@ -4263,7 +4277,8 @@ L5cab:
         lda  fac_exp
         bne  L5cbd
         beq  op19_GOTO
-op52_IF_THEN_line:
+op52_JUMP_if_true:
+; JUMP_if_true ($52 + target word): `if a then 10`, `loop while c`, `do until c` (jump when the condition is non-zero).  [sure: Rosetta]
         sty  prevop
         lda  intflg
         bpl  L5cc2
@@ -5449,7 +5464,7 @@ op75_TRAP_off:
         sta  $120c
         jmp  next_inc1_y0
 op74_TRAP:
-; ---- TRAP / RESUME / DO ----
+; ---- TRAP / RESUME ----
         iny  
         lda  (bcptr),y
         eor  #$7e
@@ -5478,9 +5493,11 @@ collision_reset:
 op76:
         jsr  collision_reset
         jmp  op19_GOTO
-op7e_RESUME_next:
+op7e_RESUME:
+; RESUME ($7E): continue AT the statement that caused the error.  [sure: `resume` -> $7E]
         dey  
-op7d_RESUME:
+op7d_RESUME_next:
+; RESUME NEXT ($7D): continue behind the statement that caused the error ($120E/$120F = position, statement length via the $7F head).  [sure: `resume next` -> $7D]
         jsr  collision_reset
         lda  $120e
         sta  bcptr
@@ -5627,7 +5644,7 @@ L6628:
 L6650:
         jsr  rom_call_ay
         jmp  next_y0
-xop2c:
+xop2c_KEY_list:
         lda  #$21
         ldy  #$61
         bne  L6650

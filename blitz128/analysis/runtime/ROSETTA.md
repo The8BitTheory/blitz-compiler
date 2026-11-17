@@ -47,3 +47,31 @@ compiled with the `$4001` runtime (image 2), which has ~401 bytes of inserted co
 Corrections to earlier guesses: `xop09` is PEN (not RSPRITE), `op10` is DIM (not FOR), `op17` is POKE, `op69` is BUMP.
 
 Image 2 detail: ext `41` CIRCLE -> handler `$4238`, `42` PAINT -> `$4203`, `43` BOX -> `$4291`. The compiled programs of the ORIGINAL BLITZ!.128 have `$4200` in these slots because the compiler file is 10 bytes short (see `IMAGE2.md`, fixed build in branch `fix-graphics-slots`).
+
+## Additions from probe compiles (original compiler in VICE, 17.11.2026)
+* `$7F nn` = statement head, present before *every* statement in full-syntax mode (menu 4-6); `nn` = statement length including the head.
+  `trap n` -> `74 <word>`, `trap` -> `75`, `resume` -> `7E`, `resume next` -> `7D`, `collision n,line` -> `.. 00 15 <word>`, `collision n` -> `.. 00 14 00 00`.
+  (`resume`/`collision` are "illegal command" in the restricted syntax of menu 1-3.)
+* Conditions: `$52 <word>` jump if true (`if a then 10`, `loop while`, `do until`), `$5A <word>` jump if false (`if a then begin`, `do while`, `loop until`);
+  `$1F nn` skips nn bytes if false (IF ... THEN statement).  `$58` has not shown up in any test (open).
+* PRINT: `$3B` = bare comma (`print ,"x"` -> `3B e9'X' 3E`), `$44` = `print#1,` without items (`b1 44`).
+* DEF FN `$37` has 4 operand bytes, FN call `$38` 2 operand bytes, FN end `$39`.  `00 2C` is KEY (list), not an FN opcode.
+* Graphics statements carry a **flag byte** behind the extended opcode (stored unencrypted, hence `key0 XOR flag` in rosetta.py output):
+
+| statement | form | flag |
+|---|---|---|
+| `draw 1,10,10` / `draw ,10,10` | absolute | `00` |
+| `draw 1,+10,-10` | first pair relative | `03` |
+| `draw 1,10;20` | polar | `80` |
+| `draw to 5,5` | (ext `3C`, flag `00`) | `00` |
+| `box 1,10,10,50,50` / `box 1,10,10` | full / first corner only | `00` / `20` |
+| `box ...,50,50,45[,1]` | with angle | `10` |
+| `box 1,+10,+10,50,50` / `box 1,10,10,+5,+5` | relative first / second pair | `03` / `0C` |
+| `circle 1,10,10,5` / `...,5,5` / `...,5,5,0,90` | radius / +yradius / +arc | `20` / `30` / `3C` |
+| `circle 1,+10,+10,5,5` | relative centre | `33` |
+| `paint 1,10,10` / `paint 1,+10,+10` | | `00` / `03` |
+| `sshape a$,1,1` / `,1,1,5,5` / all relative | | `20` / `00` / `0F` |
+| `gshape a$,1,1` / `gshape a$,+1,+1` | | `00` / `03` |
+
+`DRAW TO` continuation (`3D`) and `LOCATE` (`3E`) have no flag byte; their flags are an ordinary integer-constant operand
+(`locate +10,+10` -> `ba ba b3 00 3e`, `locate 10;20` -> `f4 ba a6 80 00 3e`, `draw .. to +5,+5` -> `b5 b5 b3 00 3d`).

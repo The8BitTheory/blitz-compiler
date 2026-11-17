@@ -1029,7 +1029,10 @@ data_ptr_init:
         eor  #$79
         sta  dataptr_hi
         rts  
-op7f:
+op7f_STMT_HEAD:
+; STMT_HEAD ($7F nn): emitted before every statement ONLY in full-syntax mode (menu 4-6; needed for COLLISION/RESUME).  nn = length of the
+; statement in bytes (incl. these two).  The handler polls the collision/event flags ($127F, $1276..) and, if one fired, pushes a return frame and
+; jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised the error.  [sure: op/length from the compiler's output; poll [likely]]
         lda  $127f
         bmi  L2396
         ldx  #$02
@@ -1187,11 +1190,11 @@ xop09_PEN:
         ldy  #$82
         jsr  rom_call_ay
         jmp  L4110
-xop14_COLLISION:
+xop14_COLLISION_off:
 ; COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
 ; $127F is the enable bitmask (masks at $45AB).  [likely]
         clc  
-xop15:
+xop15_COLLISION_on:
         php  
         jsr  get_byte
         dex  
@@ -3417,8 +3420,9 @@ L32df:
         cpx  #$3d
         bcc  L3342
         bne  op3f_PRINT_cr
-op3b_PRINT_3b:
+op3b_PRINT_comma_tab:
 ; ---- PRINT family (CHROUT/CLRCHN; $42/$44 = PRINT# via CHKOUT) ----
+; PRINT_comma_tab ($3B): a bare comma in PRINT (`print ,"x"`, `print a,,b`): tab to the next 10-column zone.  [sure: Rosetta]
         lda  $ec
         sec  
         sbc  $e6
@@ -3476,7 +3480,8 @@ L3342:
         sta  MMU_LCRA
         jmp  next
 op42_CHKOUT:
-; shared by: $42 CHKOUT, $44 CHKOUT_b
+; shared by: $42 CHKOUT, $44 CHKOUT_cr
+; CHKOUT_cr ($44): `print#1,` with nothing to print: select the channel (like $42), then CR and CLRCHN.  [sure: Rosetta]
         stx  $3e
         jsr  get_byte
         stx  $15
@@ -4032,7 +4037,8 @@ L36fa:
 L3708:
         bcs  L36e6
         bcc  L36e8
-op5a_IF_begin:
+op5a_JUMP_if_false:
+; JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]
         sty  prevop
         lda  intflg
         bpl  L371a
@@ -4044,7 +4050,8 @@ L371a:
         lda  fac_exp
         bne  L372c
         beq  op19_GOTO
-op52_IF_THEN_line:
+op52_JUMP_if_true:
+; JUMP_if_true ($52 + target word): `if a then 10`, `loop while c`, `do until c` (jump when the condition is non-zero).  [sure: Rosetta]
         sty  prevop
         lda  intflg
         bpl  L3731
@@ -5230,7 +5237,7 @@ op75_TRAP_off:
         sta  $120c
         jmp  next_inc1_y0
 op74_TRAP:
-; ---- TRAP / RESUME / DO ----
+; ---- TRAP / RESUME ----
         iny  
         lda  (bcptr),y
         eor  #$de
@@ -5259,9 +5266,11 @@ collision_reset:
 op76:
         jsr  collision_reset
         jmp  op19_GOTO
-op7e_RESUME_next:
+op7e_RESUME:
+; RESUME ($7E): continue AT the statement that caused the error.  [sure: `resume` -> $7E]
         dey  
-op7d_RESUME:
+op7d_RESUME_next:
+; RESUME NEXT ($7D): continue behind the statement that caused the error ($120E/$120F = position, statement length via the $7F head).  [sure: `resume next` -> $7D]
         jsr  collision_reset
         lda  $120e
         sta  bcptr
@@ -5408,7 +5417,7 @@ L4097:
 L40bf:
         jsr  rom_call_ay
         jmp  next_y0
-xop2c:
+xop2c_KEY_list:
         lda  #$21
         ldy  #$61
         bne  L40bf

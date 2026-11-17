@@ -118,6 +118,9 @@ for x in range(0, 0x45):
 for a_, lst in _share.items():
     if len(lst) > 1 and a_ not in (sh(0x1da3), sh(0x2e95)):
         names.COMMENT_BEFORE[a_] = (names.COMMENT_BEFORE.get(a_, '') + '\n' if a_ in names.COMMENT_BEFORE else '') + 'shared by: ' + ', '.join(lst)
+for x, txt in getattr(names, 'OP_COMMENT', {}).items():
+    a = g(main_tab_lo + x) | g(main_tab_hi + x) << 8
+    names.COMMENT_BEFORE[a] = (names.COMMENT_BEFORE[a] + '\n' if a in names.COMMENT_BEFORE else '') + txt
 def sym(a):
     if a in names.SYMS: return names.SYMS[a]
     if a in labels and a in starts and LO <= a < END: return labels[a]
