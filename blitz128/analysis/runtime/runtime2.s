@@ -188,14 +188,12 @@ gfx_xop3b_DRAW:
 ; Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
 ; $1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
 ; table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
-; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 = the final `jmp $6650` of gfx_xop3f_GSHAPE ($6650 = `jsr rom_call_ay /
-; jmp next_y0`).  Entered through the dispatcher, A = $42 (hi byte just loaded from the table) and Y = 1, so rom_call_ay calls
-; $0142: the RAM stub area at $0140 that op $7B fills with a graphics-ROM routine (it copies 36 bytes there).  The static template and
-; a compiled program (blitzc/tests/expected/stmt7a) both have $4200 in these slots, so it is not a compile-time patch.  [likely]
-; VICE trace (minimal program `graphic 1,1 : circle 1,100,100,20,10 ...`, original compiler output): xop $41 reached $4200 with
-; A=$42 X=$41 Y=1, then $6650 -> rom_call_ay -> $0142, and $0142 still held the power-up RAM pattern (no stub installed yet), i.e.
-; the call goes into uninitialised memory in that test.  So the stub must be installed by something that my test did not run - [open].
-; The three handlers at $4203, $4238, $4291 have no static reference (no table slot, no jsr/jmp) - [open], maybe dead code.
+; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 hold $4200 (= the final `jmp $6650` of gfx_xop3f_GSHAPE).  That is WRONG wiring in this build: entered
+; through the dispatcher it calls $0142, which is uninitialised RAM (VICE: A=$42 X=$41 Y=1, $0142 = power-up pattern; the program does
+; not reach END within 400M cycles).  The correct handlers are present but not referenced:
+;     xop $41 CIRCLE -> $4238     xop $42 PAINT -> $4203     xop $43 BOX -> $4291
+; [sure, differential test in IMAGE2.md: with the three slots patched to these addresses the compiled program runs through CIRCLE,
+; BOX, PAINT to END; with the slots rotated it stops with error 14 ILLEGAL QUANTITY.]
 ; The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].
         jsr  gfx_param_first
         bcc  L41aa
@@ -247,7 +245,7 @@ gfx_xop3f_GSHAPE:
 gfx_call_stub_0142:
 ; shared by: $00,$41 ?, $00,$42 ?, $00,$43 ?
         jmp  L6650
-gfx_unref_4203:
+gfx_xop42_PAINT:
         jsr  gfx_param_first
         ldy  #$04
         jsr  gfx_param_copy
@@ -270,7 +268,7 @@ gfx_xop40_SSHAPE:
         lda  #$4b
         ldy  #$64
         jmp  L6650
-gfx_unref_4238:
+gfx_xop41_CIRCLE:
         jsr  gfx_param_first
         sta  flags80
         ldy  #$1f
@@ -313,7 +311,7 @@ L428a:
         sta  $1157
         ldy  #$08
         bne  L4244
-gfx_unref_4291:
+gfx_xop43_BOX:
         jsr  gfx_param_first
         sta  flags80
         ldy  #$1f
