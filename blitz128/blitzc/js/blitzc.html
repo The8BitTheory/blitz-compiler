@@ -25,6 +25,8 @@
   .pass .pct { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
   #status { margin: .6rem 0 0; min-height: 1.4em; }
   #status.err { color: var(--err); }
+  .optnote { display: block; margin: .1rem 0 .6rem 1.6rem; max-width: 40rem; line-height: 1.4; }
+  .optnote code { font-size: .9em; }
   /* list of programs without runtime */
   #plain { list-style: none; margin: .3rem 0; padding: 0; }
   #plain li { display: flex; gap: .5rem; align-items: center; margin: .2rem 0; }
@@ -51,9 +53,12 @@
 <label>Keys as in reference file <small>(optional: C/ file of the original, for byte-identical output; applies to all programs)</small></label>
 <input type="file" id="like">
 <label>Options <small>(apply to all programs)</small></label>
-<label style="font-weight:normal"><input type="checkbox" id="runtime" checked> with runtime routines <small id="rthint">(off: C/ without runtime, needs a runtime that is already loaded)</small></label>
-<label style="font-weight:normal"><input type="checkbox" id="full"> RESUME and COLLISION with full syntax <small>(off: no COLLISION, RESUME with line number only)</small></label>
-<label style="font-weight:normal"><input type="checkbox" id="shared" checked disabled> Gemeinsame Variablentabelle <small id="sharedhint">(needs at least 2 programs)</small></label>
+<label style="font-weight:normal"><input type="checkbox" id="full"> RESUME and COLLISION with full syntax</label>
+<small class="optnote"><b>Off</b> (menu items 1&ndash;3 of the original): there is no <code>COLLISION</code> command and <code>RESUME</code> must be given a line number
+(<code>COLLISION</code>, plain <code>RESUME</code> and <code>RESUME NEXT</code> are rejected as ILLEGAL COMMAND). In return the compiler is about 15&nbsp;% faster and the
+compiled program about 20&nbsp;% shorter. <b>On</b> (menu items 4&ndash;6): <code>COLLISION</code> and every form of <code>RESUME</code> are compiled; to make this work each statement
+gets a 2-byte header that checks for pending collision events and holds the statement length, which is where the extra size comes from.</small>
+<label style="font-weight:normal"><input type="checkbox" id="shared" checked disabled> Shared variable table <small id="sharedhint">(needs at least 2 programs)</small></label>
 <br><button id="go">Compile</button>
 <p id="status" aria-live="polite"></p>
 <div class="files" id="files"></div>
@@ -5737,7 +5742,7 @@ function d81Of(results, diskName = 'BLITZC') {
 function compileJob(job, post) {
   try {
     const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
-    const overlay = !!job.overlay && programs.length > 1;   // "Gemeinsame Variablentabelle": original menu item 4
+    const overlay = !!job.overlay && programs.length > 1;   // "Shared variable table" checkbox: original menu item 4
     const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
       : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
@@ -5833,11 +5838,9 @@ function drawList() {
     sp.textContent = p.file.name; rm.type = 'button'; rm.textContent = 'Remove'; rm.onclick = () => { plain.splice(i, 1); drawList(); };
     li.append(n, sp, rm); return li;
   }));
-  $('runtime').disabled = plain.length > 0;
   updateShared();
-  $('rthint').textContent = plain.length ? '(the program with runtime always has it, the ones in the list never)' : '(off: C/ without runtime, needs a runtime that is already loaded)';
 }
-// "Gemeinsame Variablentabelle" = original compiler menu item 4 (overlay): all programs get ONE variable table, so variables survive LOAD
+// "Shared variable table" = original compiler menu item 4 (overlay): all programs get ONE variable table, so variables survive LOAD
 // between the modules. Only possible with at least two programs; the first one gets the runtime, the others start behind it.
 function updateShared() {
   const n = ($('src').files.length ? 1 : 0) + plain.length, cb = $('shared');
@@ -5881,7 +5884,7 @@ function finish(m) {
 
 $('go').onclick = async () => {
   const src = await read('src'), programs = [];
-  if (src) programs.push({ src, name: $('name').value || 'PROG', runtime: plain.length ? true : $('runtime').checked });
+  if (src) programs.push({ src, name: $('name').value || 'PROG', runtime: true });
   for (const p of plain) programs.push({ src: new Uint8Array(await p.file.arrayBuffer()), name: p.name, runtime: false });
   if (!programs.length) { $('status').className = 'err'; $('status').textContent = 'Choose a program with runtime or add programs to the list.'; return; }
   const job = { programs, blitz: null, like: await read('like'), fullSyntax: $('full').checked, overlay: programs.length > 1 && !$('shared').disabled && $('shared').checked };

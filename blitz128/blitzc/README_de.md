@@ -69,7 +69,7 @@ Befunde aus der Portierung:
 ### Mehrere Programme im Browser (Stand 17.11.2026)
 Das Feld „Programm mit Runtime“ bleibt; darunter steht die Liste „Programme ohne Runtime“ (mehrere Dateien auf einmal hinzufügbar, Name je Eintrag änderbar, Entfernen). Enthält die Liste ein Element, darf das Runtime-Feld leer bleiben. Reihenfolge: Runtime-Programm zuerst. Optionen (volle Syntax, Referenzdatei) gelten für alle. Ausgabe: je Programm `c-…` und `z-…` einzeln, bei mehreren Programmen zusätzlich ein `.d81` mit `C/NAME` und `Z/NAME`. Namen: höchstens 14 Zeichen, Dubletten werden nummeriert. Ein fehlerhaftes Programm hält die anderen nicht auf. `node js/test.js` prüft zusätzlich, dass Mehrfachläufe gleich den Einzelläufen sind.
 
-## Overlay-Modus („Gemeinsame Variablentabelle“, Menüpunkt 4 des Originals)
+## Overlay-Modus („Gemeinsame Variablentabelle“ / „Shared variable table“, Menüpunkt 4 des Originals)
 Alle Programme werden in **einem Lauf** übersetzt wie mit Menüpunkt 4 des Originals („alle Programme ... mit Overlay-Funktion“): der Compiler läuft zuerst mit
 PASS0 über alle Programme und gibt jedem Modul **dieselbe Variablennamen-Tabelle** (Vereinigung, Reihenfolge des ersten Auftretens über alle Programme). Werden die Module mit
 `LOAD "NAME",8` verkettet (nicht mit `RUN`, das Variablen immer löscht), bleiben die Variablen von Modul zu Modul erhalten. Das erste Modul enthält die Runtime,
@@ -77,6 +77,6 @@ die anderen starten dahinter. Die Ausgabedateien heißen wie die Programme (kein
 ```
 node js/cli.js a.prg out/ --plain b.prg,c.prg --overlay [--full] [--d81 out/all.d81]    # out/a.prg, b.prg, c.prg
 ```
-API: `compileOverlay([{src, name}, ...], blitz|null, {fullSyntax, keys, pads}, onEvent)`. Browser-Seite: Checkbox **Gemeinsame Variablentabelle** (standardmäßig an, nur aktiv bei mindestens
+API: `compileOverlay([{src, name}, ...], blitz|null, {fullSyntax, keys, pads}, onEvent)`. Browser-Seite: Checkbox **Shared variable table** (die Oberfläche ist englisch; standardmäßig an, nur aktiv bei mindestens
 zwei Programmen; aus = jedes Programm einzeln mit `C/NAME` und `Z/NAME` wie bisher). Der Port fährt den übersetzten Original-Compiler durch sein Menü (Quelldiskette = Gerät 8 mit allen
 Programmen, leere Zieldiskette = Gerät 9); PASS0 und das Zusammenführen der Tabelle ist also der Original-Code. `tests/overlay/` enthält Referenzen, die mit dem Original-Compiler in VICE erzeugt wurden.
