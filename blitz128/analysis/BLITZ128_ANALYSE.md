@@ -141,8 +141,10 @@ Also: source/target drive (device no. 8/9…), program names, optional **formatt
 
 ### 5.4 Compiler directives in the source
 The sources contain `REM ** NG`, `REM ** FI I,BI,CI,R,P,…`. The compiler string pool contains the directives **`**NE`, `**NG`, `**RI`, `**FI`, `**SP`** and `EXTENSIONS`.
-- `FI var,var,…` = list of variables treated as **integer ("fast integer")** [probable]
-- `NG`, `NE`, `RI`, `SP`: meaning [open] (presumably options for control structures/errors/speed; manual or comparison with the compiler logic needed)
+- `FI var,var,…` = list of variables treated as **integer ("fast integer")** [confirmed by the manual; the flag applies to all modules in overlay mode, see section 13]
+- `NG` = no graphic array: do not reserve the 9 KB hi-res area / do not relocate to `$4000` when a GRAPHIC command is found (needed for GRAPHIC 5 or extremely long programs); `RI` = restore the input buffer `$0200-$0240` (after EXTENSION or SYS routines); `NE` = no extension listing (suppresses the `?EXTENSION` messages) [all confirmed by the manual, `runtime/MANUAL.md`]
+- `SP`: not documented in the manual (the tests use `rem **sp31415`), meaning [open]
+- `::` before a command = EXTENSION: not compiled, passed to the BASIC interpreter at run time [manual]
 
 ---
 
@@ -185,7 +187,7 @@ Setup: GTK3VICE 3.7 (x128), `work8.d81` (BLITZ!.128 + `CRAWL` = `crawl.prg` from
 ## 8. What is open
 1. **Complete bytecode decompiler**: the operand formats of the ~180 opcodes are only known in fragments. The way there: derive the operand length from `handler_summary.txt` for each handler (tail `LDA #n / JMP $27E9`) and compare with more Rosetta lines. Then the **compiler bytecode itself** can also be translated back to BASIC.
 2. The area from ≈$46F8 in the compiler looks (repeating pattern) like DATA tables, not code. **Where the compiler code starts is still open.**
-3. Contents of `P/…` (intermediate file), directives `NE/NG/RI/SP`, meaning of opcodes `$01–$0D`.
+3. Contents of `P/…` (intermediate file), directive `SP` (the others are documented in the manual, see 5.4), meaning of opcodes `$01–$0D` (solved, see `runtime/`).
 4. **Overlay/chain mode** (menu items 3/4): how subsequent modules without runtime access the runtime of the first has not been investigated (the existing `C/` examples all contain the runtime).
 5. Dynamic verification is missing: a run in VICE (`x128`) with a monitor trace of `$27FC` would confirm every assumption in section 4.3 at once and quickly close the open opcodes.
 
@@ -231,3 +233,36 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (superseded:) `runtime_1c01.asm` is data garbage in the range `$23D0–$2437`. The range has to be decrypted with `EOR $45FC,y`. One should also check whether `JSR $1E2A` encrypts further code elsewhere (especially in the compiler part and in image 2).
 
 Setup to reproduce: VICE 3.9 from source, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, monitor `trace store 27ff`.
+
+---
+
+## 12. Defect: image 2 is 10 bytes short (found 17.11.2026)
+The `$4001` runtime appended to `BLITZ!.128` ends at `$6C36`, but the runtime needs it up to `$6C40`. The compiler copies the full
+11 328 bytes, so the last 10 bytes of every `$4001` output come from RAM behind the compiler (`00 00 00 FF FF FF FF 00 00 00` in VICE).
+They are the last four entries (`$41-$44`) of the extended-opcode low-byte table (CIRCLE, PAINT, BOX, `$44`) and the constant PI.
+Result: CIRCLE/PAINT/BOX call uninitialised RAM at `$0142`, `π` is garbage. Fix: `blitz128/fixed/` (see `fixed/README.md`), appended bytes
+`38 03 91 71 82 C9 0F DA A1 00`. Details of the analysis: `runtime/IMAGE2.md`. Earlier statements here about image 2 and the "RAM pattern behind the template" describe the symptom. Provenance: the file is a cracked version; whether the uncracked Skyles distribution has the same truncation is unknown.
+
+---
+
+## 13. Overlay / chain mode (solved 17.11.2026, see `runtime/OVERLAY.md`)
+Menu item 4 ("... with overlay feature") adds PASS0, which gives every compiled module the same variable-name table (union over all programs).
+At run time `LOAD "next",8` loads the next module and restarts the runtime; `init_vars` runs in check mode and keeps the variables when the new
+module's table fits and its names equal the stored names slot by slot, else everything is cleared. `RUN "next"` always clears. Verified with the original
+compiler and runtime in VICE (A: `a=42:b$="hello":c=7`; B reads them: mode 3 with a different variable order loses them, mode 4 keeps them). Open item 4 of section 8 is closed.
+
+---
+
+## 14. The manual (Skyles, 1985; notes in `runtime/MANUAL.md`)
+The scanned instruction manual was read on 17.11.2026. It documents the directives (5.4), the extension mechanism (`::`), the five compile sub-options, the limits
+(255-byte lines, 5000 lines, 6000 jumps, 1000 variables, 255 arrays, 200 `**FI` variables), the special array `z*%` and the machine-language rules (restore `$3D/$3E` after SYS).
+It confirms the overlay findings of section 13 (option 4 = extra pass that reads the variables, starting program lengthened to the longest module) and says that option 3
+does not pass variables. The dongle it requires is absent here: this copy is a cracked version (stated by the repository owner). It does not mention the BAD SUBSCRIPT error for array assignments with constant index and value (`runtime/OVERLAY.md`).
+
+---
+
+## 15. Two runtime findings (VICE traces, 17.11.2026)
+* **`::` EXTENSION = opcode `$47`.** The compiler embeds the tokenized BASIC text of the command, unencrypted and up to the closing `:`, behind the opcode. The runtime points IGONE at `tr_user_ret`,
+  lets the BASIC ROM execute one statement and continues at the BASIC text pointer `$3D/$3E` (`jump_3d3e`). See `runtime/names.py` (`OP_COMMENT[0x47]`) and `runtime/MANUAL.md`.
+* **Arrays fail in programs without any scalar variable** (error 18 BAD SUBSCRIPT at the first array access). `init` runs `init_vars` in check mode; with an empty variable table `vbase + 0 == strend`, the check passes and `init` skips
+  `op15_CLR`, so the array pointer table (`z*%`) is never initialised. Workaround: declare a scalar variable. Details and trace: `runtime/OVERLAY.md`.

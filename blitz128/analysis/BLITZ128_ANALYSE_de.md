@@ -141,8 +141,10 @@ Dazu: Quell-/Ziel-Laufwerk (Gerätenr. 8/9…), Programmnamen, optionales **Form
 
 ### 5.4 Compilerdirektiven im Quelltext
 In den Quellen kommen `REM ** NG`, `REM ** FI I,BI,CI,R,P,…`. Im Compiler-Stringpool stehen die Direktiven **`**NE`, `**NG`, `**RI`, `**FI`, `**SP`** und `EXTENSIONS`.
-- `FI var,var,…` = Liste von Variablen, die als **Integer („Fast Integer“)** behandelt werden [wahrscheinlich]
-- `NG`, `NE`, `RI`, `SP`: Bedeutung [offen] (vermutlich Optionen für Kontrollstrukturen/Fehler/Geschwindigkeit; Handbuch oder Quervergleich mit Compilerlogik nötig)
+- `FI var,var,…` = Liste von Variablen, die als **Integer („Fast Integer“)** behandelt werden [durch das Handbuch bestätigt; im Overlay-Modus gilt das Flag für alle Module, siehe Abschnitt 13]
+- `NG` = kein Grafik-Array: die 9 KB Hi-Res-Bereich nicht reservieren bzw. nicht nach `$4000` verschieben, wenn ein GRAPHIC-Befehl vorkommt (für GRAPHIC 5 oder extrem lange Programme); `RI` = Eingabepuffer `$0200-$0240` wiederherstellen (nach EXTENSION oder SYS-Routinen); `NE` = keine Extension-Liste (unterdrückt die `?EXTENSION`-Meldungen) [alle durch das Handbuch bestätigt, `runtime/MANUAL.md`]
+- `SP`: im Handbuch nicht dokumentiert (die Tests benutzen `rem **sp31415`), Bedeutung [offen]
+- `::` vor einem Befehl = EXTENSION: wird nicht kompiliert, sondern zur Laufzeit an den BASIC-Interpreter gereicht [Handbuch]
 
 ---
 
@@ -185,7 +187,7 @@ Aufbau: GTK3VICE 3.7 (x128), `work8.d81` (BLITZ!.128 + `CRAWL` = `crawl.prg` aus
 ## 8. Was offen ist
 1. **Kompletter Bytecode-Decompiler**: Operandformate der ~180 Opcodes sind nur in Fragmenten bekannt. Der Weg dorthin: aus `handler_summary.txt` je Handler die Operandlänge ableiten (Tail `LDA #n / JMP $27E9`) und mit weiteren Rosetta-Zeilen abgleichen. Dann lässt sich auch der **Compiler-Bytecode selbst** zurück in BASIC übersetzen.
 2. Der Bereich ab ≈$46F8 im Compiler sieht (Wiederholungsmuster) nach DATA-Tabellen aus, nicht nach Code. **Wo der Compiler-Code beginnt, ist noch offen.**
-3. Inhalt von `P/…` (Zwischendatei), Direktiven `NE/NG/RI/SP`, Bedeutung von Opcodes `$01–$0D`.
+3. Inhalt von `P/…` (Zwischendatei), Direktive `SP` (die übrigen stehen im Handbuch, siehe 5.4), Bedeutung der Opcodes `$01–$0D` (gelöst, siehe `runtime/`).
 4. **Overlay-/Chain-Modus** (Menüpunkte 3/4): wie nachfolgende Module ohne Runtime auf die des ersten zugreifen, ist nicht untersucht (die vorhandenen `C/`-Beispiele enthalten alle die Runtime).
 5. Dynamische Prüfung fehlt: ein Lauf in VICE (`x128`) mit Monitor-Trace von `$27FC` würde jede Annahme in Abschnitt 4.3 sofort bestätigen und die offenen Opcodes schnell schließen.
 
@@ -231,3 +233,36 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (überholt:) `runtime_1c01.asm` ist im Bereich `$23D0–$2437` Datenmüll. Der Bereich muss mit `EOR $45FC,y` entschlüsselt werden. Außerdem sollte man prüfen, ob `JSR $1E2A` noch an anderen Stellen (insbesondere im Compiler-Teil und in Image 2) weiteren Code verschlüsselt.
 
 Aufbau zum Nachstellen: VICE 3.9 aus dem Quellcode, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, Monitor `trace store 27ff`.
+
+---
+
+## 12. Fehler: Image 2 ist 10 Bytes zu kurz (gefunden 17.11.2026)
+Die an `BLITZ!.128` angehängte `$4001`-Runtime endet bei `$6C36`, braucht aber Daten bis `$6C40`. Der Compiler kopiert die vollen
+11 328 Bytes, die letzten 10 Bytes jeder `$4001`-Ausgabe stammen daher aus dem RAM hinter dem Compiler (in VICE `00 00 00 FF FF FF FF 00 00 00`).
+Es sind die letzten vier Einträge (`$41-$44`) der Low-Byte-Tabelle der erweiterten Opcodes (CIRCLE, PAINT, BOX, `$44`) und die Konstante PI.
+Folge: CIRCLE/PAINT/BOX rufen nicht initialisiertes RAM bei `$0142` auf, `π` ist Müll. Korrektur: `blitz128/fixed/` (siehe `fixed/README.md`),
+angehängt werden `38 03 91 71 82 C9 0F DA A1 00`. Analyse im Detail: `runtime/IMAGE2.md`. Herkunft: die Datei ist eine gecrackte Version; ob die ungecrackte Skyles-Distribution dieselbe Kürzung hat, ist unbekannt.
+
+---
+
+## 13. Overlay-/Chain-Modus (gelöst 17.11.2026, siehe `runtime/OVERLAY.md`)
+Menüpunkt 4 („... mit Overlay-Funktion“) fügt PASS0 hinzu; dadurch bekommt jedes Modul dieselbe Variablennamen-Tabelle (Vereinigung über alle Programme).
+Zur Laufzeit lädt `LOAD "next",8` das nächste Modul und startet die Runtime neu; `init_vars` läuft im Prüfmodus und behält die Variablen, wenn die Tabelle des neuen Moduls
+passt und die Namen Slot für Slot übereinstimmen, sonst wird alles gelöscht. `RUN "next"` löscht immer. Mit Original-Compiler und -Runtime in VICE bestätigt
+(A: `a=42:b$="hello":c=7`; B liest sie: Modus 3 mit anderer Variablenreihenfolge verliert sie, Modus 4 behält sie). Offener Punkt 4 aus Abschnitt 8 ist damit geklärt.
+
+---
+
+## 14. Das Handbuch (Skyles, 1985; Notizen in `runtime/MANUAL.md`)
+Das gescannte Handbuch wurde am 17.11.2026 gelesen. Es dokumentiert die Direktiven (5.4), den Extension-Mechanismus (`::`), die fünf Unteroptionen des Kompilierens, die Grenzen
+(255 Byte Zeilenlänge, 5000 Zeilen, 6000 Sprünge, 1000 Variablen, 255 Arrays, 200 `**FI`-Variablen), das Spezial-Array `z*%` und die Maschinensprache-Regeln (`$3D/$3E` nach SYS wiederherstellen).
+Es bestätigt die Overlay-Befunde aus Abschnitt 13 (Option 4 = Extra-Durchlauf, der die Variablen liest; Startprogramm wird auf das längste Modul verlängert) und sagt, dass Option 3
+keine Variablen übergibt. Der geforderte Dongle fehlt hier: diese Kopie ist eine gecrackte Version (Angabe des Repository-Eigentümers). Es erwähnt nicht den BAD-SUBSCRIPT-Fehler bei Array-Zuweisungen mit konstantem Index und Wert (`runtime/OVERLAY.md`).
+
+---
+
+## 15. Zwei Runtime-Befunde (VICE-Traces, 17.11.2026)
+* **`::` EXTENSION = Opcode `$47`.** Der Compiler legt den getokenten BASIC-Text des Befehls unverschlüsselt und bis zum schließenden `:` hinter dem Opcode ab. Die Runtime setzt IGONE auf `tr_user_ret`,
+  lässt das BASIC-ROM ein Statement ausführen und macht am BASIC-Textzeiger `$3D/$3E` weiter (`jump_3d3e`). Siehe `runtime/names.py` (`OP_COMMENT[0x47]`) und `runtime/MANUAL.md`.
+* **Arrays scheitern in Programmen ohne skalare Variable** (Fehler 18 BAD SUBSCRIPT beim ersten Array-Zugriff). `init` ruft `init_vars` im Prüfmodus auf; bei leerer Variablentabelle ist `vbase + 0 == strend`, die Prüfung besteht und
+  `init` überspringt `op15_CLR`, die Array-Zeigertabelle (`z*%`) wird also nie initialisiert. Workaround: eine skalare Variable deklarieren. Details und Trace: `runtime/OVERLAY.md`.

@@ -1,0 +1,439 @@
+"""Names and comments for the annotated Blitz!128 runtime.
+Edit here; run `make` to regenerate runtime.s and re-verify the bytes.
+Confidence: [sure] verified in code / VICE trace, [likely] derived from code, [open] unknown."""
+
+# ---- zero page ------------------------------------------------------------
+# C128 BASIC conventions where the runtime reuses the ROM's arithmetic: FAC1 = $63-$68, INTFLG/VALTYP = $10/$0f.
+ZP = {
+    0x0f: 'valtyp',      # $FF = string, 0 = numeric (BASIC convention)
+    0x10: 'intflg',      # bit7 set = current value is a 16-bit integer in fac_m3/fac_m4 ($66 hi, $67 lo)
+    0x24: 'ptr24', 0x25: 'ptr25', 0x26: 'ptr26', 0x27: 'ptr27',   # scratch pointers
+    0x3b: 'bcptr', 0x3c: 'bcptr_hi',   # BYTECODE POINTER (the BASIC TXTPTR slot): every handler advances it
+    0x43: 'dataptr', 0x44: 'dataptr_hi',   # cursor in the DATA/line table (header 2)
+    0x46: 'prevop',      # previous token class while an expression is evaluated
+    0x4b: 'varptr', 0x4c: 'varptr_hi',     # address of the 7-byte slot of the variable being accessed
+    0x63: 'fac_exp', 0x64: 'fac_m1', 0x65: 'fac_m2', 0x66: 'fac_m3', 0x67: 'fac_m4', 0x68: 'fac_sign',
+    0x2f: 'vbase', 0x30: 'vbase_hi',       # base of the variable-slot area (7 bytes per variable) in bank 1
+    0x31: 'strend', 0x32: 'strend_hi', 0x33: 'fretop', 0x34: 'fretop_hi', 0x35: 'frespc', 0x36: 'frespc_hi',  # string heap limits (BASIC names)
+    0x71: 'facov',       # FAC rounding byte; bit7 set => round before use (calls ROM $8C47 via round_fac)
+    0x6a: 't6a', 0x6b: 't6b', 0x6c: 't6c', 0x6d: 't6d', 0x6e: 't6e', 0x6f: 't6f',  # scratch; at start-up the six header words / patch keys
+    0x7d: 'fstk', 0x7e: 'fstk_hi',         # FOR/GOSUB stack pointer (in bank 1) [likely]
+    0x80: 'flags80',
+}
+
+# ---- absolute symbols -------------------------------------------------------
+SYMS = {
+    0xff00: 'MMU_CR', 0xff01: 'MMU_LCRA', 0xff02: 'MMU_LCRB', 0xff03: 'MMU_LCRC', 0xff04: 'MMU_LCRD',
+    0xffd2: 'CHROUT', 0xffe4: 'GETIN', 0xffcf: 'CHRIN', 0xffc3: 'CLOSE', 0xffc0: 'OPEN',
+    0xffc9: 'CHKOUT', 0xffc6: 'CHKIN', 0xffcc: 'CLRCHN', 0xffbd: 'SETNAM', 0xffba: 'SETLFS',
+    0xffd5: 'LOAD', 0xffd8: 'SAVE', 0xffb7: 'READST', 0xff81: 'CINT', 0xff84: 'IOINIT',
+    0xffe1: 'STOP', 0xfff0: 'PLOT',
+    # trampolines in common RAM (copied from $1C5E at start-up, see block comment)
+    0x0202: 'tr_cfgA_jmp', 0x0208: 'tr_call_vec', 0x020e: 'ld_var', 0x021d: 'st_var',
+    0x022c: 'rd_zp_set', 0x022f: 'rd_zp', 0x0238: 'blkcpy_b', 0x024d: 'cmp_b',
+    0x025e: 'wr_zp_set', 0x0261: 'wr_zp', 0x026a: 'tr_call_user', 0x0270: 'tr_user_ret',
+    0x0276: 'print_str', 0x0287: 'rom_call', 0x0291: 'str_copy_b',
+    0x028b: 'rom_call_lo', 0x028c: 'rom_call_hi',
+    0x4475: 'varslot_tab-$c0',
+}
+# ---- labels ---------------------------------------------------------------
+LABELS = {
+    0x1c2f: 'start', 0x2221: 'init', 0x2288: 'init_vars',
+    0x1e2a: 'decrypt_inline', 0x1e42: 'round_fac', 0x1da6: 'fout', 0x1e4f: 'fout_int',
+    0x233f: 'data_ptr_init', 0x23cd: 'install_trampolines',
+    0x23ae: 'rom_call_ax', 0x23b1: 'rom_call_x', 0x23c4: 'rom_call_ay', 0x23b7: 'rom_call_f9_80',
+    0x2543: 'trap_reset',
+    0x26ce: 'neg_int', 0x2d0a: 'pop_value', 0x2d41: 'int_to_fac', 0x2d84: 'fac_to_int',
+    0x2e0f: 'get_word', 0x2e02: 'pop_get_word', 0x2e5c: 'get_byte', 0x2e24: 'get_word_signed',
+    0x3a28: 'pop_byte', 0x39f7: 'file_params_init', 0x3041: 'io_status_check',
+    0x4225: 'garbage_collect', 0x2178: 'alloc_string', 0x2168: 'alloc_string_x',
+    0x4314: 'val_string', 0x25c5: 'hex_byte', 0x2fd3: 'fac_to_str_setup',
+    0x1da3: 'gfx_ext_hook', 0x2e95: 'rom_function', 0x3f93: 'collision_reset', 0x3232: 'screen_call',
+    # dispatcher
+    0x27d0: 'bc_jump_ax', 0x27d4: 'next', 0x27e3: 'next_y0', 0x27e9: 'skip_a', 0x27f6: 'next_inc1_y0',
+    0x27f8: 'next_inc1', 0x27fc: 'fetch', 0x2735: 'binop_dispatch', 0x278d: 'main_op', 0x279f: 'ext_op',
+    0x287c: 'operand_push', 0x2864: 'var_long_or_const', 0x2992: 'const_small',
+    0x27b2: 'user_return',
+    0x4443: 'op_hi_tab', 0x44b5: 'op_lo_tab', 0x4535: 'varslot_tab',
+    0x45b8: 'xop_hi_tab', 0x4665: 'xop_lo_tab', 0x45fc: 'decrypt_tab',
+}
+# opcode handlers: main opcode -> name (all others stay op_XX via HANDLER_NAMES default)
+MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/src + expected, see ROSETTA.md)
+    0x0e: 'NEG', 0x0f: 'NOT', 0x10: 'DIM', 0x11: 'FOR_nostep', 0x12: 'FOR', 0x13: 'NEXT_chk', 0x14: 'NEXT',
+    0x15: 'CLR', 0x16: 'JUMP_ptr52', 0x17: 'POKE', 0x18: 'SYS_x', 0x19: 'GOTO', 0x1a: 'GOSUB', 0x1b: 'ON_GOTO',
+    0x1c: 'ON_GOSUB', 0x1d: 'RETURN', 0x1e: 'RESTORE', 0x1f: 'IF_skip', 0x20: 'SGN', 0x21: 'INT', 0x22: 'ABS',
+    0x23: 'USR', 0x24: 'FRE', 0x25: 'POS', 0x26: 'SQR', 0x27: 'RND', 0x28: 'LOG', 0x29: 'EXP', 0x2a: 'COS',
+    0x2b: 'SIN', 0x2c: 'TAN', 0x2d: 'ATN', 0x2e: 'PEEK', 0x2f: 'LEN', 0x30: 'STR_S', 0x31: 'VAL', 0x32: 'ASC',
+    0x33: 'CHR_S', 0x34: 'LEFT_S', 0x35: 'RIGHT_S', 0x36: 'MID_S', 0x37: 'DEF_FN', 0x38: 'FN_call', 0x39: 'FN_end',
+    0x3b: 'PRINT_comma_tab', 0x3c: 'PRINT_semi', 0x3d: 'PRINT_comma', 0x3e: 'PRINT_nl', 0x3f: 'PRINT_cr', 0x40: 'SPC',
+    0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_cr', 0x45: 'PRINT_end',
+    0x46: 'GET', 0x47: 'EXTENSION', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
+    0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'JUMP_if_true', 0x53: 'INPUT_num',
+    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x58: 'IF_RETURN', 0x59: 'HEX_S', 0x5a: 'JUMP_if_false', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
+    0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY', 0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'DOS', 0x63: 'RECORD',
+    0x65: 'CHAR', 0x66: 'SOUND', 0x67: 'BANK', 0x68: 'XOR', 0x69: 'BUMP', 0x6a: 'RSPCOLOR', 0x6b: 'RGR',
+    0x6c: 'RCLR', 0x6d: 'POT', 0x6e: 'JOY', 0x6f: 'RDOT', 0x70: 'DEC', 0x71: 'INSTR', 0x72: 'ERR_S',
+    0x73: 'MID_S_assign', 0x74: 'TRAP', 0x75: 'TRAP_off', 0x77: 'PUDEF', 0x78: 'USING', 0x79: 'VOL',
+    0x7a: 'RWINDOW', 0x7b: 'STR_ARG', 0x7c: 'USING_end', 0x7d: 'RESUME_next', 0x7e: 'RESUME', 0x7f: 'STMT_HEAD',
+}
+EXT_OPS = {    # opcode $00 xx
+    0x00: 'GETKEY', 0x1f: 'DMA_stash', 0x25: 'DRAW_alt', 0x01: 'RREG', 0x05: 'SYS_arg', 0x09: 'PEN', 0x0a: 'PLAY', 0x0b: 'WIDTH', 0x0c: 'SPRDEF',
+    0x0d: 'RSPPOS', 0x0e: 'RSPRITE', 0x0f: 'SPRCOLOR_1', 0x10: 'SPRCOLOR_2', 0x11: 'SPRSAV_to_str',
+    0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy', 0x14: 'COLLISION_off', 0x15: 'COLLISION_on', 0x2c: 'KEY_list', 0x16: 'WINDOW', 0x17: 'obj_select',
+    0x18: 'SPRITE_enable', 0x19: 'SPRITE_color', 0x1e: 'NEW', 0x22: 'GO64', 0x23: 'TEMPO', 0x24: 'SLEEP',
+    0x26: 'GRAPHIC', 0x27: 'GRAPHIC_clr', 0x28: 'GRAPHIC_split', 0x29: 'SLOW', 0x2a: 'FAST', 0x2b: 'KEY_def',
+    0x2d: 'ENV_num', 0x2e: 'ATTACK', 0x32: 'WAVE', 0x33: 'PW', 0x34: 'FILTER_cutoff', 0x35: 'FILTER_lp',
+    0x38: 'FILTER_res', 0x39: 'SCALE', 0x3a: 'SCALE_off', 0x44: 'reinstall',
+}
+EXTRA_CODE = [0x2500, 0x27b2]   # reachable only by pushed addresses / vectors
+REF_LABELS = []
+HANDLER_NAMES = {}
+
+# ---- section comments -----------------------------------------------------
+COMMENT_BEFORE = {
+    0x1c01: """BASIC stub (line 1):  POKE6,PEEK(981):BANK0:SYS PEEK(46)*256+47 : <HOME/ESC-@/CR>"BLITZ!"
+PEEK(46) is the high byte of VARTAB -> SYS lands on `start` ($1C2F) wherever the file was loaded.""",
+    0x1c2f: """start: loader. If the program was not loaded at $1C00 (VARTAB hi != $1C) it is copied up page by page,
+then control passes to `init`.""",
+    0x1c5e: """TRAMPOLINES ($1C5E-$1CFD, 160 bytes).  Copied to $0202.. in common RAM by install_trampolines.
+MMU facts (C128): a STORE to $FF01..$FF04 (any value) selects pre-configuration A..D.
+  A = $3F  bank 0, all RAM, no I/O, no ROM  (the runtime and the bytecode are the only visible code)   [sure, VICE]
+  B = $7F  bank 1, all RAM                    (variables, strings, arrays)                              [sure, VICE]
+  C = $01  bank 0, all ROMs (BASIC/KERNAL), no I/O   (used by rom_call and the $0300 vector)            [sure, VICE]
+  D = $41  bank 1 with ROMs                   (not used by the stubs shown here)
+  (values read from $D501-$D504 while the compiler runs; they are the C128 defaults.)  I/O is reached with
+  `STA MMU_CR` = $02 (bank 0, I/O on, KERNAL visible) before CHROUT/GETIN/VIC/CIA access, then config A again.
+They exist because the runtime executes in bank 0 but keeps all data in bank 1; every access to
+variables/strings goes through one of these stubs.  Relocated listing (run-time addresses):
+  0202 tr_cfgA_jmp   STA $FF01 / JMP $24C0                      back to config A, then continue at $24C0
+  0208 tr_call_vec   STA $FF03 / JMP ($0300)                    call through the vector at $0300 (config C)
+  020E ld_var        STA $FF02 ; Y+1 bytes (varptr),y -> $63,x   load a variable (X=Y=len-1, normally 4 or 6)
+  021D st_var        STA $FF02 ; Y+1 bytes $63,x -> (varptr),y   store a variable
+  022C rd_zp_set     STA $0233 (self-modify: zp pointer = A) -> falls into
+  022F rd_zp         STA $FF02 ; LDA (zp),y ; back to A          read one byte of bank 1 through a ZP pointer
+  0238 blkcpy_b      STA $FF02 ; copy Y bytes ($24),y -> ($37),y  string/block copy inside bank 1
+  024D cmp_b         STA $FF02 ; compare X bytes (t6b),y vs (fac_m1),y   string compare, Z=equal
+  025E wr_zp_set     STX $0265 (self-modify: zp pointer = X) -> falls into
+  0261 wr_zp         STA $FF02 ; STA (zp),y                      write one byte to bank 1
+  026A tr_call_user  STA $FF03 / JMP $0100                       run user code from the stack-page stub (SYS)
+  0270 tr_user_ret   STA $FF01 / JMP user_return                 return path ($27B2)
+  0276 print_str     STA $FF02; LDA (fac_m1),y; STX $FF00; JSR CHROUT; INY; CPY fac_exp   print a string from bank 1
+  0287 rom_call      STA $FF03 / JSR (rom_call_lo/hi) / STA $FF01   call a BASIC/KERNAL ROM routine, then config A
+  0291 str_copy_b    DEY; LDA (t6b),y; STA $FF02; EOR #$00; STA (fac_m1),y ...   copy with patchable EOR operand
+rom_call is wrapped by rom_call_ax / rom_call_x / rom_call_ay (target address in A/X or A/Y).""",
+    0x1d00: """$1D00: DOS status template "00, OK,00,00" (in a compiled C/ file this holds the last status string; it is also the
+160-byte buffer used by VAL and INPUT#).  $1D04-$1DA2: $AA fill (program specific in compiled output).""",
+    0x1da3: """---- FAC -> string and other copied BASIC-ROM arithmetic (FOUT at $1DA6) ----""",
+    0x1e2a: """decrypt_inline: called with JSR directly in front of N=$68 bytes of code; pops the return address and XORs the
+following 104 bytes with decrypt_tab (EOR $45FC,y).  Used to hide the key patcher ($23D0, see ANALYSE section 11).""",
+    0x2221: """init: entry after the loader.  Sets VARTAB=$1C01, installs trampolines, reads header 2 (bytecode start, data table),
+then init_vars parses header 1 and gives every variable a 7-byte slot.  Falls into the main loop.""",
+    0x27d4: """==== MAIN LOOP / DISPATCHER ($27D0-$2B3D) ================================================
+bcptr ($3B/$3C) walks the bytecode.  Each byte is XORed with the per-compile key (the operand of the
+`EOR #imm` patched at start-up; $5A in the compiler itself).  Classification of the decrypted byte A:
+    $00        extended opcode: next byte x -> handler xop_hi_tab/xop_lo_tab[x]          (ext_op)
+    $01-$0D    binary operators, chosen by the operand type found on the stack            (binop_dispatch)
+    $0E-$7F    main opcode: handler op_hi_tab/op_lo_tab[A]                                (main_op)
+    $80-$BF    SECOND-OPERAND tokens (operand_push): if a left operand is already in FAC (prevop != 0) it is
+               pushed on the 6502 stack first.  $80-$9F = variable (slot offset varslot_tab[A-$80]),
+               $A0-$A6/$B0-$BF = small constants ($B0-$BF = integer 0-15), $A7/$A8 = 2/5-byte constants
+    $C0-$DF    short variable reference, slot offset = varslot_tab[A-$C0]
+    $E0-$E5    variable with long (10-bit) index / array element                          (var_long_or_const)
+Handlers finish with `jmp next` ($27D4: advance 1 byte), `next_inc1`, `skip_a` (advance by A) or by loading
+a new bcptr (jumps).""",
+    0x4443: """==== TABLES ===============================================================================
+Opcode dispatch tables are indexed by the opcode itself: op_hi_tab+x / op_lo_tab+x (valid x = $0E..$7F,
+so the real data starts 14 bytes after the labelled base).  Ext table: x = 0..$44.""",
+}
+# $4443.. tables are emitted as plain byte runs (see mkasm.py); no explicit DATA blocks needed
+DATA = []
+COMMENT = {}
+
+# ---- per-routine comments (placed above the label at that address) ---------------------------------
+COMMENT_BEFORE.update({
+    0x2288: """init_vars: A=$80 -> check mode.  Reads header 1 (6 bytes at $46B0, each XOR $97) into t6a..t6f:
+  t6a/t6b = start of the variable-name table, t6c/t6d = its end (= end of file), t6e/t6f = size of the variable area.
+Then walks the name table (2 bytes per name, XOR $B7) and hands every variable a 7-byte slot (varptr += 7).  [sure]""",
+    0x233f: "data_ptr_init: dataptr = header-2 word at $46B8/$46B9 (XOR $79) = start of the DATA/line table.  [sure]",
+    0x23cd: "install_trampolines: decrypt the patcher block, copy $1C5E.. to $0202.., point the error vector $0300 at the stubs.  [sure]",
+    0x23ae: """rom_call_ax / rom_call_x / rom_call_ay: set the target of `rom_call` ($028B/$028C) and call a BASIC/KERNAL ROM
+routine in config C, then return to config A.  A=lo, X (or Y for _ay) = hi.  [sure mechanism, targets: see callers]""",
+    0x2543: "trap_reset: $120C := $FF (no TRAP active), $0300/$0301 := $3F/$4D (BASIC error vector)  [likely]",
+    0x26ce: "neg_int: two's-complement negate of the 16-bit integer in fac_m3/fac_m4.  [sure]",
+    0x2d0a: """pop_value: pop a value pushed by the runtime off the HARDWARE stack into FAC1 (type flag, then 2 or 5 value bytes)
+and return via ($57).  Expression temporaries live on the 6502 stack.  [sure]""",
+    0x2d41: "int_to_fac: convert integer in fac_m3/fac_m4 (intflg=$80) to a floating-point FAC1 (FLOAT).  [likely]",
+    0x2d84: "fac_to_int: convert FAC1 to a 16-bit integer, error (jmp $24A3 = illegal quantity) if out of range.  [likely]",
+    0x2e0f: "get_word: current value -> 16-bit unsigned in X(lo)/A(hi) and $16/$17; range errors jump to $24A3.  [likely]",
+    0x2e5c: "get_byte: current value -> 8-bit in X (error if > 255).  Used by nearly every statement parameter.  [sure]",
+    0x3a28: "pop_byte: pop the previous stack value and convert it to a byte in X (like get_byte for a saved operand).  [likely]",
+    0x39f7: "file_params_init: clear the KERNAL file parameters ($B7,$B9,$19,$C6,$90), default device 1, fetch next token -> $0D.  [likely]",
+    0x3041: "io_status_check: after CHKIN/CHKOUT/OPEN/CLOSE: error handling for device >=4, restores config A.  [likely]",
+    0x4225: "garbage_collect: string heap compaction ($35/$36 = current heap top, $33/$34 = bound).  [likely]",
+    0x2178: "alloc_string: reserve A bytes below frespc; runs garbage_collect when it would cross fretop.  [likely]",
+    0x4314: "val_string: Blitz's own VAL; collects the digits 16-bit wise, then calls the BASIC ROM multiply/divide-by-10 routines.  [sure, see blitzc README]",
+    0x25c5: "hex_byte: print/convert a byte as two hex digits (HEX$).  [likely]",
+    0x1e42: "round_fac: ROM call $8C47 (FAC1 rounding: asl facov / increment mantissa) when facov bit 7 is set.  [sure: ROM disassembly]",
+    0x1da6: "FOUT: FAC1 -> string at $0100 (copy of the BASIC ROM routine).  [sure per ANALYSE section 4.2]",
+    0x3f93: "collision_reset: $120C..$120D := $FF (COLLISION / event handler bookkeeping)  [open]",
+})
+FAMILY_COMMENT = {
+    0x0e: "---- unary operators ----", 0x10: "---- FOR / NEXT / flow control ----",
+    0x3b: "---- PRINT family (CHROUT/CLRCHN; $42/$44 = PRINT# via CHKOUT) ----",
+    0x46: "---- GET / INPUT / file input ----",
+    0x5d: "---- LOAD / SAVE / VERIFY (device in $BA, secondary in $B9, name in $B7/$BB/$BC) ----",
+    0x60: "---- OPEN / CLOSE and disk-command blocks ----",
+    0x6e: "---- hardware access: joystick, sprite colour ----",
+    0x74: "---- TRAP / RESUME ----",
+}
+
+LABELS.update({
+    0x2885: 'push_left', 0x289b: 'push_narrow_try', 0x28e6: 'push_float', 0x28fc: 'push_int',
+    0x2906: 'operand_load', 0x295b: 'operand_const',
+    0x2758: 'binop_int_left', 0x277d: 'binop_str_left',
+    0x1f22: 'str_compare', 0x1f88: 'str_compare_len', 0x1e9e: 'str_concat',
+    0x1fbd: 'fcmp', 0x2017: 'int_left_to_arg', 0x2057: 'right_to_fac', 0x2067: 'float_arith_rom',
+    0x207e: 'icmp', 0x20a7: 'right_float_to_int', 0x210f: 'to_float_path', 0x2112: 'bitop_left_float',
+    0x2115: 'bitop', 0x25fc: 'int_addsub_mul', 0x260f: 'int_add', 0x2621: 'int_overflow_to_float',
+    0x2643: 'int_mul_check', 0x2657: 'int_mul', 0x2144: 'fac_to_int_arg',
+})
+COMMENT_BEFORE.update({
+    0x2735: """binop_dispatch: entered with X = operator $01-$0D (also saved in $3E).  The left operand sits on the 6502 stack,
+topped by its TYPE byte (pushed by push_float / push_int):
+    $00        float  -> popped into ARG (t6f,t6a..t6e);  right in FAC
+    bit7 set   integer-> popped into t6d/t6e
+    other      string -> popped into $70/$71 (descriptor)
+Operator codes: $01-$06 = comparisons, the code is a MASK  1 = less, 2 = equal, 4 = greater  (so $03 '<=', $05 '<>', $06 '>=');
+$07 '+', $08 '-', $09 '*', $0A/$0B = float-only ('/', '^'), $0C = AND, $0D = OR (bit0 of $3E selects OR).  [sure from code]
+Result of a comparison: -1 ($FFFF) or 0 as an integer, i.e. BASIC truth values.""",
+    0x287c: """operand_push: tokens $80-$BF and $E6+.  prevop != 0 means FAC already holds a left operand: push it (push_left).
+A float that is a whole number in 16 bit range is narrowed to an integer first (push_narrow_try) so integer arithmetic stays on the
+fast path; otherwise the 5-byte float + sign + type go on the stack (push_float / push_int).  Then operand_load fetches the operand.  [likely]""",
+    0x2057: "right_to_fac: float left operand; make the right operand float (int_to_fac) and go to fcmp ($3E<7) or float_arith_rom.  [likely]",
+    0x2067: "float_arith_rom: float + - * / ^ are done by BASIC ROM routines; address from the tables at $4556 (lo) / $455B (hi) indexed by the operator.  [likely]",
+    0x1fbd: "fcmp: compare ARG with FAC1 (float), produce -1/0 as integer using the operator mask in $3E.  [sure]",
+    0x207e: "icmp: signed 16-bit compare of t6d/t6e with fac_m3/fac_m4, result -1/0 via mask $3E.  [sure]",
+    0x20a7: "right_float_to_int: right operand is float; if it is integral and in range convert it to integer and stay on the integer path, else to_float_path.  [likely]",
+    0x2017: "int_left_to_arg: left operand integer but the operation needs floats ('/' '^' or float right): convert t6d/t6e to a float in ARG.  [likely]",
+    0x2115: "bitop: AND / OR of two 16-bit integers (lsr $3E: carry set = OR).  Operands that are float are converted with fac_to_int first.  [sure]",
+    0x25fc: "int_addsub_mul: $07 add, $08 subtract, else multiply; overflow (V flag) falls back to float via ROM call $8D0A.  [likely]",
+    0x2657: "int_mul: 16x16 shift-and-add multiply into a 32-bit accumulator (fac_m1..fac_m4); result outside 16 bit -> float.  [likely]",
+    0x1f22: "str_compare: string vs string, $3E<7.  Compares the common length with cmp_b, then the lengths; result -1/0 via mask.  [likely]",
+    0x1e9e: "str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]",
+})
+
+COMMENT_BEFORE.update({
+    0x3eec: """SPRITE register bit commands (ext opcodes $18,$1A-$1D).  Five entry points share one body; the entry
+code is a `ldy #reg` hidden behind `bit abs` opcodes ($2C), so the entries sit inside the BIT instructions:
+    $3EEC ext $18 -> Y=$15 ($D015 sprite enable)      $3EEF ext $1A -> Y=$1B ($D01B priority)
+    $3EF2 ext $1B -> Y=$1D ($D01D x-expand)           $3EF5 ext $1C -> Y=$17 ($D017 y-expand)
+    $3EF8 ext $1D -> Y=$1C ($D01C multicolor)
+The body sets/clears the bit of sprite $77 (mask table at $45AB) in $D000,y.  [sure]""",
+    0x2465: """COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
+$127F is the enable bitmask (masks at $45AB).  [likely]""",
+    0x3ff1: "SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from sprite_addr); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]",
+})
+COMMENT_BEFORE.pop(0x3eec+0) if False else None
+
+COMMENT_BEFORE.update({
+    0x3fcd: """SYS (op $4E, and op $18 which first skips one token): get_word -> $03/$04 target address, $03D5 -> $02 (bank
+set by the BANK statement, op $67), then KERNAL JSRFAR ($FF6E) through rom_call_ax.  [sure: target $FF6E observed in code]""",
+})
+
+COMMENT_BEFORE.update({
+    0x1da3: """gfx_ext_hook: ext opcodes $3B-$43 (and $25): DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+PAINT $42, BOX $43 ($3C: [open]).  These graphics statements are not in the runtime: the stub jumps to $24BE, the
+extension-module dispatcher (modules128.d64).  [sure for the opcode->statement map, see ROSETTA.md; hook target [likely]]""",
+    0x2e95: """rom_function: ops $23-$2D (USR FRE -- SQR RND LOG EXP COS SIN TAN ATN), also $24 FRE.  The op number selects a function
+vector in the BASIC ROM (table at $47D8, reached through $4C44 / $2AD2); the runtime only converts the argument and calls it.
+Ops $25 (POS) and $2E (PEEK) have their own handlers.  [likely]""",
+})
+
+ERR_ENTRIES = {   # entry = ldx #n hidden behind BIT opcodes; all fall into error_common ($24C0)
+    0x2497: ('err_next_without_for', 10), 0x249a: ('err_syntax', 11), 0x249d: ('err_return_without_gosub', 12),
+    0x24a0: ('err_out_of_data', 13), 0x24a3: ('err_illegal_quantity', 14), 0x24a6: ('err_overflow', 15),
+    0x24a9: ('err_out_of_memory', 16), 0x24ac: ('err_bad_subscript', 18), 0x24af: ('err_redimd_array', 19),
+    0x24b2: ('err_string_too_long', 23), 0x24b5: ('err_formula_too_complex', 25), 0x24b8: ('err_undefd_function', 27),
+    0x24bb: ('err_cant_resume', 31), 0x24be: ('err_no_graphics_area', 35),
+}
+for _a, (_n, _c) in ERR_ENTRIES.items(): SYMS[_a] = _n
+LABELS[0x24c0] = 'error_common'
+COMMENT_BEFORE.update({
+    0x2497: """ERROR ENTRIES.  Each entry is `ldx #errnum` hidden behind BIT opcodes ($2C), so every entry point lies inside the
+previous instruction; callers `jmp` to the address.  Numbers are the C128 BASIC error numbers (names from the standard list;
+usage in the runtime checked for 13 OUT OF DATA in READ, 14 in the integer/byte range checks, 16 in the GOSUB stack overflow,
+23 in INPUT > 160 chars, 27 in FN call, 35 in the graphics ext opcodes).  They fall into error_common.""",
+    0x24c0: """error_common: X = error number.  $7F bit7 := 1.  If no TRAP is active ($120C = $FF, or X >= $80): trap_reset and pass the
+error to the BASIC ROM through the vector at $0300 (tr_call_vec).  Otherwise: reset the stack (TXS $F8), save the error
+position / line ($1208-$120F), clear the trap and jump to the TRAP handler line ($120B/$120C, via $379C).  [likely]""",
+    0x1da3: """gfx_ext_hook: ext opcodes $3B-$43 and $25 (DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+PAINT $42, BOX $43; $3C [open]).  In THIS runtime image they just raise error 35 NO GRAPHICS AREA (jmp err_no_graphics_area).
+Programs that use graphics are compiled with the $4001 runtime (image 2, +401 bytes of inserted code) - presumably that image
+fills these table slots.  [sure for the error; image-2 role likely]""",
+})
+
+# ---- image 2 specifics (absolute image-2 addresses; applied after the image-1 names were translated) ----------
+FLAGBYTE_DOC = """GRAPHICS STATEMENT FLAG BYTE.  DRAW ($3B), DRAW TO ($3C), GSHAPE ($3F), SSHAPE ($40), CIRCLE ($41), PAINT ($42), BOX ($43)
+are followed by ONE extra byte in the bytecode.  The compiler stores it UNENCRYPTED (all other bytes are XORed with the program key), the
+handler reads it raw (gfx_param_first -> A -> $80) and the dispatcher skips it (the handler ends in next_y0 = advance 2).
+Bits (values observed with the original compiler, see ROSETTA.md):  bits 1-0 = x/y of the first coordinate pair are relative (+n/-n),
+bits 3-2 = the same for the second pair, bit 7 = polar form  x;angle ($80),  bits 5-4 = how many of the optional parameters are present
+(BOX: $00 all four corner values, $20 only the first corner, $10 with angle; CIRCLE: $20 radius only, $30 radius+yradius, $3C with arc
+angles;  SSHAPE: $00 two corners, $20 one).  gfx_param_mode / gfx_param_copy consume the bits MSB first and copy defaults ($1131..) for the
+omitted values.  DRAW TO continuation ($3D) and LOCATE ($3E) have no flag byte: their flags are an ordinary integer constant operand."""
+
+IMG2_DROP = [0x4334, 0x4334 - 0x2591 + 0x2591]          # old gfx_ext_hook name does not apply: $4334 is `jmp err_illegal_quantity`
+IMG2_LABELS = {
+    0x4334: 'range_error',
+    0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c_DRAWTO_first', 0x41be: 'gfx_xop3d_DRAWTO',
+    0x41cc: 'gfx_xop3e_LOCATE', 0x41e0: 'gfx_xop3f_GSHAPE', 0x4218: 'gfx_xop40_SSHAPE',
+    0x4203: 'gfx_xop42_PAINT', 0x4238: 'gfx_xop41_CIRCLE', 0x4291: 'gfx_xop43_BOX', 0x4200: 'gfx_GSHAPE_tail',
+    0x41d9: 'gfx_rom_9df2', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
+    0x42b3: 'gfx_param_mode', 0x432b: 'gfx_next_token',
+}
+IMG2_COMMENT_BEFORE = {
+    0x431c: FLAGBYTE_DOC if 'FLAGBYTE_DOC' in globals() else '',
+    0x41a3: """==== IMAGE 2 ONLY: graphics statement front ends ($41A3-$4336, 404 bytes inserted at image-1 $1DA3) ====
+Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
+$1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
+Extended-opcode table entries:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
+$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE)  $41 -> $4238 (CIRCLE)  $42 -> $4203 (PAINT)  $43 -> $4291 (BOX).
+NOTE: the BLITZ!.128 copy used here (a cracked version, dongle check removed) is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
+are RAM garbage; run_4001_fixed.bin / this listing contain the intended values (see ../../fixed/README.md).
+The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
+    0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
+}
+
+IMG2_EXTRA_CODE = []   # (CIRCLE/PAINT/BOX are reached through the table once its truncated tail is restored, see run_4001_fixed.bin)
+
+# PI: the constant lives behind the extended-opcode tables (5-byte float 82 C9 0F DA A1 + 00), loaded by the handler at $2B09
+LABELS.update({0x46aa: 'pi_const', 0x2b09: 'pi_load'})
+COMMENT_BEFORE.update({
+    0x2b09: "pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]",
+    0x46aa: "pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the BLITZ!.128 copy used here (cracked version) this constant is missing from image 2.",
+})
+
+COMMENT_BEFORE.update({
+    0x41a3: COMMENT_BEFORE.get(0x41a3, ''),
+})
+
+OP_COMMENT = {   # main opcode -> comment above its handler
+    0x7f: """STMT_HEAD ($7F nn): emitted before every statement ONLY in full-syntax mode (menu 4-6; needed for COLLISION/RESUME).  nn = length of the
+statement in bytes (incl. these two).  The handler polls the collision/event flags ($127F, $1276..) and, if one fired, pushes a return frame and
+jumps to the handler line; RESUME NEXT uses nn to skip the statement that raised the error.  [sure: op/length from the compiler's output; poll [likely]]""",
+    0x7d: "RESUME NEXT ($7D): continue behind the statement that caused the error ($120E/$120F = position, statement length via the $7F head).  [sure: `resume next` -> $7D]",
+    0x7e: "RESUME ($7E): continue AT the statement that caused the error.  [sure: `resume` -> $7E]",
+    0x52: "JUMP_if_true ($52 + target word): `if a then 10`, `loop while c`, `do until c` (jump when the condition is non-zero).  [sure: Rosetta]",
+    0x5a: "JUMP_if_false ($5A + target word): `if a then begin` (skip the block), `do while c`, `loop until c`.  [sure: Rosetta]",
+    0x3b: "PRINT_comma_tab ($3B): a bare comma in PRINT (`print ,\"x\"`, `print a,,b`): tab to the next 10-column zone.  [sure: Rosetta]",
+    0x44: "CHKOUT_cr ($44): `print#1,` with nothing to print: select the channel (like $42), then CR and CLRCHN.  [sure: Rosetta]",
+}
+
+OP_COMMENT[0x58] = """IF_RETURN ($58): `if <cond> then return` - if the condition is non-zero jump into op1d_RETURN (pop the GOSUB frame), else continue.  Never
+seen in the test sources (the compiler turns `if a then return` into $1F + $1D); matches the note `X58 = IF x THEN RETURN` in blitzc/README.  [sure: code]"""
+XOP_COMMENT = {
+    0x1f: """DMA statements ($00,$1F / $20 / $21 share this body; $77 := x + $65 is the command passed to the KERNAL DMA call $FF50 in Y, bank from $03D5).
+It reads three 16-bit values (get_word -> $DC07/$DC08, $DC02/$DC03, $DC04/$DC05 via the I/O area) and a byte < 16 ($DC06): the STASH / FETCH / SWAP
+family of BASIC 7 (the REC registers).  Order stash, fetch, swap is [likely] (BASIC keyword order); the compiler never emits these opcodes - it
+compiles `stash 100,4096,0,0` etc. to a bare `b0` (checked with the original compiler).""",
+    0x25: "DRAW_alt: enters the DRAW body at `lda fac_m4` (skips the flag-byte fetch).  Never emitted by the compiler in any test; image 1 answers it with error 35.  [open]",
+}
+
+COMMENT_BEFORE[0x2288] = """init_vars: header 1 -> t6a..t6f (6 bytes at $46B0, each XOR $97):  t6a/t6b = variable-name table, t6c/t6d = its end,
+t6e/t6f = size of the variable area (7 bytes per variable).  A = $80 on entry sets CHECK MODE (flags80 bit 7), which `init` always requests:
+  * the new module may keep the variables of the previous one if  vbase + size  <= strend  (it needs no more space than exists) AND
+    every name of its table (2 bytes, XOR key $B7-slot) equals the name stored in the variable slot with the same index (ld_var + compare);
+  * the first mismatch clears flags80 (asl) and leaves the loop: `init` then falls into op15_CLR = all variables are cleared;
+  * without check mode (fresh start) the names are written into the slots (st_var) and strend/fretop are set behind the slot area.
+This is the CHAIN mechanism: a `LOAD` statement (op5d) in a compiled program loads the next module and restarts the runtime; if the new
+module's variable table is a prefix-compatible copy of the old one, the variables survive.  `RUN "x"` (op62 sub-op 12) always clears them.
+Compile mode 4 ('overlay') exists to make every module's table identical (see OVERLAY.md).  [sure: VICE experiments, OVERLAY.md]"""
+OP_COMMENT[0x5d] = """LOAD / SAVE / VERIFY.  LOAD inside a running program is the module-chaining primitive: after the ROM LOAD (stub copied from $2500 to $0120)
+the BASIC text pointer is set to the loaded file and the BASIC ROM restarts the program at $5AA6; the new module's BASIC stub does `SYS` ->
+`start` -> `init` -> init_vars in check mode, so variables are KEPT when the variable tables are compatible (OVERLAY.md).  [sure: experiments]"""
+
+# ---- entry points and shared tails that used to be anonymous (names describe what the code does; [likely] throughout) ----------------
+EXTRA_CODE_RANGES = [(0x4448, 0x4451)]     # a 9-byte helper sits in the unused first slots of op_hi_tab
+LABELS.update({
+    0x1c46: 'copy_up_loop',            # loader: copy the program page by page up to $1C00
+    0x238b: 'event_frame_done',        # after RETURN from a collision/event frame: clear the "handler running" bit in $127F
+    0x23c7: 'rom_call_y',              # rom_call with the high byte in Y (low byte already set)
+    0x23d2: 'trampoline_copy_loop',
+    0x240f: 'rom_x_tail',              # jsr rom_call_x ; jmp next_y0
+    0x2497: 'error_entries',           # first of the BIT-hidden `ldx #errnum` entries (see ERR_ENTRIES)
+    0x2500: 'load_stub_src',           # code copied by op5d/5e/5f to $0120: ROM LOAD/VERIFY, then restart the program ($5AA6)
+    0x255d: 'rom_stmt_18',             # jsr rom_call_ay ; $18 := $1B ; jmp next
+    0x257d: 'rom_stmt',                # jsr rom_call_ay ; jmp next      (statement implemented entirely by a ROM routine)
+    0x25c9: 'hex_byte_2',              # hex_byte body: high nibble, then low
+    0x25d2: 'hex_nibble',              # low nibble of A -> ASCII hex digit at $0100,y
+    0x261a: 'int_result_store',        # fac_m3 := A ; overflow -> float, else next
+    0x27cc: 'jump_3d3e',               # bytecode pointer := $3D/$3E
+    0x27d6: 'next_pv',                 # prevop := Y, then advance one byte
+    0x27e5: 'skip2_pv',                # prevop := Y, skip 2 bytes
+    0x27e7: 'skip2',                   # skip 2 bytes
+    0x27eb: 'skip_a_keep_y',           # skip A bytes (Y unchanged)
+    0x27ec: 'skip_a_c',                # bcptr += A + carry
+    0x27ee: 'set_bcptr_lo',            # bcptr lo := A (carry from the caller propagates)
+    0x2825: 'var_store',               # tokens $C0-$DF: store FAC into the variable slot at ($61)   [assignment]
+    0x282e: 'var_store_int',           # slot is integer: convert FAC to integer if needed
+    0x2837: 'var_store_int2',
+    0x2841: 'var_store_float',         # slot is float: convert integer FAC to float, round, store
+    0x2845: 'var_store_float_conv',
+    0x2923: 'var_load',                # tokens $80-$9F: load the variable slot at ($61) into FAC (typed)
+    0x292c: 'var_load_int',
+    0x2942: 'var_load_str',
+    0x296c: 'var_load_float',
+    0x2a89: 'const_ops',               # operand tokens $A0..: constants / ROM-assisted operands
+    0x2ad2: 'rom_ax_tail',             # jsr rom_call_ax ; jmp next_inc1_y0
+    0x2aea: 'const_int16',             # 16-bit constant -> fac_m3/m4
+    0x2afe: 'ret_signed_a',            # finish a signed 8-bit result
+    0x2b3d: 'var_long_ref',            # tokens $E0-$E5: variable with long index / array element
+    0x2b46: 'var_long_ref2',
+    0x2c7a: 'str_store',               # store a string value into a string variable (copy + descriptor)
+    0x2ccd: 'str_store_ptr',
+    0x2ce4: 'str_store_done',
+    0x2d79: 'coerce_to_0e',            # make FAC integer/float as requested by flag $0E
+    0x2e30: 'fac_round_word',
+    0x2e57: 'store_word_1617',         # $16/$17 := X/A
+    0x2e67: 'get_byte_float',
+    0x2eec: 'ret_int_ay',              # result integer: fac_m4 := A, fac_m3 := Y, intflg := $80, next
+    0x2f76: 'ret_int_a0',              # same with Y := 0
+    0x2f7e: 'ret_int_set',
+    0x2ff9: 'str_result_6c',
+    0x316d: 'str_result',              # allocate a string and copy the text at $0100 (STR$/HEX$ ...)
+    0x31b1: 'str_ret_ptr',
+    0x31c7: 'tmpstr_push',             # push a string descriptor on the temporary-string stack at $00,x
+    0x3283: 'read_store_dispatch',
+    0x3445: 'input_prompt_check',
+    0x3496: 'input_str_store',
+    0x36aa: 'next_step_add',           # NEXT: add the STEP value to the loop variable
+    0x379c: 'jump_ax',                 # bytecode pointer := A/X (lo/hi), Y := 0, fetch
+    0x39e9: 'dos_stub_install',        # copy 83 bytes (load_stub_src) to $0120 and run them
+    0x3a1e: 'pop_or_get',
+    0x3d72: 'nibble_pack',
+    0x3e37: 'instr_core',
+    0x406e: 'sprite_addr',             # sprite number (X) -> data pointer $0E00 + n*64 in A/Y
+    0x40bf: 'rom_ay_tail',             # jsr rom_call_ay ; jmp next_y0   ( = image 2 $6650)
+    0x4110: 'fac_to_int_skip2',
+    0x4281: 'gc_compact',
+    0x4318: 'val_start',
+    0x43a4: 'val_skip_space',
+    0x43fe: 'val_exponent',
+    0x4448: 'int_to_fac_keep_y',       # sty $27 ; jsr int_to_fac ; ldy $27 ; sec ; rts
+})
+COMMENT_BEFORE.update({
+    0x2825: "var_store ($C0-$DF): the token after an expression assigns the value in FAC to the variable (Rosetta: `b1 c0` = a=1).  $80-$9F load the same slots as second operands.  [sure: Rosetta, likely: details]",
+    0x4448: "int_to_fac_keep_y: a 9-byte helper that lives in the unused first slots of op_hi_tab (opcodes < $0E have no handler).  [sure: code]",
+    0x2500: "load_stub_src: copied to $0120 by op5d/5e/5f (83 bytes).  Calls the ROM LOAD ($A1B8) or VERIFY ($9133) in config C, then looks at the load end address ($AC/$AD): $40 -> graphics-area program ($4000 := 0, $76 := $FF), $1C -> normal ($1C00 := 0, $76 := 0), sets the BASIC pointer $2E and restarts the program through the ROM ($5AA6).  [likely]",
+})
+
+OP_COMMENT[0x47] = """EXTENSION ($47): a `::` command of the source.  The compiler embeds the tokenized BASIC text of the command - UNENCRYPTED, up to and including the closing `:` -
+right behind this opcode (`::poke 2001,5:` -> `47 97 20 32 30 30 31 2c 35 3a`).  The handler saves the IGONE vector ($0308/$0309 -> $026E/$026F), points it at
+tr_user_ret ($0270), stores the bytecode pointer in $3D/$3E (and $1202/$1203) and calls the BASIC ROM through the user stub (tr_call_user, config C).  The ROM interpreter
+executes ONE statement from the embedded text and hands control back through IGONE to user_return ($27B2), which restores IGONE and continues at jump_3d3e: bcptr := $3D/$3E
+(the BASIC text pointer, now at the closing `:`), then next advances one byte.  [sure: VICE trace, see MANUAL.md]"""
+COMMENT_BEFORE[0x2221] = COMMENT_BEFORE.get(0x2221, '') + """
+BUG (found 17.11.2026): init always runs init_vars in check mode.  For a program with NO scalar variable the size of the variable area is 0, so
+vbase + 0 == strend ("fits") and init skips op15_CLR.  The array pointer table (the `z*%` array of the manual) is then never initialised and the first
+array access ends in err_bad_subscript.  With at least one scalar variable the size is > 0, check mode fails, CLR runs and everything works.  A binary patch is not
+possible in place: "equal" is also the normal case of a chain (same table size), so it cannot simply be turned into a mismatch.  Workaround: any scalar variable in the program."""

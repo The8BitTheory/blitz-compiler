@@ -1,0 +1,15 @@
+# probe  compiler  expected result of run.sh (exact)       what it shows
+c1   orig  ERROR 18                       no scalar variable: array pointer table never set up (init skips CLR)
+c2   orig  ERROR 18                       same, three arrays
+c3   orig  ERROR 18                       same, a(0)=7
+c4   orig  ERROR 18                       same, integer array
+c5   orig  END 07 20 20 20 20 20 20 20    variable index, one scalar variable
+c6   orig  ERROR 18                       same as c1 with a(15)
+c7   orig  ERROR 18                       same as c1 with a(16)
+c8   orig  END 07 20 20 20 20 20 20 20    index expression i+1
+c9   orig  END 07 20 20 20 20 20 20 20    constant index, value from a variable
+c10  orig  END 07 20 20 20 20 20 20 20    store with variable index, read with constant index
+c11  orig  END 07 20 20 20 20 20 20 20    constant index and value, but a scalar variable x exists (before the DIM)
+c12  orig  END 07 20 20 20 20 20 20 20    same, the scalar variable comes after the array use
+c13  orig  ERROR 18                       two arrays, no scalar variable
+e1   orig  END 01 05 03 20 20 20 20 20    ::poke 2001,5 is executed by the BASIC interpreter (opcode $47)

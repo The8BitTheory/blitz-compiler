@@ -1,0 +1,42 @@
+# Constant rom_call targets (static extraction; targets set via other patterns, e.g. $8D0A, may be missing)
+# ROM images: C128 BASIC lo ($4000) + hi ($8000), disassembled with da65; first instructions only.
+
+$4bd4  callers: rom_call_x
+    jsr L4B34 | lda $3B | ldy $3C | sta $1200 | sty $1201
+$540b  callers: L255d
+    jsr L8781 | cmp #$06 | bne L5450 | ldy #$00 | sty $63
+$575b  callers: L3445
+    lda $15 | beq L5764 | ldx #$18 | jmp L4D3C | eor $44
+$57b6  callers: L347e
+    jsr L9281 | eor $58 | eor ($20,x) | eor #$47 | lsr $524F
+$6a92  callers: xop27
+    cpx #$05 | beq L6ADE | bcc L6A9B | jmp L7D28 | beq L6AF2
+$71c8  callers: L257d
+    cpx #$10 | bcs L71E9 | stx $77 | lda $1274 | and #$F0
+$730d  callers: L40bf
+    cpx #$02 | bcs L7332 | txa | pha | ldx $12B3
+$7372  callers: L2419
+    jsr L9F4F | jsr LA845 | lda #$D0 | sta $1168 | lda #$20
+$79e3  callers: L2aa1
+    lda $7A | bne L7A27 | jmp LA778 | bit $10 | bpl L79FD
+$7a3e  callers: L2ad2
+    jsr L79E3 | ldy #$00 | lda #$7B | jsr L03AB | and #$0F
+$7e3e  callers: L2bfa, L397a
+    sty $24 | jsr L4300 | sta $2A | dey | jsr L4300
+$80f9  callers: L23c7
+    dex | txa | cmp #$29 | bcs L8136 | jsr L4A82
+$8253  callers: op6d
+    dex | cpx #$04 | bcs L82AB | jsr LA845 | ldy #$00
+$82b4  callers: xop09_RSPRITE
+    cpx #$05 | bcs L82AB | cpx #$02 | bcs L82D6 | ldy $11E9,x
+$8848  callers: L361a
+    bne L884D | jmp L8C28 | stx $58 | ldx #$6A | lda $6A
+$8b17  callers: L43c4
+    jsr L8C38 | tax | beq L8B2D | clc | adc #$02
+$8d00  callers: L2630
+    jsr L6820 | tax | sty $71 | lda $68 | sty $68
+$8d67  callers: L43f5
+    bit $62 | bpl L8D79 | lda #$00 | sec | sbc $60
+$8db8  callers: L43c4
+    lda $6F | eor $68 | sta $70 | ldx $63 | jmp L8848
+$ff6e  (KERNAL/other)  callers: op4e_SYS

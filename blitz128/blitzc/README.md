@@ -80,6 +80,6 @@ node js/cli.js a.prg out/ --plain b.prg,c.prg --overlay [--full] [--d81 out/all.
 ```
 API: `compileOverlay([{src, name}, ...], blitz|null, {fullSyntax, keys, pads}, onEvent)` -> `[{name, runtime, c, errors, extensions, diskName}]`.
 Browser page: checkbox **Gemeinsame Variablentabelle** (on by default, enabled only when at least two programs are selected; off = every program on its own
-with `C/NAME` and `Z/NAME` as before). How it works and the experiments behind it: `analysis/BLITZ128_ANALYSE.md`, section 13 (branch `runtime-annotated`: `analysis/runtime/OVERLAY.md`).
+with `C/NAME` and `Z/NAME` as before). How it works and the experiments behind it: `analysis/BLITZ128_ANALYSE.md`, section 13 and `analysis/runtime/OVERLAY.md`.
 The port drives the translated original compiler through its menu (source disk = device 8 with all programs, empty target disk = device 9), so PASS0 and
 the table merge are the original's own code. `tests/overlay/` holds references made with the original compiler in VICE; `node js/test.js` and `tools/chrome-test.py` rebuild them byte for byte.
