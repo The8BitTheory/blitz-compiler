@@ -19,7 +19,7 @@ assembles back to exactly the bytes of `../run_1c01.bin`:
 | Dispatcher / token classes / operand classes | documented [sure] |
 | Shared helpers (get_byte, get_word, pop_value, int<->fac, rom_call, GC, VAL, ...) | named, tagged [sure]/[likely] |
 | ~90 opcode handlers | labelled `opXX_NAME` where the function is clear, otherwise `opXX` |
-| Ext. opcodes (`$00 xx`) | labelled `xopXX`, few named |
+| Ext. opcodes (`$00 xx`) | labelled `xopXX`; sprite (`$18,$1A-$1D`, SPRSAV `$11-$13`), COLLISION, VIC colour, wave select named; sound/graphics parameter handlers (`$26-$38`, `$1F-$21`) still `[open]` |
 | Operator handlers `$01-$0D` (int/float/string arithmetic, compare, AND/OR) | analysed: stack model, operand typing, int/float/string paths named and commented [sure]/[likely] |
 | Copied BASIC ROM arithmetic (FOUT etc.) | labelled only where referenced |
 | Remaining anonymous `Lxxxx` labels | generated, not yet named |

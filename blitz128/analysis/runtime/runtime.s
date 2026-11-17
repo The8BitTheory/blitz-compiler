@@ -1166,7 +1166,9 @@ xop09:
         ldy  #$82
         jsr  rom_call_ay
         jmp  L4110
-xop14:
+xop14_COLLISION:
+; COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
+; $127F is the enable bitmask (masks at $45AB).  [likely]
         clc  
 xop15:
         php  
@@ -4956,13 +4958,13 @@ op72:
         lda  #$01
         sta  intflg
         jmp  next_inc1_y0
-xop19:
+xop19_SPRCOLOR:
         ldy  $77
         iny  
         iny  
-xop10:
+xop10_VIC_d025:
         iny  
-xop0f:
+xop0f_VIC_d024:
         jsr  get_byte
         dex  
         cpx  #$10
@@ -5084,7 +5086,7 @@ xop38:
         txa  
         ldy  #$34
         jmp  L3d72
-xop32:
+xop32_WAVE_select:
         jsr  get_byte
         cpx  #$04
         bcs  L3edc
@@ -5098,7 +5100,7 @@ xop2d:
         bcc  L3ee7
 L3edc:
         jmp  $24a3
-xop17:
+xop17_obj_select:
         jsr  get_byte
         dex  
         cmp  #$08
@@ -5106,7 +5108,13 @@ xop17:
 L3ee7:
         stx  $77
         jmp  next_y0
-xop18:
+xop18_SPRITE_enable:
+; SPRITE register bit commands (ext opcodes $18,$1A-$1D).  Five entry points share one body; the entry
+; code is a `ldy #reg` hidden behind `bit abs` opcodes ($2C), so the entries sit inside the BIT instructions:
+;     $3EEC ext $18 -> Y=$15 ($D015 sprite enable)      $3EEF ext $1A -> Y=$1B ($D01B priority)
+;     $3EF2 ext $1B -> Y=$1D ($D01D x-expand)           $3EF5 ext $1C -> Y=$17 ($D017 y-expand)
+;     $3EF8 ext $1D -> Y=$1C ($D01C multicolor)
+; The body sets/clears the bit of sprite $77 (mask table at $45AB) in $D000,y.  [sure]
         ldy  #$15
         bit  $1ba0
         bit  $1da0
@@ -5243,7 +5251,8 @@ op4e:
         sty  $3e
         jsr  rom_call_ax
         jmp  L27cc
-xop11:
+xop11_SPRSAV_to_str:
+; SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from L406e); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]
         jsr  get_byte
         jsr  L406e
         sta  t6b
@@ -5269,7 +5278,7 @@ xop11:
         inc  bcptr_hi
 L4025:
         jmp  L31b1
-xop12:
+xop12_SPRSAV_from_str:
         jsr  pop_byte
         jsr  L406e
         sta  t6d
@@ -5289,7 +5298,7 @@ L403d:
         bcc  L403d
 L404b:
         jmp  next_y0
-xop13:
+xop13_SPRSAV_copy:
         jsr  get_byte
         jsr  L406e
         sta  fac_m3

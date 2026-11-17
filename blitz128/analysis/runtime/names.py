@@ -74,6 +74,8 @@ MAIN_OPS = {
 }
 EXT_OPS = {
     0x00: 'GET_ext', 0x1e: 'stub_100_ext',
+    0x0f: 'VIC_d024', 0x10: 'VIC_d025', 0x11: 'SPRSAV_to_str', 0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy',
+    0x14: 'COLLISION', 0x17: 'obj_select', 0x18: 'SPRITE_enable', 0x19: 'SPRCOLOR', 0x32: 'WAVE_select',
 }
 EXTRA_CODE = [0x2500, 0x27b2]   # reachable only by pushed addresses / vectors
 REF_LABELS = [0x4475]
@@ -208,3 +210,16 @@ fast path; otherwise the 5-byte float + sign + type go on the stack (push_float 
     0x1f22: "str_compare: string vs string, $3E<7.  Compares the common length with cmp_b, then the lengths; result -1/0 via mask.  [likely]",
     0x1e9e: "str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]",
 })
+
+COMMENT_BEFORE.update({
+    0x3eec: """SPRITE register bit commands (ext opcodes $18,$1A-$1D).  Five entry points share one body; the entry
+code is a `ldy #reg` hidden behind `bit abs` opcodes ($2C), so the entries sit inside the BIT instructions:
+    $3EEC ext $18 -> Y=$15 ($D015 sprite enable)      $3EEF ext $1A -> Y=$1B ($D01B priority)
+    $3EF2 ext $1B -> Y=$1D ($D01D x-expand)           $3EF5 ext $1C -> Y=$17 ($D017 y-expand)
+    $3EF8 ext $1D -> Y=$1C ($D01C multicolor)
+The body sets/clears the bit of sprite $77 (mask table at $45AB) in $D000,y.  [sure]""",
+    0x2465: """COLLISION (ext $14/$15): parameter x=1..3, the handler line is stored encrypted (EOR $DE / $E5) in $127C,x / $1279,x,
+$127F is the enable bitmask (masks at $45AB).  [likely]""",
+    0x3ff1: "SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from L406e); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]",
+})
+COMMENT_BEFORE.pop(0x3eec+0) if False else None
