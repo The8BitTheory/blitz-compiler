@@ -114,6 +114,9 @@ export class Runtime {
     this.st = 0; this.steps = 0; this.maxSteps = opts.maxSteps || 5e8;
     // devices
     this.files = new Map(Object.entries(opts.files || {}).map(([k, b]) => [k, Array.from(b)]));
+    // opts.split: device 8 = source disk (this.files), every other device its own, empty disk (needed by the multi-program menu
+    // items 2-4 which write plain program names to an empty target disk). Default: one disk for all devices.
+    this.split = !!opts.split; this.disks = new Map([[8, this.files]]); this.diskName = new Map();
     this.ch = new Map(); this.inLfn = null; this.outLfn = null; this.fields = null;
     this.dstatus = '00, OK,00,00';
     this.keys = (opts.keys || '').split(''); this.lines = (opts.lines || []).slice();
@@ -226,7 +229,15 @@ export class Runtime {
     const t = this.lineBuf.trim(); this.lineBuf = ''; this.homed = false;
     if (!t || /^\d{6}$/.test(t)) return;                                     // empty, or the TI$ clock in the top right corner
     const m = /^pass(\d)$/.exec(t);
-    if (m) { this.pass = +m[1]; return this.emit({ type: 'pass', pass: this.pass }); }
+    if (m) {
+      this.pass = +m[1];
+      // multi-program menu items: the line "program: NAME" is printed just BEFORE the PASSn line it belongs to
+      if (this.progName) this.emit({ type: 'working', name: this.progName, pass: this.pass });
+      this.emit({ type: 'pass', pass: this.pass });
+      return;
+    }
+    const pr = /program:\s*(\S.*)$/i.exec(t);
+    if (pr) { this.progName = pr[1]; return; }
     if (this.pass !== null) this.emit({ type: 'message', text: t });
   }
   // a number printed right after HOME/DOWN is the line number the compiler is working on
@@ -252,36 +263,63 @@ export class Runtime {
     for (const p of parts.slice(1)) { const c = p[0]; if (c === 'R' || c === 'W' || c === 'A') mode = c; else if (c) type = c; }
     return { drive, fname, type, mode };
   }
+  disk(dev) {   // the file map of a device
+    if (!this.split) return this.files;
+    dev = Math.floor(dev);
+    if (!this.disks.has(dev)) this.disks.set(dev, new Map());
+    return this.disks.get(dev);
+  }
   open(lfn, dev, sa = 0, name = '') {
     lfn = Math.floor(lfn); dev = Math.floor(dev); sa = Math.floor(sa);
-    if (dev < 8 || dev > 11) { this.ch.set(lfn, { kind: 'null' }); return; }   // all disk devices share one simulated disk
-    if (sa === 15) { this.ch.set(lfn, { kind: 'cmd', buf: '' }); if (name) this.doCmd(name); return; }
-    if (name.startsWith('$')) { this.ch.set(lfn, { kind: 'file', data: this.dirListing(), pos: 0, mode: 'R' }); this.dstatus = '00, OK,00,00'; return; }
-    const f = this.parseName(name);
+    if (dev < 8 || dev > 11) { this.ch.set(lfn, { kind: 'null' }); return; }
+    if (sa === 15) { this.ch.set(lfn, { kind: 'cmd', buf: '', dev }); if (name) this.doCmd(name, dev); return; }
+    if (name.startsWith('$')) { this.ch.set(lfn, { kind: 'file', data: this.dirListing(dev), pos: 0, mode: 'R' }); this.dstatus = '00, OK,00,00'; return; }
+    const f = this.parseName(name), D = this.disk(dev);
     if (f.mode === 'R') {
-      if (!this.files.has(f.fname)) { this.dstatus = '62,FILE NOT FOUND,00,00'; this.ch.set(lfn, { kind: 'null' }); return; }
-      this.ch.set(lfn, { kind: 'file', name: f.fname, data: this.files.get(f.fname), pos: 0, mode: 'R' });
+      if (!D.has(f.fname)) { this.dstatus = '62,FILE NOT FOUND,00,00'; this.ch.set(lfn, { kind: 'null' }); return; }
+      this.ch.set(lfn, { kind: 'file', name: f.fname, data: D.get(f.fname), pos: 0, mode: 'R' });
     } else {
-      if (this.files.has(f.fname)) { this.dstatus = '63,FILE EXISTS,00,00'; this.ch.set(lfn, { kind: 'null' }); return; }
-      const data = []; this.files.set(f.fname, data);
+      if (D.has(f.fname)) { this.dstatus = '63,FILE EXISTS,00,00'; this.ch.set(lfn, { kind: 'null' }); return; }
+      const data = []; D.set(f.fname, data);
       this.ch.set(lfn, { kind: 'file', name: f.fname, data, pos: 0, mode: 'W' });
     }
     this.dstatus = '00, OK,00,00';
   }
   close(lfn) { this.ch.delete(Math.floor(lfn)); }
   closeAll() { this.ch.clear(); }
-  dirListing() { return []; }
-  doCmd(s) {
+  // Directory as the DOS delivers it for OPEN "$0",0 : 2-byte load address, then per line link(2) blocks(2) text 0, header first, "N BLOCKS FREE." last.
+  // The compiler (menu items 2-4) skips 6 bytes + the header line, then per entry 4 bytes, takes the name between the quotes and the
+  // type letters behind them, and stops at the first line whose type is exactly PRG.
+  dirListing(dev = 8) {
+    const D = this.disk(dev), out = [0x01, 0x08];   // C128: $0801 (value irrelevant to the compiler)
+    const line = (blocks, bytes) => { out.push(1, 1, blocks & 255, blocks >> 8, ...bytes, 0); };
+    const txt = s => Array.from(s, c => c.charCodeAt(0));
+    const pad = (s, n) => s + ' '.repeat(Math.max(0, n - s.length));
+    line(0, [0x12, 34, ...txt(pad(this.diskName.get(Math.floor(dev)) || 'BLITZC', 16)), 34, 32, ...txt('01 3D')]);
+    for (const [name, data] of D) {
+      if (name.includes('/') && name[1] === '/') { /* C/, Z/, P/, D/ files are listed too - the compiler only looks at the type */ }
+      const blocks = Math.max(1, Math.ceil(data.length / 254)), b = String(blocks);
+      line(blocks, [...txt(' '.repeat(4 - b.length)), 34, ...txt(name), 34, ...txt(' '.repeat(Math.max(1, 17 - name.length))), ...txt('PRG'), 32, 32]);
+    }
+    line(3000, txt('BLOCKS FREE.             '));
+    out.push(0, 0);
+    return out;
+  }
+  doCmd(s, dev = 8) {
     s = s.replace(/\r$/, '');
+    const D = this.disk(dev);
     if (s[0] === 'S') {
       const m = /^S[01]?:(.*)$/.exec(s); let n = 0;
-      if (m) for (const p of m[1].split(',')) if (this.files.delete(p)) n++;
+      if (m) for (const p of m[1].split(',')) if (D.delete(p)) n++;
       this.dstatus = '01, FILES SCRATCHED,' + String(n).padStart(2, '0') + ',00';
+    } else if (s[0] === 'N') {   // N0:name,id  = format: wipe the disk
+      const m = /^N[01]?:([^,]*)/.exec(s); D.clear(); if (m) this.diskName.set(Math.floor(dev), m[1]);
+      this.dstatus = '00, OK,00,00';
     } else this.dstatus = '00, OK,00,00';
   }
   writeByte(lfn, b) {
     const c = this.ch.get(lfn); if (!c) throw new Error('?FILE NOT OPEN ' + lfn);
-    if (c.kind === 'cmd') { if (b === 13) { this.doCmd(c.buf); c.buf = ''; } else c.buf += String.fromCharCode(b); }
+    if (c.kind === 'cmd') { if (b === 13) { this.doCmd(c.buf, c.dev); c.buf = ''; } else c.buf += String.fromCharCode(b); }
     else if (c.kind === 'file') { if (c.mode !== 'W') throw new Error('write to read file'); c.data.push(b); }
   }
   readByte(lfn) {

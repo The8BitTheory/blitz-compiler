@@ -69,3 +69,17 @@ Findings from the port:
 
 ### Several programs in the browser (as of 17 Nov 2026)
 The field "Program with runtime" stays; below it is the list "Programs without runtime" (several files can be added at once, the name of each entry can be changed, entries can be removed). If the list has an element, the runtime field may stay empty. Order: the program with runtime comes first. Options (full syntax, reference file) apply to all programs. Output: `c-…` and `z-…` per program as separate downloads, and for several programs additionally a `.d81` with `C/NAME` and `Z/NAME`. Names: at most 14 characters, duplicates are numbered. A failing program does not stop the others. `node js/test.js` additionally checks that multi-program runs equal the single runs.
+
+## Overlay mode ("Gemeinsame Variablentabelle", original menu item 4)
+All programs are compiled in **one run** like menu item 4 of the original ("all programs ... with overlay feature"): the compiler first runs
+PASS0 over all of them and gives every module the **same variable-name table** (union, order of first appearance across the programs). Chained with
+`LOAD "NAME",8` (not `RUN`, which always clears the variables) the variables then survive from module to module. The first module contains the runtime,
+the others start behind it. Output files carry the plain program names (no `C/` prefix, no `Z/` file), exactly as the original writes them.
+```
+node js/cli.js a.prg out/ --plain b.prg,c.prg --overlay [--full] [--d81 out/all.d81]    # out/a.prg, b.prg, c.prg
+```
+API: `compileOverlay([{src, name}, ...], blitz|null, {fullSyntax, keys, pads}, onEvent)` -> `[{name, runtime, c, errors, extensions, diskName}]`.
+Browser page: checkbox **Gemeinsame Variablentabelle** (on by default, enabled only when at least two programs are selected; off = every program on its own
+with `C/NAME` and `Z/NAME` as before). How it works and the experiments behind it: `analysis/BLITZ128_ANALYSE.md`, section 13 (branch `runtime-annotated`: `analysis/runtime/OVERLAY.md`).
+The port drives the translated original compiler through its menu (source disk = device 8 with all programs, empty target disk = device 9), so PASS0 and
+the table merge are the original's own code. `tests/overlay/` holds references made with the original compiler in VICE; `node js/test.js` and `tools/chrome-test.py` rebuild them byte for byte.

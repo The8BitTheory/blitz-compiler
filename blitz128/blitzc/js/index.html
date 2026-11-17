@@ -54,6 +54,7 @@ Open this page through a local web server (e.g. <code>npx serve js</code>), beca
 <label>Options <small>(apply to all programs)</small></label>
 <label style="font-weight:normal"><input type="checkbox" id="runtime" checked> with runtime routines <small id="rthint">(off: C/ without runtime, needs a runtime that is already loaded)</small></label>
 <label style="font-weight:normal"><input type="checkbox" id="full"> RESUME and COLLISION with full syntax <small>(off: no COLLISION, RESUME with line number only)</small></label>
+<label style="font-weight:normal"><input type="checkbox" id="shared" checked disabled> Gemeinsame Variablentabelle <small id="sharedhint">(needs at least 2 programs)</small></label>
 <br><button id="go">Compile</button>
 <p id="status" aria-live="polite"></p>
 <div class="files" id="files"></div>
@@ -94,8 +95,11 @@ for (const [n, label, idle] of PASSES) {
   if (idle) d.title = label + ': ' + idle;
   rows[n] = { d, bar: d.querySelector('i'), pct: d.querySelector('.pct'), line: d.querySelector('input'), idle: idle ? '–' : '' };
 }
-function resetRows() {
-  for (const r of Object.values(rows)) { r.d.className = 'pass idle'; r.bar.style.width = '0'; r.pct.textContent = r.idle; r.line.value = ''; r.frac = 0; }
+function resetRows(keepPass0 = false) {
+  for (const [n, r] of Object.entries(rows)) {
+    if (keepPass0 && n === '0') continue;     // overlay: PASS0 ran once for all programs, it stays "done"
+    r.d.className = 'pass idle'; r.bar.style.width = '0'; r.pct.textContent = r.idle; r.line.value = ''; r.frac = 0;
+  }
 }
 function finishRow(n) {
   const r = rows[n]; if (!r) return;
@@ -147,17 +151,29 @@ function drawList() {
     li.append(n, sp, rm); return li;
   }));
   $('runtime').disabled = plain.length > 0;
+  updateShared();
   $('rthint').textContent = plain.length ? '(the program with runtime always has it, the ones in the list never)' : '(off: C/ without runtime, needs a runtime that is already loaded)';
 }
+// "Gemeinsame Variablentabelle" = original compiler menu item 4 (overlay): all programs get ONE variable table, so variables survive LOAD
+// between the modules. Only possible with at least two programs; the first one gets the runtime, the others start behind it.
+function updateShared() {
+  const n = ($('src').files.length ? 1 : 0) + plain.length, cb = $('shared');
+  cb.disabled = n < 2;
+  $('sharedhint').textContent = n < 2 ? '(needs at least 2 programs)'
+    : cb.checked ? '(menu item 4 of the original: one variable table for all modules, output files named like the programs - chain them with LOAD "NAME",8)'
+    : '(off: every program is compiled on its own, files C/NAME and Z/NAME)';
+}
+$('shared').onchange = updateShared;
 $('addbtn').onclick = () => $('add').click();
 $('add').onchange = () => { for (const f of $('add').files) plain.push({ file: f, name: base(f) }); $('add').value = ''; drawList(); };
-$('src').onchange = () => { const f = $('src').files[0]; if (f) $('name').value = base(f); };
+$('src').onchange = () => { const f = $('src').files[0]; if (f) $('name').value = base(f); updateShared(); };
 
 function onProgram(m) {
   curName = m.name; curRuntime = m.runtime; count = m.count;
   if (m.count > 1) { pend.push(`--- ${m.index + 1}/${m.count}: ${m.name} (${m.runtime ? 'with' : 'without'} runtime) ---`); total++; }
   if (frame) cancelAnimationFrame(frame); paint();
-  state = {}; resetRows();
+  state = {}; resetRows(m.overlay);
+  if (m.overlay) { const r = rows[1]; r.d.className = 'pass'; r.pct.textContent = '0 %'; }
   $('status').className = ''; $('status').textContent = m.count > 1 ? `Compiling ${m.index + 1}/${m.count}: ${m.name} …` : 'Compiling …';
 }
 function finish(m) {
@@ -170,11 +186,11 @@ function finish(m) {
     t.textContent = r.name + (r.runtime ? ' (with runtime)' : ' (without runtime)') + ': ';
     d.append(t);
     if (r.error) d.append(r.error);
-    else for (const [k, data] of [['c', r.c], ['z', r.z]]) if (data) d.append(link(data, fname(k, r.name)));
+    else for (const [k, data] of [['c', r.c], ['z', r.z]]) if (data) d.append(link(data, m.overlay ? r.name.toLowerCase() + '.prg' : fname(k, r.name)));
     if (r.errors) d.append(` (errors: ${r.errors})`);
     box.push(d);
   }
-  if (m.d81) { const d = document.createElement('div'); d.append(link(m.d81, (m.results[0].name || 'blitzc').toLowerCase() + '.d81')); d.append(' (all files as C/ and Z/)'); box.push(d); }
+  if (m.d81) { const d = document.createElement('div'); d.append(link(m.d81, (m.results[0].name || 'blitzc').toLowerCase() + '.d81')); d.append(m.overlay ? ' (all modules under their program names, as the original writes them)' : ' (all files as C/ and Z/)'); box.push(d); }
   $('files').replaceChildren(...box);
   $('status').className = m.errors ? 'err' : '';
   $('status').textContent = `Done in ${sec} s – ${m.results.length} program${m.results.length > 1 ? 's' : ''}, errors: ${m.errors}, extensions: ${m.extensions}`;
@@ -185,7 +201,7 @@ $('go').onclick = async () => {
   if (src) programs.push({ src, name: $('name').value || 'PROG', runtime: plain.length ? true : $('runtime').checked });
   for (const p of plain) programs.push({ src: new Uint8Array(await p.file.arrayBuffer()), name: p.name, runtime: false });
   if (!programs.length) { $('status').className = 'err'; $('status').textContent = 'Choose a program with runtime or add programs to the list.'; return; }
-  const job = { programs, blitz: null, like: await read('like'), fullSyntax: $('full').checked };
+  const job = { programs, blitz: null, like: await read('like'), fullSyntax: $('full').checked, overlay: programs.length > 1 && !$('shared').disabled && $('shared').checked };
   $('go').disabled = true; $('files').replaceChildren(); $('msgs').value = ''; $('msgcount').textContent = '';
   pend = []; total = 0; state = {}; resetRows(); $('status').className = ''; $('status').textContent = 'Compiling …'; t0 = performance.now();
   await runJob(job, onMsg);
@@ -193,6 +209,7 @@ $('go').onclick = async () => {
 };
 drawList();
 resetRows();
+updateShared();
 </script>
 </body>
 </html>

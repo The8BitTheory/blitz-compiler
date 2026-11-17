@@ -16,9 +16,15 @@ for d in sorted(glob.glob(os.path.join(H, 'tests', 'expected', '*'))):
     e = {'name': t, 'src': b64(src), 'c': b64(os.path.join(d, 'c.prg'))}
     if os.path.exists(os.path.join(d, 'z.prg')): e['z'] = b64(os.path.join(d, 'z.prg'))
     tests.append(e)
+ov = []
+for d in sorted(glob.glob(os.path.join(H, 'tests', 'overlay', '*'))):
+    cfg = json.load(open(os.path.join(d, 'case.json')))
+    ov.append({'name': os.path.basename(d), 'full': cfg['full'], 'order': cfg['order'],
+               'src': [b64(os.path.join(d, 'src', n + '.prg')) for n in cfg['order']],
+               'exp': [b64(os.path.join(d, 'expected', n + '.prg')) for n in cfg['order']]})
 runner = '''
 const b2u=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-const api=new Function(WSRC+'\\nreturn {compile,keysOf};')();
+const api=new Function(WSRC+'\\nreturn {compile,keysOf,compileOverlay};')();
 const T=%s; const out=[]; let fail=0;
 for(const t of T){
   const [base,m]=t.name.split('.m'); const mode={runtime:!(m==='35'||m==='65'),fullSyntax:m==='4'||m==='65'};
@@ -30,8 +36,16 @@ for(const t of T){
   const errs=[cmp(r.c,ec,'C/'), t.z?cmp(r.z,b2u(t.z),'Z/'):null].filter(Boolean);
   if(errs.length){fail++; out.push('FAIL '+t.name+' '+errs.join('; '));} else out.push('ok   '+t.name+' C/ '+r.c.length);
 }
+const O=%s;
+for(const t of O){
+  const exp=t.exp.map(b2u), ks=exp.map(api.keysOf);
+  let r; try{ r=api.compileOverlay(t.order.map((n,i)=>({name:n,src:b2u(t.src[i])})),null,{fullSyntax:t.full,keys:ks[0].keys,pads:ks.map(k=>k.pad)}); }catch(e){ out.push('FAIL overlay '+t.name+' exception '+e.message); fail++; continue; }
+  const errs=[]; r.forEach((x,i)=>{ const a=x.c,b=exp[i]; if(!a){errs.push(x.name+': missing');return;} const n=Math.min(a.length,b.length);
+    for(let k=0;k<n;k++) if(a[k]!==b[k]){errs.push(x.name+': first diff at '+k);return;} if(a.length!==b.length) errs.push(x.name+': length '+a.length+' vs '+b.length); });
+  if(errs.length){fail++; out.push('FAIL overlay '+t.name+' '+errs.join('; '));} else out.push('ok   overlay '+t.name+' '+r.map(x=>x.name+' '+x.c.length).join(', '));
+}
 document.getElementById('out').textContent=out.join('\\n')+'\\nFAILED: '+fail;
-''' % json.dumps(tests)
+''' % (json.dumps(tests), json.dumps(ov))
 html = ('<!doctype html><meta charset=utf-8><pre id=out>running</pre><script type="text/plain" id="wsrc">\n' + code.replace('</script', '<\\/script') +
         '\n</script><script>const WSRC=document.getElementById("wsrc").textContent;\n' + runner + '</script>')
 chrome = sys.argv[1] if len(sys.argv) > 1 else next((shutil.which(c) for c in ('chrome', 'google-chrome', 'chromium', 'chromium-browser') if shutil.which(c)), None)
