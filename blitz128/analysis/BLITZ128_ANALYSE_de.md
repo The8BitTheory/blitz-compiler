@@ -240,7 +240,7 @@ Aufbau zum Nachstellen: VICE 3.9 aus dem Quellcode, `--enable-headlessui`, `x128
 Die an `BLITZ!.128` angehängte `$4001`-Runtime endet bei `$6C36`, braucht aber Daten bis `$6C40`. Der Compiler kopiert die vollen
 11 328 Bytes, die letzten 10 Bytes jeder `$4001`-Ausgabe stammen daher aus dem RAM hinter dem Compiler (in VICE `00 00 00 FF FF FF FF 00 00 00`).
 Es sind die letzten vier Einträge (`$41-$44`) der Low-Byte-Tabelle der erweiterten Opcodes (CIRCLE, PAINT, BOX, `$44`) und die Konstante PI.
-Folge: CIRCLE/PAINT/BOX rufen nicht initialisiertes RAM bei `$0142` auf, `π` ist Müll. Korrektur: `blitz128/fixed/` (Branch `overlay-mode`, siehe `fixed/README.md`),
+Folge: CIRCLE/PAINT/BOX rufen nicht initialisiertes RAM bei `$0142` auf, `π` ist Müll. Korrektur: `blitz128/fixed/` (siehe `fixed/README.md`),
 angehängt werden `38 03 91 71 82 C9 0F DA A1 00`. Analyse im Detail: `runtime/IMAGE2.md`. Herkunft: die Datei ist eine gecrackte Version; ob die ungecrackte Skyles-Distribution dieselbe Kürzung hat, ist unbekannt.
 
 ---

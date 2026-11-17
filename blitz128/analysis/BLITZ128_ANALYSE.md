@@ -240,7 +240,7 @@ Setup to reproduce: VICE 3.9 from source, `--enable-headlessui`, `x128 -warp -so
 The `$4001` runtime appended to `BLITZ!.128` ends at `$6C36`, but the runtime needs it up to `$6C40`. The compiler copies the full
 11 328 bytes, so the last 10 bytes of every `$4001` output come from RAM behind the compiler (`00 00 00 FF FF FF FF 00 00 00` in VICE).
 They are the last four entries (`$41-$44`) of the extended-opcode low-byte table (CIRCLE, PAINT, BOX, `$44`) and the constant PI.
-Result: CIRCLE/PAINT/BOX call uninitialised RAM at `$0142`, `π` is garbage. Fix: `blitz128/fixed/` (branch `overlay-mode`, see `fixed/README.md`), appended bytes
+Result: CIRCLE/PAINT/BOX call uninitialised RAM at `$0142`, `π` is garbage. Fix: `blitz128/fixed/` (see `fixed/README.md`), appended bytes
 `38 03 91 71 82 C9 0F DA A1 00`. Details of the analysis: `runtime/IMAGE2.md`. Earlier statements here about image 2 and the "RAM pattern behind the template" describe the symptom. Provenance: the file is a cracked version; whether the uncracked Skyles distribution has the same truncation is unknown.
 
 ---

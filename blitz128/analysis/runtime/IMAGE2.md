@@ -16,7 +16,7 @@ image 1's `$1DA3`; everything behind it is shifted by `+$2591` (instead of the p
 Image 1 and image 2 share the whole interpreter; image 2 only adds the graphics statement front ends, which hand over to the C128's own
 graphics ROM.
 
-## The defect: this copy of BLITZ!.128 is 10 bytes short  (fixed in branch `overlay-mode`, `blitz128/fixed/`)
+## The defect: this copy of BLITZ!.128 is 10 bytes short  (fixed: `blitz128/fixed/`)
 **Provenance.** The `BLITZ!.128` in this repository is a *cracked* version (the dongle check is disabled; stated by the repository owner). Whether the uncracked Skyles distribution
 has the same 10-byte truncation - or whether it was introduced by the crack or by copying - is unknown. "The original" below means this untouched file.
 

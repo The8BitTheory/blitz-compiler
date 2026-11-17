@@ -1,0 +1,10 @@
+BREAK: 1  C:$23a6  (Stop on exec)
+Setting checkpoint 1 command to: bank ram;m 07d0 07d7;quit
+BREAK: 2  C:$24c0  (Stop on exec)
+Setting checkpoint 2 command to: r;quit
+#2 (Stop on  exec 24c0)  240/$0f0,  59/$3b
+.C:24c0  A9 80       LDA #$80       - A:00 X:12 Y:08 SP:f5 ..-...Z.    7661363
+Executing: r;quit
+  ADDR A  X  Y  SP 00 01 NV-BDIZC LIN CYC  STOPWATCH
+.;24c0 00 12 08 f5 2f 73 00100010 240 059    7661363
+(C:$24c0) 

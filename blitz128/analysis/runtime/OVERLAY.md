@@ -40,7 +40,7 @@ happen to agree. The encryption keys are the same for all modules of one compile
 
 ## PASS0 merge rules for arrays, DEF FN and `**FI` (tested 17.11.2026)
 Two-module programs, original (fixed) compiler, menu item 4, then run in VICE; the JS port reproduces every output byte for byte
-(`blitzc/tests/overlay/ovl-*`, branch `overlay-mode`).
+(`blitzc/tests/overlay/ovl-*`).
 
 | what | rule observed | evidence |
 |---|---|---|
@@ -66,4 +66,4 @@ A compiler change could insert a dummy variable when the table is empty (not don
 
 ## Not done
 * The merge rules were tested with two-module programs; larger sets, multi-dimensional arrays, `**NE/**NG/**RI/**SP` and mixed integer/float uses of one name were not.
-* The JavaScript port implements menu item 4 (`compileOverlay`, branch `overlay-mode`); only compile output was compared with the original, the run-time behaviour above was checked with the original compiler's modules.
+* The JavaScript port implements menu item 4 (`compileOverlay`); only compile output was compared with the original, the run-time behaviour above was checked with the original compiler's modules.
