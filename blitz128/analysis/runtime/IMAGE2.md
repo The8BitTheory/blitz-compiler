@@ -18,3 +18,10 @@ Consequence: image 1 and image 2 share the whole interpreter; image 2 only adds 
 over to the C128's own graphics ROM. Programs without graphics never need it.
 
 See `runtime2.s` (generated with `python3 mkasm.py --img2`): the whole image 2 as re-assemblable source. Table slots `$41-$43` (CIRCLE/PAINT/BOX) hold `$4200` both in the template and in a compiled program (`stmt7a`): the `jmp $6650` at `$4200` is entered with A=$42, Y=1 and so calls the RAM stub at `$0142` (filled by op `$7B`). The handlers at `$4203/$4238/$4291` have no static reference (open, maybe dead code).
+
+## VICE trace of xop `$41` (CIRCLE)
+Program `graphic 1,1 : circle 1,100,100,20,10 : box ... : paint ...` compiled by the original compiler, loaded with `load"prog",8` / `run`
+(loading with `,8,1` puts the file at `$4001` where the loader then copies garbage - the loader expects to be loaded at `$1C01`).
+Breakpoints: `$4200` hit with A=`$42` X=`$41` Y=1, then `$6650`, then `$0142` - which held the RAM power-up pattern (`00 00 FF FF ...`), no
+code. So the CIRCLE/PAINT/BOX slots call a stub that op `$7B` (copies 36 bytes of ROM from `$9567`/`$95A3` to `$0140`) would install, but
+nothing had installed it in this test. Unresolved: what the compiled program does differently in a real run (open).

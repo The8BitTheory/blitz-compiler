@@ -291,6 +291,9 @@ $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT,
 jmp next_y0`).  Entered through the dispatcher, A = $42 (hi byte just loaded from the table) and Y = 1, so rom_call_ay calls
 $0142: the RAM stub area at $0140 that op $7B fills with a graphics-ROM routine (it copies 36 bytes there).  The static template and
 a compiled program (blitzc/tests/expected/stmt7a) both have $4200 in these slots, so it is not a compile-time patch.  [likely]
+VICE trace (minimal program `graphic 1,1 : circle 1,100,100,20,10 ...`, original compiler output): xop $41 reached $4200 with
+A=$42 X=$41 Y=1, then $6650 -> rom_call_ay -> $0142, and $0142 still held the power-up RAM pattern (no stub installed yet), i.e.
+the call goes into uninitialised memory in that test.  So the stub must be installed by something that my test did not run - [open].
 The three handlers at $4203, $4238, $4291 have no static reference (no table slot, no jsr/jmp) - [open], maybe dead code.
 The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
     0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
