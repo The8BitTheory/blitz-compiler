@@ -1,231 +1,233 @@
-# Blitz! 128 (Skyles-Compiler) – Analyse von Compiler und Runtime
+**English** · [Deutsch](BLITZ128_ANALYSE_de.md)
 
-Stand: 12.11.2026 · Material: `blitz!.128.prg` (45 212 Bytes, Ladeadresse $1C01) und `blitz-128.d81`
-Kennzeichnung: **[gesichert]** = an Daten/Code verifiziert, **[wahrscheinlich]** = aus Code abgeleitet, **[offen]** = nicht geklärt.
+# Blitz! 128 (Skyles compiler) – analysis of compiler and runtime
 
-Hinweis zum Werkzeug: JC64dis ist eine Java-GUI und lässt sich hier nicht automatisieren. Ich habe deshalb einen eigenen 6502-Disassembler (rekursiv, Code/Daten-Trennung) geschrieben. Er liegt in `analysis/tools/`. Das Listing kannst du bei Bedarf in JC64dis nachvollziehen (Adressen sind identisch zur Ladeadresse).
+As of: 12 Nov 2026 · Material: `blitz!.128.prg` (45,212 bytes, load address $1C01) and `blitz-128.d81`
+Labels: **[confirmed]** = verified against data/code, **[probable]** = derived from code, **[open]** = not clarified.
 
----
-
-## 1. Kernergebnis in fünf Sätzen
-
-1. **Der Compiler ist selbst ein von Blitz kompiliertes BASIC-Programm.** Er besteht aus der Runtime (ab $1C01) plus seinem eigenen Bytecode, den Strings und einer Variablentabelle am Ende.
-2. **Die „Runtime“ ist ein Bytecode-Interpreter** (ca. 11 183 Bytes, $1C01–$46AF). Kompilierte Programme sind keine Maschinensprache, sondern ein XOR-verschleierter Token-/Bytecode-Strom, den dieser Interpreter ausführt.
-3. **Eine kompilierte `C/`-Datei ist: kopierte Runtime + 41 gepatchte Schlüsselbytes + Header + Bytecode + Variablennamentabelle.** Die Schlüssel sind für alle Programme identisch (kein Schlüssel pro Programm).
-4. Die Datei enthält **zwei Runtime-Varianten**: eine für BASIC-Start $1C01 (Image 1) und eine für $4001 (Image 2, hinten angehängt, ~135 Byte länger).
-5. Die D81 enthält **gelöschte Originalquellen und Compiler-Ausgaben** (`C/`, `Z/`, `D/`), die als Rosetta-Stein dienen.
+A note on tooling: JC64dis is a Java GUI and cannot be automated here. I therefore wrote my own 6502 disassembler (recursive, with code/data separation). It lives in `analysis/tools/`. You can retrace the listing in JC64dis if you like (addresses are identical to the load address).
 
 ---
 
-## 2. Die D81
+## 1. Main result in five sentences
 
-| Eintrag | Befund |
+1. **The compiler is itself a BASIC program compiled by Blitz.** It consists of the runtime (from $1C01) plus its own bytecode, the strings and a variable table at the end.
+2. **The "runtime" is a bytecode interpreter** (about 11,183 bytes, $1C01–$46AF). Compiled programs are not machine language but an XOR-obfuscated token/bytecode stream that this interpreter executes.
+3. **A compiled `C/` file is: copied runtime + 41 patched key bytes + header + bytecode + variable name table.** The keys are identical for all programs (no key per program).
+4. The file contains **two runtime variants**: one for BASIC start $1C01 (image 1) and one for $4001 (image 2, appended at the end, ~135 bytes longer).
+5. The D81 contains **deleted original sources and compiler output** (`C/`, `Z/`, `D/`) that serve as a Rosetta stone.
+
+---
+
+## 2. The D81
+
+| Entry | Finding |
 |---|---|
-| Aktive Datei | `BLITZ!.128` (PRG, 178 Blöcke) – **byte-identisch** mit der .prg im Ordner [gesichert] |
-| Gelöschte Dateien | 25 Einträge (Typ $00), Blockketten intakt bis auf `P/LIVE6PERF15-2` (Kette defekt) [gesichert] |
-| Quellen (BASIC 7 getokent, Load $1C01) | `LIVE6B`, `LIVE6D`, `LIVE6W2`, `LIVE6W3`, `LIVE8PERF`, `LIVE10WORK`, `-B`, `-E`, `-F`, `-H`, `-I3` |
-| Compiler-Ausgabe | `C/…` (kompiliertes Programm, Load $1C01, 18–19 KB), `Z/…` (Adress→Zeilen-Zuordnung, Load $0104), `D/LIVE6` (DATA-Werte, Load $0331) |
+| Active file | `BLITZ!.128` (PRG, 178 blocks) – **byte-identical** to the .prg in the folder [confirmed] |
+| Deleted files | 25 entries (type $00), block chains intact except `P/LIVE6PERF15-2` (chain broken) [confirmed] |
+| Sources (BASIC 7 tokenized, load $1C01) | `LIVE6B`, `LIVE6D`, `LIVE6W2`, `LIVE6W3`, `LIVE8PERF`, `LIVE10WORK`, `-B`, `-E`, `-F`, `-H`, `-I3` |
+| Compiler output | `C/…` (compiled program, load $1C01, 18–19 KB), `Z/…` (address→line mapping, load $0104), `D/LIVE6` (DATA values, load $0331) |
 
-Alle extrahierten Dateien: `analysis/d81/`. Entpacker: `analysis/tools/d81x.py`.
+All extracted files: `analysis/d81/`. Extractor: `analysis/tools/d81x.py`.
 
-**Wichtig für deine Frage:** `C/LIVE6B`, `C/LIVE6`, `C/LIVE6PERF15-0/-1/-2` wurden alle **mit eingebauter Runtime** erzeugt (Option 1/2). Das ist der Referenzfall.
+**Important for your question:** `C/LIVE6B`, `C/LIVE6`, `C/LIVE6PERF15-0/-1/-2` were all produced **with the runtime built in** (option 1/2). That is the reference case.
 
 ---
 
-## 3. Dateiaufbau von `BLITZ!.128`
+## 3. File layout of `BLITZ!.128`
 
 ```
-$1C01-$1C2C  BASIC-Zeile 1: POKE6,PEEK(981):BANK0:SYS PEEK(46)*256+47 : <HOME/ESC-@/CR> "BLITZ!"
-$1C2F-$1C5D  Lader (verschiebt das Programm nach $1C00, falls es woanders geladen wurde)
-$1C5E-$1CFD  160 Bytes Trampoline (Bank-Umschaltung) – werden zur Laufzeit nach $0202 kopiert
-$1D00        "00, OK,00,00" (DOS-Status-Vorlage), $1D04-$1DA0 = $AA-Füllung (161 B, im C/-Output programmspezifisch)
-$1DA3-$44xx  Runtime-Code (inkl. kopierter BASIC-FP-Routinen, FOUT etc.)
-$4443-$46AF  Dispatch-Tabellen, Konstanten
-$46B0-$46B5  Header 1 (6 Bytes, XOR $97)
-$46B6-$46C1  Header 2 (XOR $79)
-$46C2-...    DATA-Tabelle, danach Bytecode (beim Compiler ab ≈$46F8)
-...-$A064    Bytecode + Strings + Variablennamentabelle (Compiler: $9F73–$A064 = 121 Namen)
-$A065-$CC9A  Image 2: Runtime-Variante für BASIC-Start $4001 (11 318 Bytes)
+$1C01-$1C2C  BASIC line 1: POKE6,PEEK(981):BANK0:SYS PEEK(46)*256+47 : <HOME/ESC-@/CR> "BLITZ!"
+$1C2F-$1C5D  loader (moves the program to $1C00 if it was loaded elsewhere)
+$1C5E-$1CFD  160 bytes of trampolines (bank switching) – copied to $0202 at run time
+$1D00        "00, OK,00,00" (DOS status template), $1D04-$1DA0 = $AA fill (161 B, program-specific in the C/ output)
+$1DA3-$44xx  runtime code (including copied BASIC FP routines, FOUT etc.)
+$4443-$46AF  dispatch tables, constants
+$46B0-$46B5  header 1 (6 bytes, XOR $97)
+$46B6-$46C1  header 2 (XOR $79)
+$46C2-...    DATA table, then bytecode (in the compiler from ≈$46F8)
+...-$A064    bytecode + strings + variable name table (compiler: $9F73–$A064 = 121 names)
+$A065-$CC9A  image 2: runtime variant for BASIC start $4001 (11,318 bytes)
 ```
 
-Der BASIC-Stub zeigt, wie geladen wird: `SYS PEEK(46)*256+47` springt auf `$2E`-Hibyte·256+47. Bei normalem Laden ist das $1C2F. Der Text hinter dem SYS ist ein LIST-Trick: er löscht den Bildschirm und schreibt „BLITZ!“.
+The BASIC stub shows how loading works: `SYS PEEK(46)*256+47` jumps to `$2E` high byte·256+47. With normal loading that is $1C2F. The text behind the SYS is a LIST trick: it clears the screen and writes "BLITZ!".
 
-Der Lader prüft `$2E`. Ist es nicht `$1C`, kopiert er das Programm seitenweise nach $1C00 und springt auf **$2221** (Haupteinsprung). Image 2 enthält den gleichen Lader, der stattdessen nach $4000 hochkopiert und auf $47B2 springt. [gesichert]
+The loader checks `$2E`. If it is not `$1C`, it copies the program page by page to $1C00 and jumps to **$2221** (main entry). Image 2 contains the same loader, which instead copies up to $4000 and jumps to $47B2. [confirmed]
 
 ---
 
-## 4. Die Runtime (Interpreter)
+## 4. The runtime (interpreter)
 
-### 4.1 Initialisierung ($2221)
-- setzt `$2D/$2E` auf $1C01 (VARTAB), kopiert die Trampoline $1C5E… nach `$0202` (Routine `$23CD`) und biegt den Fehlervektor `$0300/$0301` auf diese Routinen um [gesichert].
-- `$2288` liest **Header 1** (6 Bytes ab $46B0, je XOR $97) nach `$6A–$6F` [gesichert]:
-  `$6A/$6B` = Anfang der Variablennamentabelle, `$6C/$6D` = Ende (= Dateiende), `$6E/$6F` = Größe des Variablenbereichs = **Anzahl Variablen × 7**.
-  Geprüft an allen 6 Dateien (z. B. `C/LIVE6B`: 46 Namen, 46×7 = $0142 ✓; Compiler: 121 Namen, 121×7 = $034F ✓).
-- Danach läuft `$2288` die Namenstabelle durch (je 2 Byte, XOR $B7) und vergibt jedem Namen einen **7-Byte-Slot** im Variablenbereich ($4B += 7).
-- `$233F`/`$2206` lesen **Header 2** (XOR $79): Einsprungadresse, Zeiger auf die DATA-Tabelle (`$43/$44`) und TXTPTR-Start (`$3B/$3C`). [wahrscheinlich]
+### 4.1 Initialization ($2221)
+- sets `$2D/$2E` to $1C01 (VARTAB), copies the trampolines $1C5E… to `$0202` (routine `$23CD`) and redirects the error vector `$0300/$0301` to these routines [confirmed].
+- `$2288` reads **header 1** (6 bytes from $46B0, each XOR $97) into `$6A–$6F` [confirmed]:
+  `$6A/$6B` = start of the variable name table, `$6C/$6D` = end (= end of file), `$6E/$6F` = size of the variable area = **number of variables × 7**.
+  Checked on all 6 files (e.g. `C/LIVE6B`: 46 names, 46×7 = $0142 ✓; compiler: 121 names, 121×7 = $034F ✓).
+- `$2288` then walks the name table (2 bytes each, XOR $B7) and gives each name a **7-byte slot** in the variable area ($4B += 7).
+- `$233F`/`$2206` read **header 2** (XOR $79): entry address, pointer to the DATA table (`$43/$44`) and TXTPTR start (`$3B/$3C`). [probable]
 
-### 4.2 Speichermodell
-- Programm/Bytecode in Bank 0 ab $1C01. Alle Zugriffe auf Variablen, Strings, Arrays laufen über **Trampoline im gemeinsamen RAM** ($0202–$02A1). Sie schreiben `$FF02` (MMU-Preconfig B), lesen/schreiben per `(zp),y` und stellen mit `$FF01` (Preconfig A) zurück. Typische Einsprünge: `$020E`/`$021D` (Variablen holen/speichern), `$022C`/`$022F` (indirektes Lesen, Zeiger in A), `$0238` (Blockkopie), `$024D` (Vergleich), `$025E/$0261`. [gesichert für die Mechanik, **[wahrscheinlich]** dass Preconfig B = Bank 1 ist]
-- Zero-Page wie im BASIC-ROM: FAC1 = `$63–$68`, FAC2 = `$6A–$70`, `$10` = Typflag, `$0F` = Integerflag, `$33–$38` = String-/Array-Zeiger. FP-Routinen (z. B. FOUT bei $1DA6, Potenztabelle $4555) sind **Kopien der BASIC-ROM-Arithmetik**, in RAM abgelegt. [gesichert]
+### 4.2 Memory model
+- Program/bytecode in bank 0 from $1C01. All accesses to variables, strings and arrays go through **trampolines in common RAM** ($0202–$02A1). They write `$FF02` (MMU preconfig B), read/write via `(zp),y` and restore with `$FF01` (preconfig A). Typical entry points: `$020E`/`$021D` (get/store variable), `$022C`/`$022F` (indirect read, pointer in A), `$0238` (block copy), `$024D` (compare), `$025E/$0261`. [confirmed for the mechanism, **[probable]** that preconfig B = bank 1]
+- Zero page as in the BASIC ROM: FAC1 = `$63–$68`, FAC2 = `$6A–$70`, `$10` = type flag, `$0F` = integer flag, `$33–$38` = string/array pointers. FP routines (e.g. FOUT at $1DA6, power table $4555) are **copies of the BASIC ROM arithmetic**, placed in RAM. [confirmed]
 
-### 4.3 Hauptschleife ($27D4–$2800)
-Das Bytecode-Byte wird gelesen (`LDA ($3B),y`), mit Schlüssel XOR-t und klassifiziert [gesichert aus dem Code]:
+### 4.3 Main loop ($27D4–$2800)
+The bytecode byte is read (`LDA ($3B),y`), XORed with the key and classified [confirmed from the code]:
 
-| Byte (nach XOR) | Bedeutung |
+| Byte (after XOR) | Meaning |
 |---|---|
-| `$00` + Folgebyte `x` | **Erweiterter Opcode** → Tabelle `$45B8`(hi)/`$4665`(lo), x = 0…$44 (69 Einträge) |
-| `$01–$0D` | Sonderpfad ab `$2735` (z. B. RETURN = $01, GOSUB = $06) |
-| `$0E–$7F` | **Haupt-Opcode** → Tabelle `$4443`(hi)/`$44B5`(lo), 114 Einträge |
-| `$80–$BF` | Konstanten/Operanden (`$B0–$BF` = Integerkonstante 0–15, `$A7–$A9` = 1/2/5-Byte-Konstanten) |
-| `$C0–$DF` | **Kurzreferenz auf Variable** (Slot-Offset aus Tabelle `$4535`) |
-| `$E0–$E5` | Variable mit langem Index (10 Bit, ×7) bzw. Array-/Sonderzugriff |
+| `$00` + following byte `x` | **Extended opcode** → table `$45B8`(hi)/`$4665`(lo), x = 0…$44 (69 entries) |
+| `$01–$0D` | Special path from `$2735` (e.g. RETURN = $01, GOSUB = $06) |
+| `$0E–$7F` | **Main opcode** → table `$4443`(hi)/`$44B5`(lo), 114 entries |
+| `$80–$BF` | Constants/operands (`$B0–$BF` = integer constant 0–15, `$A7–$A9` = 1/2/5-byte constants) |
+| `$C0–$DF` | **Short reference to a variable** (slot offset from table `$4535`) |
+| `$E0–$E5` | Variable with long index (10 bits, ×7) or array/special access |
 
-Der Interpreter ist damit ein **Token-Interpreter mit vorverdrahteten Variablenadressen**, nicht wie BASIC mit Namenssuche. Daher die Geschwindigkeit.
+The interpreter is thus a **token interpreter with pre-wired variable addresses**, not a name-lookup interpreter like BASIC. Hence the speed.
 
-### 4.4 Verschleierung (alles statisch, kein Programmschlüssel)
-Die Schlüssel sind **Operanden von `EOR #imm`-Befehlen** im Runtime-Code. In der **Datei** `BLITZ!.128` stehen dort `$00`-Platzhalter, in jedem erzeugten `C/`-File sind sie gepatcht [gesichert, an 5 Dateien identisch].
-**Korrektur (VICE-Trace, Nov. 2026):** Der Compiler läuft zur Laufzeit **ebenfalls mit $5A** – bei allen 88 667 getraceten Treffern auf `$2800` gilt `Dateibyte XOR A = $5A`. Die Platzhalter werden also **beim Start im Speicher gepatcht**, und wer das tut, ist offen (in der Datei findet sich kein Code, der die Adressen direkt beschreibt; ein Speicherabzug nach dem Start klärt das). Meine frühere Aussage „im Compiler key $00“ war falsch.
+### 4.4 Obfuscation (all static, no program key)
+The keys are **operands of `EOR #imm` instructions** in the runtime code. In the **file** `BLITZ!.128` there are `$00` placeholders there; in every generated `C/` file they are patched [confirmed, identical on 5 files].
+**Correction (VICE trace, Nov 2026):** At run time the compiler **also runs with $5A** – for all 88,667 traced hits on `$2800`, `file byte XOR A = $5A` holds. So the placeholders are **patched in memory at start**, and who does it is open (the file contains no code that writes the addresses directly; a memory dump after start will clarify). My earlier statement "key $00 in the compiler" was wrong.
 
-| Adresse(n) | Wert in C/-Datei | Zweck |
+| Address(es) | Value in C/ file | Purpose |
 |---|---|---|
-| `$27A3,$27FF,$2989,…` (≈35 Stellen) | `$5A` | **Bytecode-Strom** wird byteweise mit $5A entschlüsselt |
-| `$22CF,$22D6` | `$B7` | Variablennamentabelle |
-| `$2257,$323F` | `$EE` | Sonderfälle (Zweck [offen]) |
-| `$2A77` | `$3E` | Stringkonstanten-Pfad (passt zum $3E-Schlüssel der Compiler-Strings) [wahrscheinlich] |
-| `$2473,$3795,$3F7F` | `$DE` | Operandenbytes (lo) |
-| `$247B,$379B,$3F87` | `$E5` | Operandenbytes (hi) |
-| `$228F` | `$97` (fest, auch im Compiler) | Header 1 |
-| `$2216,$221C,$2233,$223A,$2342,$2349` | `$79` (fest) | Header 2 |
+| `$27A3,$27FF,$2989,…` (≈35 places) | `$5A` | **Bytecode stream** is decrypted byte by byte with $5A |
+| `$22CF,$22D6` | `$B7` | Variable name table |
+| `$2257,$323F` | `$EE` | Special cases (purpose [open]) |
+| `$2A77` | `$3E` | String constant path (fits the $3E key of the compiler strings) [probable] |
+| `$2473,$3795,$3F7F` | `$DE` | Operand bytes (lo) |
+| `$247B,$379B,$3F87` | `$E5` | Operand bytes (hi) |
+| `$228F` | `$97` (fixed, also in the compiler) | Header 1 |
+| `$2216,$221C,$2233,$223A,$2342,$2349` | `$79` (fixed) | Header 2 |
 
-Zusätzlich gibt es einen **Selbstentschlüsselungs-Haken** `$1E2A` (XOR mit Tabelle `$45FC`, wird mit `JSR` vor 104 Byte Code aufgerufen). [wahrscheinlich, Wirkung nicht nachgestellt]
+In addition there is a **self-decryption hook** `$1E2A` (XOR with table `$45FC`, called with `JSR` before 104 bytes of code). [probable, effect not reproduced]
 
-**Zweite Schicht für Sprungziele** (aus Rosetta-Vergleich, siehe 6): Nach der $5A-Entschlüsselung ist ein 16-Bit-Ziel `(b0 XOR $7D, b1 XOR $0E)` = absolute Adresse im Programm. Geprüft gegen die `Z/`-Tabelle für `GOSUB 200/2000/5000/10000/11000/30000/40000` – stimmt in allen Fällen (GOSUB auf eine nicht vorhandene Zeile landet auf der nächsten vorhandenen, z. B. 40000 → 40002).
+**Second layer for jump targets** (from the Rosetta comparison, see 6): after the $5A decryption, a 16-bit target `(b0 XOR $7D, b1 XOR $0E)` = absolute address in the program. Checked against the `Z/` table for `GOSUB 200/2000/5000/10000/11000/30000/40000` – correct in all cases (a GOSUB to a non-existent line lands on the next existing one, e.g. 40000 → 40002).
 
-### 4.5 Opcode-Tabellen
-Vollständige Liste aller 114 + 69 Handler mit Länge, Kernal-Aufrufen und Unterroutinen: **`analysis/handler_summary.txt`**. Zuordnungen, die aus den Kernal-Aufrufen folgen [wahrscheinlich]:
+### 4.5 Opcode tables
+Full list of all 114 + 69 handlers with length, Kernal calls and subroutines: **`analysis/handler_summary.txt`**. Assignments that follow from the Kernal calls [probable]:
 
-- Haupt-Opcodes `$3B–$45`: **PRINT-Familie** (CHROUT/CLRCHN; `$42/$44` mit CHKOUT = PRINT#)
-- `$46` und erw. `$00`: **GET** (GETIN)
-- `$48`: CHKIN (INPUT#/GET#), `$51/$53/$55/$57`: **INPUT**-Varianten (CHRIN)
+- Main opcodes `$3B–$45`: **PRINT family** (CHROUT/CLRCHN; `$42/$44` with CHKOUT = PRINT#)
+- `$46` and ext. `$00`: **GET** (GETIN)
+- `$48`: CHKIN (INPUT#/GET#), `$51/$53/$55/$57`: **INPUT** variants (CHRIN)
 - `$60`: **OPEN**, `$61`: **CLOSE**
-- `$1E`: **RESTORE** (durchläuft die DATA-Tabelle), `$01`: **RETURN**, `$06`: **GOSUB**, `$4E`: **GOTO/THEN-Zeile**
-- Viele Opcodes teilen Handler (`$2E95` für `$23–$2D,$6C,$6F` = „in diesem Kontext unzulässig“; `$2F85` für `$2F,$31,$32,$70`).
+- `$1E`: **RESTORE** (walks the DATA table), `$01`: **RETURN**, `$06`: **GOSUB**, `$4E`: **GOTO/THEN line**
+- Many opcodes share handlers (`$2E95` for `$23–$2D,$6C,$6F` = "not allowed in this context"; `$2F85` for `$2F,$31,$32,$70`).
 
-Konstantenkodierung für Einzelzeichen-Strings: `Zeichen XOR $11` (nach $5A-Schicht), z. B. "1"→`$20`, "Q"→`$40`, "_"→`$4E`. [gesichert an den IF-I$=… Zeilen von LIVE6B]
-
----
-
-## 5. Der Compiler
-
-### 5.1 Aufbau [gesichert]
-Runtime (Schlüssel zur Laufzeit $5A, siehe 4.4) + eigener Bytecode + Stringpool + 121 Variablen. Die Strings sind mit **$3E** verschleiert (`analysis/strings_compiler_xor3e.txt`, 234 Fundstellen).
-
-### 5.2 Bedienung/Funktionsumfang (aus den Strings)
-Das Menü ist **viersprachig (EN/FR/IT/DE)** und kennt fünf Betriebsarten:
-
-1. Einzelnes Programm → Diskette **mit Runtime-Routinen**
-2. **Alle** Programme einer Diskette → leere Diskette, **jeweils** mit Runtime
-3. Alle Programme → leere Diskette, **nur das erste Modul** enthält die Runtime
-4. Alle Programme → leere Diskette (mit Overlay)
-5. Einzelnes Programm → Diskette **ohne Runtime-Routinen**
-
-Dazu: Quell-/Ziel-Laufwerk (Gerätenr. 8/9…), Programmnamen, optionales **Formatieren** der Zieldiskette, Abfrage `COMPILE…`.
-
-### 5.3 Arbeitsweise [wahrscheinlich]
-- Meldungen **PASS0 / PASS1 / PASS2** → mindestens drei Läufe über das Quellprogramm.
-- Fehlermeldungen des Compilers: *DO WITHOUT LOOP*, *LOOP WITHOUT DO*, *BEND NOT FOUND*, *SYNTAX ERROR*, *UNDEF'D STATEMENT*, *BAD SUBSCRIPT*, *OVERFLOW*, *TYPE MISMATCH*, *ILLEGAL COMMAND* (auch DE/FR/IT).
-- Ausgabe in vier Dateien pro Programm: `C/NAME` (Objekt), `Z/NAME` (Zeilentabelle), `D/NAME` (DATA), `P/NAME` (Zusatzdatei, nur Name und eine defekte Kette belegt → Zweck [offen]).
-- Ausgabe von `C/`: der Compiler schreibt **seine eigene Runtime** ($1C01–$46AF aus dem Speicher) und patcht die 41 Schlüsselstellen. Header 1/2, Bytecode und die Namenstabelle folgen.
-
-### 5.4 Compilerdirektiven im Quelltext
-In den Quellen kommen `REM ** NG`, `REM ** FI I,BI,CI,R,P,…`. Im Compiler-Stringpool stehen die Direktiven **`**NE`, `**NG`, `**RI`, `**FI`, `**SP`** und `EXTENSIONS`.
-- `FI var,var,…` = Liste von Variablen, die als **Integer („Fast Integer“)** behandelt werden [wahrscheinlich]
-- `NG`, `NE`, `RI`, `SP`: Bedeutung [offen] (vermutlich Optionen für Kontrollstrukturen/Fehler/Geschwindigkeit; Handbuch oder Quervergleich mit Compilerlogik nötig)
+Constant encoding for single-character strings: `character XOR $11` (after the $5A layer), e.g. "1"→`$20`, "Q"→`$40`, "_"→`$4E`. [confirmed on the IF-I$=… lines of LIVE6B]
 
 ---
 
-## 6. Zuordnung Quelltext ↔ Bytecode (Rosetta-Stein)
+## 5. The compiler
 
-Datei `analysis/bytecode_C_LIVE6B.txt` (420 Zeilen) zeigt je BASIC-Zeile den $5A-entschlüsselten Bytecode. Verifizierte Fragmente:
+### 5.1 Structure [confirmed]
+Runtime (key at run time $5A, see 4.4) + own bytecode + string pool + 121 variables. The strings are obfuscated with **$3E** (`analysis/strings_compiler_xor3e.txt`, 234 occurrences).
 
-| BASIC | Bytecode (nach $5A) | Befund |
+### 5.2 Operation/features (from the strings)
+The menu is **four-language (EN/FR/IT/DE)** and knows five modes:
+
+1. Single program → disk **with runtime routines**
+2. **All** programs of a disk → empty disk, **each** with runtime
+3. All programs → empty disk, **only the first module** contains the runtime
+4. All programs → empty disk (with overlay)
+5. Single program → disk **without runtime routines**
+
+Also: source/target drive (device no. 8/9…), program names, optional **formatting** of the target disk, prompt `COMPILE…`.
+
+### 5.3 How it works [probable]
+- Messages **PASS0 / PASS1 / PASS2** → at least three passes over the source program.
+- Compiler error messages: *DO WITHOUT LOOP*, *LOOP WITHOUT DO*, *BEND NOT FOUND*, *SYNTAX ERROR*, *UNDEF'D STATEMENT*, *BAD SUBSCRIPT*, *OVERFLOW*, *TYPE MISMATCH*, *ILLEGAL COMMAND* (also DE/FR/IT).
+- Output in four files per program: `C/NAME` (object), `Z/NAME` (line table), `D/NAME` (DATA), `P/NAME` (extra file, only name and a broken chain occupied → purpose [open]).
+- Output of `C/`: the compiler writes **its own runtime** ($1C01–$46AF from memory) and patches the 41 key places. Header 1/2, bytecode and the name table follow.
+
+### 5.4 Compiler directives in the source
+The sources contain `REM ** NG`, `REM ** FI I,BI,CI,R,P,…`. The compiler string pool contains the directives **`**NE`, `**NG`, `**RI`, `**FI`, `**SP`** and `EXTENSIONS`.
+- `FI var,var,…` = list of variables treated as **integer ("fast integer")** [probable]
+- `NG`, `NE`, `RI`, `SP`: meaning [open] (presumably options for control structures/errors/speed; manual or comparison with the compiler logic needed)
+
+---
+
+## 6. Mapping source ↔ bytecode (Rosetta stone)
+
+The file `analysis/bytecode_C_LIVE6B.txt` (420 lines) shows, per BASIC line, the $5A-decrypted bytecode. Verified fragments:
+
+| BASIC | Bytecode (after $5A) | Finding |
 |---|---|---|
-| `RETURN` | `01` | gesichert |
-| `GOSUB 200` | `06 3A 4D` | `06` + 16-Bit-Ziel `(3A^7D, 4D^0E)` = `$4743` ✓ |
-| `IF I$="1" THEN 11500` | `9B F5 20 1E 4E 30 8B` | `F5`=I$, `20`="1", `1E`=Stringvergleich „=“, `4E`=GOTO-Ziel `(30^7D,8B^0E)` |
-| `IF I$="Q" THEN END` | `9B F5 40 1E 03 1F 53` | `03`=END(?) + Sprungwort |
-| `GC(0)=6:GC(1)=0:…` | `AC AA F8 1B, AD AC F8 1B, …` | Array-Zuweisung, Index/Wert als Kurzkonstanten |
-| `IF…THEN …:IF…THEN` (Zeile 200) | `… 05 3A 65` | `05`+Wort = bedingter Sprung ans Zeilenende |
-| `ON CS GOTO …` | `95 07 0A 3A 8D 3A 97 …` | Liste von Sprungwörtern |
+| `RETURN` | `01` | confirmed |
+| `GOSUB 200` | `06 3A 4D` | `06` + 16-bit target `(3A^7D, 4D^0E)` = `$4743` ✓ |
+| `IF I$="1" THEN 11500` | `9B F5 20 1E 4E 30 8B` | `F5`=I$, `20`="1", `1E`=string compare "=", `4E`=GOTO target `(30^7D,8B^0E)` |
+| `IF I$="Q" THEN END` | `9B F5 40 1E 03 1F 53` | `03`=END(?) + jump word |
+| `GC(0)=6:GC(1)=0:…` | `AC AA F8 1B, AD AC F8 1B, …` | Array assignment, index/value as short constants |
+| `IF…THEN …:IF…THEN` (line 200) | `… 05 3A 65` | `05`+word = conditional jump to end of line |
+| `ON CS GOTO …` | `95 07 0A 3A 8D 3A 97 …` | List of jump words |
 
-Daraus folgt: Der Compiler **löst Zeilennummern in absolute Adressen auf** und lässt REM-Zeilen weg; die `Z/`-Datei hält die Rückzuordnung Adresse → Originalzeile fest.
-
----
-
-## 7. Image 2 (Runtime für $4001)
-Struktur wie Image 1 (gleicher Lader mit Hochkopieren um $24 Seiten, Fill-Bereich bei $4104, Marker `0F DA A1 00`), aber **nicht** bloß relokiert: ab $41A3 sind ≈401 Byte zusätzlicher Code eingefügt (alle späteren internen Adressen +$2591 statt +$2400), Gesamtlänge 11 318 B. Der eingeschobene Code arbeitet mit anderen Variablen ($1131/$1155…) und ruft viele Hilfsroutinen auf. [gesichert als Variante, **Zweck [wahrscheinlich]**: Runtime für Programme, die den Grafikbereich belegen und deshalb bei $4001 beginnen]. Im Compiler-Image 1 wird sie nicht ausgeführt.
+It follows that the compiler **resolves line numbers into absolute addresses** and drops REM lines; the `Z/` file keeps the reverse mapping address → original line.
 
 ---
 
-## 7b. Ergebnisse des VICE-Laufs (13.11.2026)
-Aufbau: GTK3VICE 3.7 (x128), `work8.d81` (BLITZ!.128 + `CRAWL` = `crawl.prg` aus dem Repo `dungeoncrawlerjam2025`) in Laufwerk 8, `work9.d81` (leer) in Laufwerk 9. Tracepoint `trace exec 2800` mit `m 3b 3c` (Log in `crawl/trace.log`, 18 MB).
+## 7. Image 2 (runtime for $4001)
+Structure like image 1 (same loader that copies up by $24 pages, fill area at $4104, marker `0F DA A1 00`), but **not** merely relocated: from $41A3 about 401 bytes of additional code are inserted (all later internal addresses +$2591 instead of +$2400), total length 11,318 B. The inserted code works with other variables ($1131/$1155…) and calls many helper routines. [confirmed as a variant, **purpose [probable]**: runtime for programs that occupy the graphics area and therefore start at $4001]. It is not executed in compiler image 1.
 
-- **Die Hauptschleife der Runtime ist wie beschrieben** (`$27FC: LDA ($3B),Y / EOR #key / BEQ $279F`; `$3B/$3C` = Bytecode-Zeiger). Alle 88 667 Treffer: `Datei[ptr] XOR A = $5A`. [gesichert]
-- **Operandlängen** (Abstand zum nächsten Opcode), aus dem Trace, ausführlich in `opcode_stats_trace.txt` [gesichert für die genannten Opcodes]:
-  - `$B0–$BF`: 1 Byte (Integerkonstante 0–15)
-  - `$A0, $A4, $A6`: Opcode + 1 Byte; `$A7`: + 2 Byte (16-Bit-Konstante); `$A8`: + 5 Byte (Gleitkommakonstante)
-  - `$E0–$E5`: Opcode + 1 Byte (Variable mit langem Index)
-  - **`$E8–$EE`: Stringkonstante, die Länge = Opcode − $E8, danach die Zeichen**; `$E7` + Längenbyte für längere Strings
-  - `$01–$0E, $81–$8F, $F0–$FF` u. a.: 1 Byte (Operatoren/Statements ohne Operand)
-  - Sprung-/Kontroll-Opcodes (`$13, $19, $1A, $1B, $1D, $1F, $52, $58`) zeigen gemischte Abstände, weil sie verzweigen
-- **`P/NAME` ist eine Zwischendatei zwischen den Durchläufen** (SEQ-Datei, wird beim Compile zuerst geschrieben und offen gehalten, erste Ablage im Compile von CRAWL: `P/CRAWL`). [gesichert für das Auftreten, Inhalt noch nicht ausgewertet]
+---
 
-## 8. Was offen ist
-1. **Kompletter Bytecode-Decompiler**: Operandformate der ~180 Opcodes sind nur in Fragmenten bekannt. Der Weg dorthin: aus `handler_summary.txt` je Handler die Operandlänge ableiten (Tail `LDA #n / JMP $27E9`) und mit weiteren Rosetta-Zeilen abgleichen. Dann lässt sich auch der **Compiler-Bytecode selbst** zurück in BASIC übersetzen.
-2. Der Bereich ab ≈$46F8 im Compiler sieht (Wiederholungsmuster) nach DATA-Tabellen aus, nicht nach Code. **Wo der Compiler-Code beginnt, ist noch offen.**
-3. Inhalt von `P/…` (Zwischendatei), Direktiven `NE/NG/RI/SP`, Bedeutung von Opcodes `$01–$0D`.
-4. **Overlay-/Chain-Modus** (Menüpunkte 3/4): wie nachfolgende Module ohne Runtime auf die des ersten zugreifen, ist nicht untersucht (die vorhandenen `C/`-Beispiele enthalten alle die Runtime).
-5. Dynamische Prüfung fehlt: ein Lauf in VICE (`x128`) mit Monitor-Trace von `$27FC` würde jede Annahme in Abschnitt 4.3 sofort bestätigen und die offenen Opcodes schnell schließen.
+## 7b. Results of the VICE run (13 Nov 2026)
+Setup: GTK3VICE 3.7 (x128), `work8.d81` (BLITZ!.128 + `CRAWL` = `crawl.prg` from the repo `dungeoncrawlerjam2025`) in drive 8, `work9.d81` (empty) in drive 9. Tracepoint `trace exec 2800` with `m 3b 3c` (log in `crawl/trace.log`, 18 MB).
 
-## 9. Dateien
-| Pfad (`blitz128/analysis/`) | Inhalt |
+- **The main loop of the runtime is as described** (`$27FC: LDA ($3B),Y / EOR #key / BEQ $279F`; `$3B/$3C` = bytecode pointer). All 88,667 hits: `file[ptr] XOR A = $5A`. [confirmed]
+- **Operand lengths** (distance to the next opcode), from the trace, in detail in `opcode_stats_trace.txt` [confirmed for the opcodes named]:
+  - `$B0–$BF`: 1 byte (integer constant 0–15)
+  - `$A0, $A4, $A6`: opcode + 1 byte; `$A7`: + 2 bytes (16-bit constant); `$A8`: + 5 bytes (floating-point constant)
+  - `$E0–$E5`: opcode + 1 byte (variable with long index)
+  - **`$E8–$EE`: string constant, length = opcode − $E8, followed by the characters**; `$E7` + length byte for longer strings
+  - `$01–$0E, $81–$8F, $F0–$FF` and others: 1 byte (operators/statements without operand)
+  - Jump/control opcodes (`$13, $19, $1A, $1B, $1D, $1F, $52, $58`) show mixed distances because they branch
+- **`P/NAME` is an intermediate file between the passes** (SEQ file, written first during the compile and kept open, first stored in the compile of CRAWL: `P/CRAWL`). [confirmed for the occurrence, contents not yet evaluated]
+
+## 8. What is open
+1. **Complete bytecode decompiler**: the operand formats of the ~180 opcodes are only known in fragments. The way there: derive the operand length from `handler_summary.txt` for each handler (tail `LDA #n / JMP $27E9`) and compare with more Rosetta lines. Then the **compiler bytecode itself** can also be translated back to BASIC.
+2. The area from ≈$46F8 in the compiler looks (repeating pattern) like DATA tables, not code. **Where the compiler code starts is still open.**
+3. Contents of `P/…` (intermediate file), directives `NE/NG/RI/SP`, meaning of opcodes `$01–$0D`.
+4. **Overlay/chain mode** (menu items 3/4): how subsequent modules without runtime access the runtime of the first has not been investigated (the existing `C/` examples all contain the runtime).
+5. Dynamic verification is missing: a run in VICE (`x128`) with a monitor trace of `$27FC` would confirm every assumption in section 4.3 at once and quickly close the open opcodes.
+
+## 9. Files
+| Path (`blitz128/analysis/`) | Contents |
 |---|---|
-| `runtime_1c01.asm` | Rekursives Listing der Runtime $1C2F–$46AF (5 693 Zeilen) |
-| `handler_summary.txt` | Alle Opcode-Handler mit Länge/Kernal/Unterroutinen |
-| `strings_compiler_xor3e.txt` | Menü-/Fehlertexte des Compilers (4 Sprachen) |
-| `bytecode_C_LIVE6B.txt` | Zeile für Zeile Quelltext ↔ entschlüsselter Bytecode |
-| `d81/` | alle (auch gelöschte) Dateien der D81 |
+| `runtime_1c01.asm` | Recursive listing of the runtime $1C2F–$46AF (5,693 lines) |
+| `handler_summary.txt` | All opcode handlers with length/Kernal/subroutines |
+| `strings_compiler_xor3e.txt` | Menu/error texts of the compiler (4 languages) |
+| `bytecode_C_LIVE6B.txt` | Source ↔ decrypted bytecode, line by line |
+| `d81/` | all (including deleted) files of the D81 |
 | `tools/` | `dis6502.py`, `rtdis.py`, `mklist.py`, `handlers.py`, `bas7.py`, `zmap.py`, `d81x.py`, `bcdump.py` |
 
-## 10. Nachtrag: Ergebnisse des CRAWL-Compile-Laufs (mem.bin, C_CRAWL)
+## 10. Addendum: results of the CRAWL compile run (mem.bin, C_CRAWL)
 
-- **Image 2 = Runtime-Template für $4001-Ausgaben.** Die ersten 11318 Bytes ($4001-$6C36) von `C_CRAWL.prg` sind byte-identisch mit "Image 2" im Compiler (0 Differenzen). Der Compiler schreibt dieses Template unverändert und hängt Header + XOR-Bytecode + Variablentabelle an. Image 1 (Load $1C01, 41 Patchstellen) wird dagegen für $1C01-Ausgaben verwendet.
-- **mem.bin vs. Datei (nach vollständigem Compile):** nur 53 Bytes unterschiedlich: DOS-Statustext $1D00-$1D0C plus die 41 Schlüssel-Patchstellen (Platzhalter $00 in der Datei -> $5A/$B7/$EE/$DE/$E5/$3E im Speicher). Es gibt also keine Code-Entschlüsselung; die Schlüssel werden beim Start in den Speicher gepatcht.
-- **Trace $27FC:** Schlüssel für Bytecode ist durchgehend $5A (alle 88.667 Treffer).
-- **P_CRAWL** ist die Zwischendatei zwischen den Pässen; C_/Z_/D_CRAWL sind Objekt, Adress-Zeilen-Map und DATA-Werte.
-- **Offen:** Direkt hinter dem Template ($6C37) stehen `00 00 00 ff ff ff ff 00 00 00 28 03 1a 02 46 95 ...`; das passt nicht zum Header1-Schema (^$97). Position von Header1/Header2/Variablennamentabelle im $4001-Format ist noch nicht gesichert. Ebenso offen: wer die 41 Patches beim Start schreibt (Startup-Trace ab Programmstart nötig), und die Operandlängen der Sprungopcodes $13,$19,$1A,$1B,$1D,$1F,$52,$58.
+- **Image 2 = runtime template for $4001 outputs.** The first 11318 bytes ($4001-$6C36) of `C_CRAWL.prg` are byte-identical to "image 2" in the compiler (0 differences). The compiler writes this template unchanged and appends header + XOR bytecode + variable table. Image 1 (load $1C01, 41 patch places) is used for $1C01 outputs instead.
+- **mem.bin vs. file (after a complete compile):** only 53 bytes differ: DOS status text $1D00-$1D0C plus the 41 key patch places (placeholder $00 in the file -> $5A/$B7/$EE/$DE/$E5/$3E in memory). So there is no code decryption; the keys are patched into memory at start.
+- **Trace $27FC:** the key for the bytecode is $5A throughout (all 88,667 hits).
+- **P_CRAWL** is the intermediate file between the passes; C_/Z_/D_CRAWL are object, address-line map and DATA values.
+- **Open:** directly behind the template ($6C37) are `00 00 00 ff ff ff ff 00 00 00 28 03 1a 02 46 95 ...`; this does not fit the header-1 scheme (^$97). The position of header 1/header 2/variable name table in the $4001 format is not yet confirmed. Also open: who writes the 41 patches at start (startup trace from program start needed), and the operand lengths of the jump opcodes $13,$19,$1A,$1B,$1D,$1F,$52,$58.
 
-## 11. Wer patcht die 41 Schlüsselstellen? (VICE-Lauf 15.11.2026) [gesichert]
+## 11. Who patches the 41 key places? (VICE run 15 Nov 2026) [confirmed]
 
-**Antwort: die Runtime selbst, mit selbstentschlüsselndem Code.** Das Listing in `runtime_1c01.asm` ab `$23CF` ist in der Datei *verschlüsselt* (es sieht nur zufällig plausibel aus). Der Aufruf `JSR $1E2A` bei `$23CD` entschlüsselt die 104 ($68) Bytes ab `$23D0` an Ort und Stelle (`EOR $45FC,y`) und kehrt in den entschlüsselten Code zurück. Am Ende springt der Code mit gepushter Rücksprungadresse nach `$1E35` und verschlüsselt sich damit wieder. Deshalb zeigt `mem.bin` an dieser Stelle dieselben Bytes wie die Datei.
+**Answer: the runtime itself, with self-decrypting code.** The listing in `runtime_1c01.asm` from `$23CF` is *encrypted* in the file (it only looks randomly plausible). The call `JSR $1E2A` at `$23CD` decrypts the 104 ($68) bytes from `$23D0` in place (`EOR $45FC,y`) and returns into the decrypted code. At the end the code jumps to `$1E35` with a pushed return address and thereby encrypts itself again. That is why `mem.bin` shows the same bytes as the file at this place.
 
-Entschlüsselter Patcher (`$23D0`):
+Decrypted patcher (`$23D0`):
 ```
 LDX #0 : LDA #$2F
-L: EOR $46BC,X : STA $6A,X : INX : CPX #6 : BNE L   ; laufende XOR-Kette
+L: EOR $46BC,X : STA $6A,X : INX : CPX #6 : BNE L   ; running XOR chain
 STA $2257,$323F                 ; $6F  = $EE
 LDA $6B : STA $2A77             ; $6B  = $3E
 LDA $6C : STA $22CF,$22D6       ; $6C  = $B7
-Zeiger $24/$25 = $27A0, Y=3, bis Hi-Byte = $40:
+pointer $24/$25 = $27A0, Y=3, until hi byte = $40:
    LDA $6A : STA ($24),Y        ; $6A  = $5A
-   scan: naechste Stelle, an der (ptr+0..2) == B1 3B 49 (= LDA ($3B),Y ; EOR #imm) ist
+   scan: next place where (ptr+0..2) == B1 3B 49 (= LDA ($3B),Y ; EOR #imm)
 LDA $6D : STA $2473,$3795,$3F7F ; $6D  = $DE
 LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 ```
-- **Schlüssel = XOR-Kette über 6 Bytes ab `$46BC`** mit Startwert `$2F`: `75 64 89 69 3B 0B` ergibt `$6A..$6F = 5A 3E B7 DE E5 EE`. Das sind genau die beobachteten Werte. Die Schlüssel stehen also verdeckt im Header 2 (Bytes `$46BC–$46C1`, bei `$4001`-Programmen `$6C4D–$6C52`). **Korrektur:** Sie sind **pro Compile zufällig**. Drei Compiles von CRAWL ergeben drei verschiedene Sätze, und `C_LIVE6B` läuft mit Bytecode-Schlüssel `$46` (in VICE bestätigt). Die `$5A`-Werte an den Patchstellen der `C/`-Dateien sind nur Überbleibsel aus dem Speicher des Compilers, weil dieser seine eigene, schon gepatchte Runtime abspeichert. Die Rosetta-Auswertung in Abschnitt 6 (`$5A` auf LIVE6B) ist daher mit dem falschen Schlüssel gemacht und muss mit `$46` wiederholt werden.
-- Die `$5A`-Stellen sind **alle** `EOR #imm`-Operanden direkt hinter `LDA ($3B),Y` (Signatur `B1 3B 49`) im Bereich `$27A0–$3FFF`, dazu `$27A3` direkt. Das sind 29 Stellen. Die vier Treffer `$3795/$379B/$3F7F/$3F87` werden danach mit `$DE`/`$E5` überschrieben.
-- Warum die Trace-Haltepunkte bisher nichts zeigten: erster Treffer auf `$27FF` war der Kernal-LOAD (`$02B8`, A=`$00`). Der echte Patch kommt bei `$23FF` (`STA ($24),Y`, A=`$5A`), und zwar im entschlüsselten Code, den ein statisches Listing der Datei nicht zeigt.
-- **Doppelnutzung:** Der Patcher verschlüsselt sich am Ende wieder (`JMP $1E35`). Die verschlüsselten Bytes `$23D0–$2437` sind zugleich gültige Opcode-Handler (Sprungziele `$23E6`, `$23F4`, `$23FA`, `$240F`, `$2415` …). Das alte Listing ist dort also für die Laufzeit **richtig**. Den Patcher habe ich separat abgelegt (`patcher_1c01.bin`, `patcher_4001.bin`), das Laufzeit-Abbild steht in `run_1c01.bin`/`run_4001.bin` (Werkzeug `tools/runimg.py`), das Listing in `runtime_1c01_run.asm`.
-- (überholt:) `runtime_1c01.asm` ist im Bereich `$23D0–$2437` Datenmüll. Der Bereich muss mit `EOR $45FC,y` entschlüsselt werden. Außerdem sollte man prüfen, ob `JSR $1E2A` noch an anderen Stellen (insbesondere im Compiler-Teil und in Image 2) weiteren Code verschlüsselt.
+- **Key = XOR chain over 6 bytes from `$46BC`** with start value `$2F`: `75 64 89 69 3B 0B` gives `$6A..$6F = 5A 3E B7 DE E5 EE`. These are exactly the observed values. So the keys are hidden in header 2 (bytes `$46BC–$46C1`, for `$4001` programs `$6C4D–$6C52`). **Correction:** they are **random per compile**. Three compiles of CRAWL give three different sets, and `C_LIVE6B` runs with bytecode key `$46` (confirmed in VICE). The `$5A` values at the patch places of the `C/` files are only leftovers from the compiler's memory, because it saves its own, already patched runtime. The Rosetta evaluation in section 6 (`$5A` on LIVE6B) was therefore done with the wrong key and has to be repeated with `$46`.
+- The `$5A` places are **all** `EOR #imm` operands directly behind `LDA ($3B),Y` (signature `B1 3B 49`) in the range `$27A0–$3FFF`, plus `$27A3` directly. That is 29 places. The four hits `$3795/$379B/$3F7F/$3F87` are overwritten afterwards with `$DE`/`$E5`.
+- Why the trace breakpoints showed nothing so far: the first hit on `$27FF` was the Kernal LOAD (`$02B8`, A=`$00`). The real patch happens at `$23FF` (`STA ($24),Y`, A=`$5A`), in the decrypted code, which a static listing of the file does not show.
+- **Dual use:** the patcher encrypts itself again at the end (`JMP $1E35`). The encrypted bytes `$23D0–$2437` are at the same time valid opcode handlers (jump targets `$23E6`, `$23F4`, `$23FA`, `$240F`, `$2415` …). The old listing is therefore **correct** for run time there. I stored the patcher separately (`patcher_1c01.bin`, `patcher_4001.bin`), the run-time image is in `run_1c01.bin`/`run_4001.bin` (tool `tools/runimg.py`), the listing in `runtime_1c01_run.asm`.
+- (superseded:) `runtime_1c01.asm` is data garbage in the range `$23D0–$2437`. The range has to be decrypted with `EOR $45FC,y`. One should also check whether `JSR $1E2A` encrypts further code elsewhere (especially in the compiler part and in image 2).
 
-Aufbau zum Nachstellen: VICE 3.9 aus dem Quellcode, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, Monitor `trace store 27ff`.
+Setup to reproduce: VICE 3.9 from source, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, monitor `trace store 27ff`.
