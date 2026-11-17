@@ -1,66 +1,69 @@
-# blitzc – Nachbau des Blitz! 128 Compilers (Skyles, V860929)
+**English** · [Deutsch](README_de.md)
 
-Ziel: Der Compiler läuft ohne Emulator (Node und Browser). Eingabe ist ein getokentes BASIC-7-PRG, Ausgabe `C/`, `Z/` und `D/`, byte-identisch zum Original bei denselben sechs Zufallsschlüsseln.
+# blitzc – a re-implementation of the Blitz! 128 compiler (Skyles, V860929)
 
-## Stand
-- `oracle/`: Original-Compiler headless in VICE 3.9 (Prüfstein)
-  - `build-vice.sh` baut x128/c1541/petcat ohne root nach `~/vice`
-  - `compile.sh in.prg outdir` erzeugt `c.prg z.prg [d.prg]`, `screen.txt`, `keys.txt`
-- `tools/keys.py`: liest die 6 Schlüssel aus einer `C/`-Datei
-- `tools/runimg.py`: Runtime-Abbild „wie ausgeführt“ (Patcher entschlüsselt und angewendet)
-- `tests/src/*.bas|prg`, `tests/expected/<name>/`: Referenzausgaben des Originals
+Goal: the compiler runs without an emulator (Node and browser). Input is a tokenized BASIC 7 PRG, output is `C/`, `Z/` and `D/`, byte-identical to the original for the same six random keys.
 
-## Befunde (siehe ../analysis/BLITZ128_ANALYSE.md, Abschnitt 11)
-- Die Schlüssel werden pro Compile zufällig gewählt, abhängig vom Timing. Im Emulator sind sie bei gleichem Tasten-Timing deterministisch.
-- Erster Menüpunkt `1` = Single Drive, „no COLLISION command“. Danach fragt der Compiler nach dem Programmnamen und kompiliert sofort.
+## Status
+- `oracle/`: original compiler, headless in VICE 3.9 (the reference)
+  - `build-vice.sh` builds x128/c1541/petcat without root into `~/vice`
+  - `compile.sh in.prg outdir` produces `c.prg z.prg [d.prg]`, `screen.txt`, `keys.txt`
+- `tools/keys.py`: reads the 6 keys from a `C/` file
+- `tools/runimg.py`: runtime image "as executed" (patcher decrypted and applied)
+- `tests/src/*.bas|prg`, `tests/expected/<name>/`: reference output of the original
 
-## Decompiler (Stand 15.11.2026)
-- `tools/bcdis.py`: Opcode-Tabelle (Längen aus `tools/oplen.py`, abstrakte Interpretation der Runtime-Handler). Sie zerlegt alle Korpuszeilen exakt (`tools/checklen.py`) und trifft alle 2 496 im VICE-Trace ausgeführten Adressen des Compilers.
-- `tools/decomp.py c.prg`: Bytecode wird zu Pseudo-BASIC (Infix, Variablennamen, Sprungmarken `Lxxxx`, DATA-Tabelle).
-- `compiler_decomp.bas`: der zurückgewonnene Compiler. Code `$50F8–$9F72`, 121 Variablen, DATA-Tabelle `$46CA` = 6502-Maschinencode-Routinen (Zeilen 63500 ff., per POKE geladen, Einsprung über `SYS M%`/`SYS 5872`).
+## Findings (see ../analysis/BLITZ128_ANALYSE.md, section 11)
+- The keys are chosen at random for every compile and depend on timing. In the emulator they are deterministic for identical key timing.
+- First menu item `1` = single drive, "no COLLISION command". The compiler then asks for the program name and compiles right away.
 
-Format-Notizen:
-- DATA-Tabelle: Einträge `len, text, zeile_lo, zeile_hi`, XOR Schlüssel 5, Ende `$FF`.
-- Sprungziele: 2 Bytes Hi/Lo, roh XOR Schlüssel 3/4. IF-Skip `1F nn` ist relativ.
-- `Z/` enthält nicht alle Zeilen (Zeilen mit DO am Programmanfang fehlen), noch klären.
-- Programme mit Grafikbefehlen werden als `$4001`-Variante erzeugt (Header bei `$6C41`).
+## Decompiler (as of 15 Nov 2026)
+- `tools/bcdis.py`: opcode table (lengths from `tools/oplen.py`, abstract interpretation of the runtime handlers). It splits every line of the corpus exactly (`tools/checklen.py`) and hits all 2,496 addresses of the compiler executed in the VICE trace.
+- `tools/decomp.py c.prg`: bytecode becomes pseudo-BASIC (infix, variable names, jump labels `Lxxxx`, DATA table).
+- `compiler_decomp.bas`: the recovered compiler. Code `$50F8–$9F72`, 121 variables, DATA table `$46CA` = 6502 machine-code routines (lines 63500 ff., loaded by POKE, entered via `SYS M%`/`SYS 5872`).
 
-## JS-Portierung (Stand 15.11.2026)
+Format notes:
+- DATA table: entries `len, text, line_lo, line_hi`, XOR key 5, end `$FF`.
+- Jump targets: 2 bytes hi/lo, raw XOR keys 3/4. IF-skip `1F nn` is relative.
+- `Z/` does not contain every line (lines with DO at the start of the program are missing), still to be clarified.
+- Programs with graphics commands are produced as the `$4001` variant (header at `$6C41`).
 
-`js/` enthält den Compiler als eigenständiges Programm für Node und Browser. **Alle 51 Referenzläufe sind byte-identisch zum Original (C/ und Z/)**, in allen vier Varianten (mit/ohne Runtime × eingeschränkte/volle RESUME/COLLISION-Syntax), darunter CRAWL, alle LIVE-Quellen der D81 (bis 56 KB Quelltext, 45 KB C/), Fehlerfälle, Direktiven, `$4001`-Variante, 80 Gleitkommakonstanten.
+## JS port (as of 15 Nov 2026)
+
+`js/` contains the compiler as a stand-alone program for Node and browser. **All 51 reference runs are byte-identical to the original (C/ and Z/)**, in all four variants (with/without runtime × restricted/full RESUME/COLLISION syntax), including CRAWL, all LIVE sources of the D81 (up to 56 KB source, 45 KB C/), error cases, directives, the `$4001` variant, and 80 floating-point constants.
 
 ```
-node js/cli.js prog.prg out/                      # zufällige Schlüssel wie das Original
-node js/cli.js prog.prg out/ --no-runtime --full  # ohne Runtime, volle RESUME/COLLISION-Syntax
-node js/cli.js prog.prg out/ --like ref/c.prg     # Schlüssel+Füllbytes aus einer Original-C/-Datei
-node js/test.js                                   # alle tests/expected nachbauen und vergleichen
-bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
-MODE=65 bash oracle/compare.sh x.prg             # Modus: 1, 4 (volle Syntax), 35 (ohne Runtime), 65 (beides)
+node js/cli.js prog.prg out/                      # random keys like the original
+node js/cli.js prog.prg out/ --no-runtime --full  # without runtime, full RESUME/COLLISION syntax
+node js/cli.js prog.prg out/ --like ref/c.prg     # keys + filler bytes taken from an original C/ file
+node js/test.js                                   # rebuild all tests/expected and compare
+bash oracle/compare.sh x.prg ...                  # original (VICE) against port, same keys
+MODE=65 bash oracle/compare.sh x.prg             # mode: 1, 4 (full syntax), 35 (no runtime), 65 (both)
 ```
-Mehrere Programme (Stand 17.11.2026): `--plain a.prg,b.prg` kompiliert weitere Programme **ohne Runtime** (sie laufen hinter dem Programm mit Runtime, das zuerst kommt; `-` statt `<in.prg>` = keines), `--d81 out.d81` schreibt alle `C/`- und `Z/`-Dateien auf ein 1581-Image. Ausgabe dann `c-<name>.prg`, `z-<name>.prg`. API: `compileMany([{src,name,runtime}], blitz, opts)`, `d81Of(results)` (`js/d81.js`). `D/` und `P/` sind Zwischendateien, die der Compiler am Ende selbst löscht, sie gehören nicht zur Ausgabe.
+
+Several programs (as of 17 Nov 2026): `--plain a.prg,b.prg` compiles further programs **without runtime** (they run behind the program with runtime, which comes first; `-` instead of `<in.prg>` = none), `--d81 out.d81` writes all `C/` and `Z/` files to a 1581 image. Output is then `c-<name>.prg`, `z-<name>.prg`. API: `compileMany([{src,name,runtime}], blitz, opts)`, `d81Of(results)` (`js/d81.js`). `D/` and `P/` are intermediate files that the compiler deletes itself at the end; they are not part of the output.
 ```
 node js/cli.js crawl.prg out/ --plain lib1.prg,lib2.prg --d81 out/all.d81
 ```
-Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg|null, {name, runtime, fullSyntax, keys, pad})` (null = eingebettete BLITZ!.128 aus `js/blitzimg.js`, erzeugt mit `tools/embed.py`) aus `js/blitzc.js` → `{c, z, errors, screen}`.
+Browser: open `js/blitzc.html` directly (a single file, built with `tools/bundle.py`; `js/index.html` is the module version for a web server). API: `compile(srcPrg, blitzPrg|null, {name, runtime, fullSyntax, keys, pad})` (null = embedded BLITZ!.128 from `js/blitzimg.js`, produced with `tools/embed.py`) from `js/blitzc.js` → `{c, z, errors, screen}`.
 
-Aufbau:
-- `tools/bc2js.py` übersetzt den **Bytecode des Compilers** (nicht das Pseudo-BASIC) nach `js/compiler.gen.js`: ein `case` pro Sprungziel, Label = Originaladresse. Damit entfallen die Anzeigefehler von `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): alle Arrays sind eindimensional, FOR/GET/READ/INPUT nehmen die zuletzt geladene Variable als Referenz, `X58` = `IF x THEN RETURN`, POKE/OPEN mit umgekehrter Argumentfolge.
-- `js/rt.js`: BASIC-Primitiven, 1581-Simulation (Kanäle, Befehlskanal, Scratch, Status), Tastatur (Menü `1`, Programmname), DATA-Tabelle, native Fassungen der Maschinencode-Helfer: `SYS 288/291` Tokenizer, `SYS 5872` Zeile lesen, `SYS 5960/5985` Byte lesen/schreiben (Schlüssel bei `$1769`), `SYS 6012` Suche in Integer-Array, `SYS 5816` Speicherblock schreiben.
-- Die Runtime in C/ kommt aus BLITZ!.128 selbst; die Datei ist als Base64 eingebettet (`js/blitzimg.js`), eine eigene kann man in der CLI mit `--blitz` angeben (die Browser-Seite nutzt immer die eingebettete) (Image 1 mit den zur Laufzeit gepatchten Compiler-Schlüsseln, Image 2 ab `$A065` plus 10 Bytes RAM-Muster `00 00 00 FF FF FF FF 00 00 00`).
+Structure:
+- `tools/bc2js.py` translates the **bytecode of the compiler** (not the pseudo-BASIC) to `js/compiler.gen.js`: one `case` per jump target, label = original address. This removes the display errors of `compiler_decomp.bas` (`?`, `ARRn(a,b,…)`): all arrays are one-dimensional, FOR/GET/READ/INPUT take the most recently loaded variable as reference, `X58` = `IF x THEN RETURN`, POKE/OPEN have reversed argument order.
+- `js/rt.js`: BASIC primitives, 1581 simulation (channels, command channel, scratch, status), keyboard (menu `1`, program name), DATA table, native versions of the machine-code helpers: `SYS 288/291` tokenizer, `SYS 5872` read line, `SYS 5960/5985` read/write byte (key at `$1769`), `SYS 6012` search in integer array, `SYS 5816` write memory block.
+- The runtime in C/ comes from BLITZ!.128 itself; the file is embedded as Base64 (`js/blitzimg.js`), the CLI accepts your own with `--blitz` (the browser page always uses the embedded one) (image 1 with the compiler keys patched at run time, image 2 from `$A065` plus 10 bytes of RAM pattern `00 00 00 FF FF FF FF 00 00 00`).
 
-Befunde aus der Portierung:
-- Zufall: RND(0) wird nur für die 6 Schlüssel (Reihenfolge W1,W3,W4,W5,W6,W2), für J% (0–9 Füllbytes hinter dem Header) und die Füllbytes selbst gezogen. `keysOf()` liest alles aus einer C/-Datei zurück.
-- `$1D00` in C/ ist der Puffer, den VAL (String-Kopie ohne Endnull, max. 160 Bytes) und INPUT# (mit Endnull) benutzen. Er enthält die letzte Statuszeile `00, OK,00,00` und ggf. Reste einer langen Konstante.
-- Gleitkommakonstanten: VAL ist eine Blitz-eigene Routine (`$4314`), die Ziffern 16-bittig sammelt und dann Rechenroutinen im C128-BASIC-ROM ruft (×10, ÷10, Addition, Runden). `js/cbmfloat.js` überträgt diesen Code samt ROM-Routinen Befehl für Befehl mit Carry-Flag nach JS; **kein ROM nötig**. Geprüft mit `node tools/fincheck.mjs 500000`: 500 000 Zufallszahlen gegen den Originalcode auf dem 6502-Kern (`js/cpu6502.js`, braucht dafür das BASIC-ROM hi 318019-04 aus VICE), 0 Abweichungen.
-- Orakel: große Quellen brauchen mehr Frames, z. B. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
-- `Z/` ist ein BASIC-Programm (Ladeadresse `$0401`): je Zeile `04 08`, Adresse als Zeilennummer, Text `= nnn `.
-- Varianten: volle RESUME/COLLISION-Syntax = Menü 4–6 (`TA%=2`), ohne Runtime = zweites Menü Punkt 5 (`T9%=1`), das nur bei Dual Drive oder zwei Laufwerken erscheint. Der Port bedient intern Menü 1/4 bzw. 3/6 mit Geräten 8→9; das Laufwerkssetup hat sonst keinen Einfluss. C/ ohne Runtime beginnt direkt mit dem Header (Ladeadresse `$46B0` bzw. `$6C41`). Testnamen: `<name>.m4`, `.m35`, `.m65`.
+Findings from the port:
+- Randomness: RND(0) is drawn only for the 6 keys (order W1,W3,W4,W5,W6,W2), for J% (0–9 filler bytes behind the header) and the filler bytes themselves. `keysOf()` reads everything back from a C/ file.
+- `$1D00` in C/ is the buffer used by VAL (string copy without end null, max. 160 bytes) and INPUT# (with end null). It holds the last status line `00, OK,00,00` and possibly remains of a long constant.
+- Floating-point constants: VAL is a Blitz-specific routine (`$4314`) that collects the digits in 16 bits and then calls arithmetic routines in the C128 BASIC ROM (×10, ÷10, addition, rounding). `js/cbmfloat.js` ports this code, including the ROM routines, instruction by instruction with the carry flag to JS; **no ROM needed**. Checked with `node tools/fincheck.mjs 500000`: 500,000 random numbers against the original code on the 6502 core (`js/cpu6502.js`, which needs the BASIC ROM hi 318019-04 from VICE for this), 0 differences.
+- Oracle: large sources need more frames, e.g. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
+- `Z/` is a BASIC program (load address `$0401`): per line `04 08`, address as line number, text `= nnn `.
+- Variants: full RESUME/COLLISION syntax = menu 4–6 (`TA%=2`), without runtime = second menu item 5 (`T9%=1`), which appears only with dual drive or two drives. The port internally drives menu 1/4 and 3/6 with devices 8→9; the drive setup has no other influence. C/ without runtime starts directly with the header (load address `$46B0` or `$6C41`). Test names: `<name>.m4`, `.m35`, `.m65`.
 
-### Textausgabe im Browser (Stand 16.11.2026)
-`js/blitzc.html` zeigt nicht mehr den rohen C128-Bildschirmtext, sondern drei Fortschrittszeilen (PASS0/PASS1/PASS2: Balken, Prozent, letzte Zeilennummer) und eine scrollbare, nur lesbare Textarea für alle übrigen Meldungen (`?extensions in N`, Fehler, Zusammenfassung). Menü- und Titeltext entfallen.
-- `rt.js` übersetzt die Cursor-Ausgabe des Compilers (HOME/DOWN + Zahl = aktuelle Zeile, `PASSn`, Meldungszeilen) in Ereignisse; `compile(..., {onEvent})` ergänzt Position und Gesamtzahl der Quellzeilen (`sourceLines()`), `r.messages` liefert die Meldungen, `r.screen` bleibt unverändert.
-- Ereignisse: `start`, `pass`, `progress {pass,line,index,total}`, `message {text}`. PASS0 läuft nur im Mehrprogramm-Modus (T8), der Port bedient nur Einzelprogramme.
-- Die Seite kompiliert in einem Web Worker (`js/worker.js`; in `blitzc.html` per Blob-URL, geht auch von `file://`), damit der Fortschritt live erscheint; ohne Worker läuft derselbe Code in der Seite.
+### Text output in the browser (as of 16 Nov 2026)
+`js/blitzc.html` no longer shows the raw C128 screen text but three progress rows (PASS0/PASS1/PASS2: bar, percentage, last line number) and a scrollable, read-only textarea for all other messages (`?extensions in N`, errors, summary). Menu and title text are gone.
+- `rt.js` translates the cursor output of the compiler (HOME/DOWN + number = current line, `PASSn`, message lines) into events; `compile(..., {onEvent})` adds position and total number of source lines (`sourceLines()`), `r.messages` returns the messages, `r.screen` is unchanged.
+- Events: `start`, `pass`, `progress {pass,line,index,total}`, `message {text}`. PASS0 only runs in multi-program mode (T8); the port only serves single programs.
+- The page compiles in a Web Worker (`js/worker.js`; in `blitzc.html` via Blob URL, also works from `file://`) so that progress appears live; without a worker the same code runs in the page.
 
-### Mehrere Programme im Browser (Stand 17.11.2026)
-Das Feld „Programm mit Runtime“ bleibt; darunter steht die Liste „Programme ohne Runtime“ (mehrere Dateien auf einmal hinzufügbar, Name je Eintrag änderbar, Entfernen). Enthält die Liste ein Element, darf das Runtime-Feld leer bleiben. Reihenfolge: Runtime-Programm zuerst. Optionen (volle Syntax, Referenzdatei) gelten für alle. Ausgabe: je Programm `c-…` und `z-…` einzeln, bei mehreren Programmen zusätzlich ein `.d81` mit `C/NAME` und `Z/NAME`. Namen: höchstens 14 Zeichen, Dubletten werden nummeriert. Ein fehlerhaftes Programm hält die anderen nicht auf. `node js/test.js` prüft zusätzlich, dass Mehrfachläufe gleich den Einzelläufen sind.
+### Several programs in the browser (as of 17 Nov 2026)
+The field "Program with runtime" stays; below it is the list "Programs without runtime" (several files can be added at once, the name of each entry can be changed, entries can be removed). If the list has an element, the runtime field may stay empty. Order: the program with runtime comes first. Options (full syntax, reference file) apply to all programs. Output: `c-…` and `z-…` per program as separate downloads, and for several programs additionally a `.d81` with `C/NAME` and `Z/NAME`. Names: at most 14 characters, duplicates are numbered. A failing program does not stop the others. `node js/test.js` additionally checks that multi-program runs equal the single runs.
