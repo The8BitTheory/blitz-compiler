@@ -48,7 +48,7 @@ LABELS = {
     0x3a28: 'pop_byte', 0x39f7: 'file_params_init', 0x3041: 'io_status_check',
     0x4225: 'garbage_collect', 0x2178: 'alloc_string', 0x2168: 'alloc_string_x',
     0x4314: 'val_string', 0x25c5: 'hex_byte', 0x2fd3: 'fac_to_str_setup',
-    0x1da3: 'op_unimpl', 0x3f93: 'collision_reset', 0x3232: 'screen_call',
+    0x1da3: 'gfx_ext_hook', 0x2e95: 'rom_function', 0x3f93: 'collision_reset', 0x3232: 'screen_call',
     # dispatcher
     0x27d0: 'bc_jump_ax', 0x27d4: 'next', 0x27e3: 'next_y0', 0x27e9: 'skip_a', 0x27f6: 'next_inc1_y0',
     0x27f8: 'next_inc1', 0x27fc: 'fetch', 0x2735: 'binop_dispatch', 0x278d: 'main_op', 0x279f: 'ext_op',
@@ -58,24 +58,32 @@ LABELS = {
     0x45b8: 'xop_hi_tab', 0x4665: 'xop_lo_tab', 0x45fc: 'decrypt_tab',
 }
 # opcode handlers: main opcode -> name (all others stay op_XX via HANDLER_NAMES default)
-MAIN_OPS = {
-    0x0e: 'NEG', 0x0f: 'NOT_bitwise', 0x10: 'FOR_init', 0x11: 'FOR_loop_a', 0x12: 'FOR_loop_b',
-    0x13: 'NEXT_named', 0x14: 'NEXT_any', 0x15: 'stub_100', 0x16: 'goto_resume',
-    0x19: 'JUMP_abs', 0x1a: 'GOSUB_push', 0x1b: 'ON_select', 0x1c: 'ON_select2', 0x1d: 'RETURN_pop',
-    0x1e: 'RESTORE', 0x1f: 'IF_skip', 0x20: 'SGN', 0x21: 'INT', 0x22: 'ABS',
-    0x3b: 'PRINT_comma', 0x3c: 'PRINT_str', 0x3d: 'PRINT_str', 0x3e: 'PRINT_str', 0x3f: 'PRINT_cr',
-    0x40: 'PRINT_spc', 0x41: 'PRINT_spc', 0x42: 'PRINT_chan', 0x43: 'PRINT_str', 0x44: 'PRINT_chan', 0x45: 'PRINT_end',
-    0x46: 'GET', 0x48: 'CHKIN', 0x49: 'rom_stmt_4bd4', 0x4b: 'rom_stmt_926a',
-    0x51: 'INPUT_a', 0x52: 'IF_zero_skip', 0x53: 'INPUT_b', 0x55: 'INPUT_b', 0x57: 'INPUT_a',
-    0x58: 'IF_nonzero', 0x5a: 'IF_float', 0x4e: 'SYS', 0x18: 'SYS_x', 0x67: 'BANK', 0x72: 'ERR_str', 0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY',
-    0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'dos_block', 0x68: 'XOR_int',
-    0x6e: 'JOY', 0x69: 'xchg_11e7', 0x6a: 'RSPCOLOR', 0x74: 'TRAP_set', 0x75: 'TRAP_off',
-    0x7d: 'RESUME', 0x7e: 'RESUME_next', 0x7f: 'DO_push',
+MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/src + expected, see ROSETTA.md)
+    0x0e: 'NEG', 0x0f: 'NOT', 0x10: 'DIM', 0x11: 'FOR_nostep', 0x12: 'FOR', 0x13: 'NEXT_chk', 0x14: 'NEXT',
+    0x15: 'CLR', 0x16: 'JUMP_ptr52', 0x17: 'POKE', 0x18: 'SYS_x', 0x19: 'GOTO', 0x1a: 'GOSUB', 0x1b: 'ON_GOTO',
+    0x1c: 'ON_GOSUB', 0x1d: 'RETURN', 0x1e: 'RESTORE', 0x1f: 'IF_skip', 0x20: 'SGN', 0x21: 'INT', 0x22: 'ABS',
+    0x23: 'USR', 0x24: 'FRE', 0x25: 'POS', 0x26: 'SQR', 0x27: 'RND', 0x28: 'LOG', 0x29: 'EXP', 0x2a: 'COS',
+    0x2b: 'SIN', 0x2c: 'TAN', 0x2d: 'ATN', 0x2e: 'PEEK', 0x2f: 'LEN', 0x30: 'STR_S', 0x31: 'VAL', 0x32: 'ASC',
+    0x33: 'CHR_S', 0x34: 'LEFT_S', 0x35: 'RIGHT_S', 0x36: 'MID_S', 0x37: 'DEF_FN', 0x38: 'FN_call', 0x39: 'FN_end',
+    0x3b: 'PRINT_3b', 0x3c: 'PRINT_semi', 0x3d: 'PRINT_comma', 0x3e: 'PRINT_nl', 0x3f: 'PRINT_cr', 0x40: 'SPC',
+    0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_b', 0x45: 'PRINT_end',
+    0x46: 'GET', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
+    0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'IF_THEN_line', 0x53: 'INPUT_num',
+    0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x59: 'HEX_S', 0x5a: 'IF_begin', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
+    0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY', 0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'DOS', 0x63: 'RECORD',
+    0x65: 'CHAR', 0x66: 'SOUND', 0x67: 'BANK', 0x68: 'XOR', 0x69: 'BUMP', 0x6a: 'RSPCOLOR', 0x6b: 'RGR',
+    0x6c: 'RCLR', 0x6d: 'POT', 0x6e: 'JOY', 0x6f: 'RDOT', 0x70: 'DEC', 0x71: 'INSTR', 0x72: 'ERR_S',
+    0x73: 'MID_S_assign', 0x74: 'TRAP', 0x75: 'TRAP_off', 0x77: 'PUDEF', 0x78: 'USING', 0x79: 'VOL',
+    0x7a: 'RWINDOW', 0x7b: 'STR_ARG', 0x7c: 'USING_end', 0x7d: 'RESUME', 0x7e: 'RESUME_next',
 }
-EXT_OPS = {
-    0x00: 'GET_ext', 0x09: 'RSPRITE', 0x1e: 'stub_100_ext',
-    0x0f: 'VIC_d024', 0x10: 'VIC_d025', 0x11: 'SPRSAV_to_str', 0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy',
-    0x14: 'COLLISION', 0x17: 'obj_select', 0x18: 'SPRITE_enable', 0x19: 'SPRCOLOR', 0x32: 'WAVE_select',
+EXT_OPS = {    # opcode $00 xx
+    0x00: 'GETKEY', 0x01: 'RREG', 0x05: 'SYS_arg', 0x09: 'PEN', 0x0a: 'PLAY', 0x0b: 'WIDTH', 0x0c: 'SPRDEF',
+    0x0d: 'RSPPOS', 0x0e: 'RSPRITE', 0x0f: 'SPRCOLOR_1', 0x10: 'SPRCOLOR_2', 0x11: 'SPRSAV_to_str',
+    0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy', 0x14: 'COLLISION', 0x16: 'WINDOW', 0x17: 'obj_select',
+    0x18: 'SPRITE_enable', 0x19: 'SPRITE_color', 0x1e: 'NEW', 0x22: 'GO64', 0x23: 'TEMPO', 0x24: 'SLEEP',
+    0x26: 'GRAPHIC', 0x27: 'GRAPHIC_clr', 0x28: 'GRAPHIC_split', 0x29: 'SLOW', 0x2a: 'FAST', 0x2b: 'KEY_def',
+    0x2d: 'ENV_num', 0x2e: 'ATTACK', 0x32: 'WAVE', 0x33: 'PW', 0x34: 'FILTER_cutoff', 0x35: 'FILTER_lp',
+    0x38: 'FILTER_res', 0x39: 'SCALE', 0x3a: 'SCALE_off', 0x44: 'reinstall',
 }
 EXTRA_CODE = [0x2500, 0x27b2]   # reachable only by pushed addresses / vectors
 REF_LABELS = [0x4475]
@@ -230,4 +238,13 @@ COMMENT_BEFORE.pop(0x3eec+0) if False else None
 COMMENT_BEFORE.update({
     0x3fcd: """SYS (op $4E, and op $18 which first skips one token): get_word -> $03/$04 target address, $03D5 -> $02 (bank
 set by the BANK statement, op $67), then KERNAL JSRFAR ($FF6E) through rom_call_ax.  [sure: target $FF6E observed in code]""",
+})
+
+COMMENT_BEFORE.update({
+    0x1da3: """gfx_ext_hook: ext opcodes $3B-$43 (and $25): DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+PAINT $42, BOX $43 ($3C: [open]).  These graphics statements are not in the runtime: the stub jumps to $24BE, the
+extension-module dispatcher (modules128.d64).  [sure for the opcode->statement map, see ROSETTA.md; hook target [likely]]""",
+    0x2e95: """rom_function: ops $23-$2D (USR FRE -- SQR RND LOG EXP COS SIN TAN ATN), also $24 FRE.  The op number selects a function
+vector in the BASIC ROM (table at $47D8, reached through $4C44 / $2AD2); the runtime only converts the argument and calls it.
+Ops $25 (POS) and $2E (PEEK) have their own handlers.  [likely]""",
 })

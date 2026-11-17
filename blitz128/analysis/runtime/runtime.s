@@ -168,8 +168,10 @@ L1c5b:
         .byte $aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa
         .byte $aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa
         .byte $aa,$3a,$80
-op_unimpl:
-; ---- FAC -> string and other copied BASIC-ROM arithmetic (FOUT at $1DA6) ----
+gfx_ext_hook:
+; gfx_ext_hook: ext opcodes $3B-$43 (and $25): DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+; PAINT $42, BOX $43 ($3C: [open]).  These graphics statements are not in the runtime: the stub jumps to $24BE, the
+; extension-module dispatcher (modules128.d64).  [sure for the opcode->statement map, see ROSETTA.md; hook target [likely]]
         jmp  $24be
 fout:
 ; FOUT: FAC1 -> string at $0100 (copy of the BASIC ROM routine).  [sure per ANALYSE section 4.2]
@@ -302,7 +304,7 @@ L1e7d:
         sta  fac_sign
 L1e7f:
         jmp  next_inc1
-op0f_NOT_bitwise:
+op0f_NOT:
         lda  intflg
         bmi  L1e89
         jsr  fac_to_int
@@ -787,7 +789,7 @@ L219b:
         stx  $0298
         ldy  fac_exp
         jmp  str_copy_b
-op7b:
+op7b_STR_ARG:
         lda  #$02
         sta  MMU_CR
         sty  $77
@@ -818,7 +820,7 @@ L21cb:
         jmp  L255d
         .byte $8d,$03,$ff,$20,$d9,$51,$8d,$01,$ff,$4c,$a6,$23,$8d,$03,$ff,$20
         .byte $fa,$51,$8d,$01,$ff,$4c,$06,$22
-op15_stub_100:
+op15_CLR:
         ldy  #$17
         bit  $0ba0
         ldx  #$0b
@@ -850,7 +852,7 @@ init:
         lda  #$80
         jsr  init_vars
         bit  flags80
-        bpl  op15_stub_100
+        bpl  op15_CLR
 L2247:
         jmp  next
 op1e_RESTORE:
@@ -888,7 +890,7 @@ L2273:
         bcc  L2254
         inc  dataptr_hi
         bcs  L2254
-op16_goto_resume:
+op16_JUMP_ptr52:
         lda  $52
         ldx  $53
         jmp  bc_jump_ax
@@ -1012,7 +1014,7 @@ data_ptr_init:
         eor  #$79
         sta  dataptr_hi
         rts  
-op7f_DO_push:
+op7f:
         lda  $127f
         bmi  L2396
         ldx  #$02
@@ -1060,9 +1062,9 @@ L2396:
         clc  
         adc  #$02
         jmp  L27ee
-op4f:
+op4f_END:
         clc  
-op49_rom_stmt_4bd4:
+op49_STOP:
         jsr  trap_reset
         lda  #$d4
         ldx  #$4b
@@ -1100,18 +1102,18 @@ L23d2:
         lda  #$02
         sta  $0300
         rts  
-xop24:
+xop24_SLEEP:
         jsr  get_word
         ldy  $16
         ldx  #$da
         stx  rom_call_lo
         ldx  #$6b
         bne  L240f
-xop2b:
+xop2b_KEY_def:
         lda  #$f4
         ldx  #$60
         bne  L23fe
-xop0a:
+xop0a_PLAY:
         lda  #$e7
         ldx  #$6d
 L23fe:
@@ -1126,15 +1128,15 @@ L23fe:
 L240f:
         jsr  rom_call_x
         jmp  next_y0
-xop0c:
+xop0c_SPRDEF:
         lda  #$72
         ldx  #$73
 L2419:
         jsr  rom_call_ax
         jmp  next_y0
-xop39:
+xop39_SCALE:
         iny  
-xop3a:
+xop3a_SCALE_off:
         jsr  get_byte
         cpx  #$02
         bcs  *+126
@@ -1156,14 +1158,15 @@ L2433:
         lda  #$89
         ldx  #$69
         bne  L2419
-xop05:
+xop05_SYS_arg:
+; shared by: $00,$05 SYS_arg, $00,$06 ?, $00,$07 ?, $00,$08 ?
         txa  
         tay  
         jsr  get_byte
         txa  
         sta  a:$00,y
         jmp  next_y0
-xop09_RSPRITE:
+xop09_PEN:
         jsr  get_byte
         lda  #$b4
         ldy  #$82
@@ -1290,11 +1293,11 @@ trap_reset:
         lda  #$4d
         sta  $0301
         rts  
-xop22:
+xop22_GO64:
         lda  #$59
         ldy  #$5a
         bne  L257d
-op56:
+op56_TI_S_assign:
         lda  #$0b
         ldy  #$54
 L255d:
@@ -1303,23 +1306,23 @@ L2560:
         lda  #$1b
         sta  $18
         jmp  next
-op4b_rom_stmt_926a:
+op4b_SCNCLR_n:
         jsr  get_byte
         lda  #$92
         ldy  #$6a
         bne  L257d
-op5b:
+op5b_SCNCLR:
         lda  #$7b
         ldy  #$6a
         bne  L257d
-op79:
+op79_VOL:
         jsr  get_byte
         lda  #$c8
         ldy  #$71
 L257d:
         jsr  rom_call_ay
         jmp  next
-op78:
+op78_USING:
         dey  
         sty  $0136
         lda  fac_m1
@@ -1339,12 +1342,12 @@ L2596:
         bne  L2596
 L25a3:
         jmp  $249a
-op7c:
+op7c_USING_end:
         ror  $77
         lda  #$f2
         ldy  #$98
         bne  L255d
-op59:
+op59_HEX_S:
         jsr  get_word
         sty  t6f
         sty  t6d
@@ -1377,7 +1380,7 @@ L25dc:
         sta  $0100,y
         iny  
         rts  
-op68_XOR_int:
+op68_XOR:
         jsr  get_word
         sta  t6d
         stx  t6e
@@ -1681,7 +1684,7 @@ L27d6:
         bne  fetch
         inc  bcptr_hi
         bne  fetch
-xop44:
+xop44_reinstall:
         jsr  install_trampolines
 next_y0:
         ldy  #$00
@@ -2184,7 +2187,7 @@ L2b0d:
         dex  
         bpl  L2b0d
         jmp  next_inc1_y0
-op4d:
+op4d_POINTER:
         ldx  varptr
         lda  varptr_hi
         bne  L2afa
@@ -2740,7 +2743,10 @@ L2e8a:
 L2e91:
         ldx  #$00
         beq  L2e8a
-op23:
+rom_function:
+; rom_function: ops $23-$2D (USR FRE -- SQR RND LOG EXP COS SIN TAN ATN), also $24 FRE.  The op number selects a function
+; vector in the BASIC ROM (table at $47D8, reached through $4C44 / $2AD2); the runtime only converts the argument and calls it.
+; Ops $25 (POS) and $2E (PEEK) have their own handlers.  [likely]
         txa  
         pha  
         lda  intflg
@@ -2782,7 +2788,7 @@ L2ed5:
 L2ed8:
         lda  ($16),y
         jmp  L2eec
-op2e:
+op2e_PEEK:
         jsr  get_word
         ldx  $03d5
         beq  L2ed8
@@ -2795,14 +2801,15 @@ L2eec:
         lda  #$80
         sta  intflg
         jmp  next_inc1
-xop01:
+xop01_RREG:
+; shared by: $00,$01 RREG, $00,$02 ?, $00,$03 ?, $00,$04 ?
         lda  $04,x
         dey  
         inc  bcptr
         bne  L2eec
         inc  bcptr_hi
         bne  L2eec
-op25:
+op25_POS:
         lda  $ec
         sec  
         sbc  $e6
@@ -2887,7 +2894,8 @@ L2f7e:
         lda  #$80
         sta  intflg
         jmp  next_inc1_y0
-op2f:
+op2f_LEN:
+; shared by: $2F LEN, $31 VAL, $32 ASC, $70 DEC
         lda  #$64
         sta  $0233
         lda  fac_m4
@@ -2937,7 +2945,7 @@ fac_to_str_setup:
         jmp  $8e42
 L2fdf:
         jmp  fout
-op30:
+op30_STR_S:
         jsr  fac_to_str_setup
         sta  MMU_LCRA
         sty  t6e
@@ -2955,7 +2963,7 @@ L2ff9:
         sta  $52
         sty  fac_exp
         jmp  L316d
-op33:
+op33_CHR_S:
         jsr  get_byte
         lda  frespc
         ldy  frespc_hi
@@ -3026,7 +3034,7 @@ op48_CHKIN:
         jsr  CHKIN
         jsr  io_status_check
         jmp  next
-xop00_GET_ext:
+xop00_GETKEY:
         inc  bcptr
         bne  op46_GET
         inc  bcptr_hi
@@ -3114,13 +3122,14 @@ L30f3:
         jsr  wr_zp
 L310f:
         jmp  L2ce4
-op36:
+op36_MID_S:
         jsr  get_byte
         jsr  pop_byte
         txa  
         bne  L3121
         jmp  $24a3
-op34:
+op34_LEFT_S:
+; shared by: $34 LEFT_S, $35 RIGHT_S
         jsr  get_byte
 L3121:
         pla  
@@ -3246,7 +3255,7 @@ L31c7:
         jmp  next_inc1
 L31ea:
         jmp  $24b5
-op4c:
+op4c_WAIT:
         jsr  get_word
         jsr  pop_byte
         stx  varptr
@@ -3259,7 +3268,7 @@ L31fa:
         and  varptr
         beq  L31fa
         jmp  next
-op17:
+op17_POKE:
         jsr  get_word
         jsr  pop_byte
         txa  
@@ -3285,7 +3294,7 @@ screen_call:
         lda  #$16
         sta  $02aa
         jmp  $02a2
-op4a:
+op4a_READ:
         ldx  #$ee
         txa  
         eor  (dataptr),y
@@ -3360,7 +3369,8 @@ L32b3:
         ldx  #$02
         jsr  print_str
         beq  L32df
-op3c_PRINT_str:
+op3c_PRINT_semi:
+; shared by: $3C PRINT_semi, $3D PRINT_comma, $3E PRINT_nl, $43 PRINTH_value
         stx  $3e
         lda  valtyp
         bmi  L328d
@@ -3384,7 +3394,7 @@ L32df:
         cpx  #$3d
         bcc  L3342
         bne  op3f_PRINT_cr
-op3b_PRINT_comma:
+op3b_PRINT_3b:
 ; ---- PRINT family (CHROUT/CLRCHN; $42/$44 = PRINT# via CHKOUT) ----
         lda  $ec
         sec  
@@ -3395,7 +3405,8 @@ L32ec:
         eor  #$ff
         adc  #$01
         bpl  L3308
-op40_PRINT_spc:
+op40_SPC:
+; shared by: $40 SPC, $41 TAB
         stx  $3e
         jsr  get_byte
         txa  
@@ -3441,7 +3452,8 @@ op45_PRINT_end:
 L3342:
         sta  MMU_LCRA
         jmp  next
-op42_PRINT_chan:
+op42_CHKOUT:
+; shared by: $42 CHKOUT, $44 CHKOUT_b
         stx  $3e
         jsr  get_byte
         stx  $15
@@ -3462,13 +3474,14 @@ op61_CLOSE:
         jsr  CLOSE
         jsr  io_status_check
         jmp  next
-op50:
+op50_INPUT_begin:
         lda  bcptr
         sta  $1202
         lda  bcptr_hi
         sta  $1203
         jmp  next
-op53_INPUT_b:
+op53_INPUT_num:
+; shared by: $53 INPUT_num, $55 ?
         stx  $3e
         lda  #$02
         sta  MMU_CR
@@ -3517,7 +3530,8 @@ L33d1:
 L33db:
         sty  $45
         jmp  op45_PRINT_end
-op51_INPUT_a:
+op51_INPUT_str:
+; shared by: $51 INPUT_str, $57 ?
         lda  #$02
         sta  MMU_CR
         stx  $3e
@@ -3660,7 +3674,7 @@ L34d7:
         sbc  t6b
         sta  t6f
         jmp  L3445
-op12_FOR_loop_b:
+op12_FOR:
         lda  intflg
         and  #$80
         sta  $0e
@@ -3673,7 +3687,7 @@ L34ed:
         dex  
         bpl  L34ed
         bmi  L3513
-op11_FOR_loop_a:
+op11_FOR_nostep:
         lda  #$01
         ldx  intflg
         bmi  L3509
@@ -3810,7 +3824,7 @@ L35cf:
         stx  fstk_hi
 L35d1:
         sta  fstk
-op14_NEXT_any:
+op14_NEXT:
         ldy  #$02
         lda  varptr_hi
         cmp  (fstk),y
@@ -3836,7 +3850,7 @@ L35ef:
         bcc  L35cf
 L35fa:
         jmp  L2497
-op13_NEXT_named:
+op13_NEXT_chk:
         ldy  #$02
         lda  (fstk),y
         sta  varptr_hi
@@ -3995,33 +4009,34 @@ L36fa:
 L3708:
         bcs  L36e6
         bcc  L36e8
-op5a_IF_float:
+op5a_IF_begin:
         sty  prevop
         lda  intflg
         bpl  L371a
         lda  fac_m3
         ora  fac_m4
         bne  L372c
-        beq  op19_JUMP_abs
+        beq  op19_GOTO
 L371a:
         lda  fac_exp
         bne  L372c
-        beq  op19_JUMP_abs
-op52_IF_zero_skip:
+        beq  op19_GOTO
+op52_IF_THEN_line:
         sty  prevop
         lda  intflg
         bpl  L3731
         lda  fac_m3
         ora  fac_m4
-        bne  op19_JUMP_abs
+        bne  op19_GOTO
 L372c:
         lda  #$02
         jmp  L27ec
 L3731:
         lda  fac_exp
-        bne  op19_JUMP_abs
+        bne  op19_GOTO
         beq  L372c
-op1b_ON_select:
+op1b_ON_GOTO:
+; shared by: $1B ON_GOTO, $1C ON_GOSUB
         sty  prevop
         iny  
         stx  $3e
@@ -4048,7 +4063,7 @@ L3754:
         dec  fac_m3
         sec  
         bcs  L3769
-op1a_GOSUB_push:
+op1a_GOSUB:
         lda  #$02
         sta  fac_m3
         sty  fac_m2
@@ -4076,7 +4091,7 @@ L377b:
         iny  
         sta  (fstk),y
         ldy  fac_m2
-op19_JUMP_abs:
+op19_GOTO:
         iny  
 L3792:
         lda  (bcptr),y
@@ -4104,7 +4119,7 @@ L37ab:
         stx  fstk_hi
 L37b8:
         sta  fstk
-op1d_RETURN_pop:
+op1d_RETURN:
         lda  (fstk),y
         cmp  #$8d
         beq  L37ce
@@ -4137,7 +4152,7 @@ L37e3:
         jmp  fetch
 L37eb:
         jmp  L238b
-op39:
+op39_FN_end:
         pla  
         sta  varptr
         pla  
@@ -4156,17 +4171,17 @@ L37f6:
         tax  
         pla  
         jmp  L379c
-op58_IF_nonzero:
+op58:
         sty  prevop
         lda  intflg
         bpl  L381a
         lda  fac_m3
         ora  fac_m4
-        bne  op1d_RETURN_pop
+        bne  op1d_RETURN
         jmp  next_inc1
 L381a:
         lda  fac_exp
-        bne  op1d_RETURN_pop
+        bne  op1d_RETURN
         jmp  next_inc1
 op1f_IF_skip:
         sty  prevop
@@ -4187,7 +4202,7 @@ L3837:
         lda  (bcptr),y
         eor  #$5a
         jmp  skip_a
-op37:
+op37_DEF_FN:
         iny  
         lda  (bcptr),y
         eor  #$5a
@@ -4219,7 +4234,7 @@ op37:
         jsr  st_var
         ldy  #$05
         bne  L3837
-op38:
+op38_FN_call:
         ldy  #$02
         lda  (bcptr),y
         eor  #$5a
@@ -4267,7 +4282,7 @@ L38bb:
         jmp  L2841
 L38ca:
         jmp  $24af
-op10_FOR_init:
+op10_DIM:
 ; ---- FOR / NEXT / flow control ----
         iny  
         lda  (bcptr),y
@@ -4534,7 +4549,7 @@ L3a93:
         jsr  OPEN
         jsr  io_status_check
         jmp  next
-op62_dos_block:
+op62_DOS:
         jsr  file_params_init
         inc  bcptr
         bne  L3aab
@@ -4716,7 +4731,7 @@ L3bf2:
         iny  
         sty  $011d
         jmp  L39e9
-op63:
+op63_RECORD:
         jsr  get_byte
         txa  
         beq  L3ba3
@@ -4734,7 +4749,7 @@ op64:
         lda  #$f9
         ldy  #$a2
         jmp  L257d
-xop28:
+xop28_GRAPHIC_split:
         jsr  pop_byte
         cpx  #$1a
         bcs  L3c9b
@@ -4744,7 +4759,7 @@ xop28:
         asl  a
         adc  #$30
         sta  $0a34
-xop27:
+xop27_GRAPHIC_clr:
         jsr  get_byte
         cpx  #$02
         bcs  L3c9b
@@ -4756,7 +4771,7 @@ xop27:
         jsr  rom_call_ay
 L3c42:
         jmp  next_y0
-op65:
+op65_CHAR:
         jsr  pop_byte
         cpx  #$02
         ldy  $d8
@@ -4801,7 +4816,7 @@ L3c71:
         jmp  L257d
 L3c9b:
         jmp  $24a3
-op66:
+op66_SOUND:
         jsr  get_byte
         dex  
         cpx  #$03
@@ -4852,7 +4867,7 @@ L3cec:
         ldy  $16
         jsr  rom_call_x
         jmp  next
-op54:
+op54_MOVSPR:
         iny  
         lda  (bcptr),y
         eor  #$5a
@@ -4869,7 +4884,7 @@ op54:
         stx  rom_call_lo
         ldx  #$6c
         jmp  L240f
-xop26:
+xop26_GRAPHIC:
         lda  #$a1
         ldx  #$1d
         sta  $3d
@@ -4887,7 +4902,7 @@ L3d55:
         lda  #$6c
         ldy  #$6b
         jmp  L40bf
-xop2e:
+xop2e_ATTACK:
         iny  
 xop2f:
         lda  $77
@@ -4923,7 +4938,7 @@ L3d88:
         ora  ptr24
         sta  $123f,y
         jmp  next_y0
-xop33:
+xop33_PW:
         jsr  get_word
         ldy  $77
         lda  $1253,y
@@ -4935,7 +4950,7 @@ xop33:
         sta  $125d,y
 L3da4:
         jmp  next_y0
-xop2a:
+xop2a_FAST:
         ldx  #$02
         bit  $01a2
         lda  #$02
@@ -4949,25 +4964,25 @@ L3dbb:
         sta  $d011
         stx  $d030
         jmp  L27e7
-op6d:
+op6d_POT:
         jsr  get_byte
         lda  #$53
         ldy  #$82
         jsr  rom_call_ay
         jsr  fac_to_int
         jmp  next_inc1_y0
-op72_ERR_str:
+op72_ERR_S:
         jsr  rom_call_f9_80
         lda  #$01
         sta  intflg
         jmp  next_inc1_y0
-xop19_SPRCOLOR:
+xop19_SPRITE_color:
         ldy  $77
         iny  
         iny  
-xop10_VIC_d025:
+xop10_SPRCOLOR_2:
         iny  
-xop0f_VIC_d024:
+xop0f_SPRCOLOR_1:
         jsr  get_byte
         dex  
         cpx  #$10
@@ -4980,14 +4995,14 @@ xop0f_VIC_d024:
         jmp  next_y0
 L3dfa:
         jmp  $24a3
-xop0b:
+xop0b_WIDTH:
         jsr  get_byte
         dex  
         cpx  #$02
         bcs  L3dfa
         stx  $116b
         jmp  L27e5
-op71:
+op71_INSTR:
         jsr  get_byte
         txa  
         beq  L3dfa
@@ -5051,7 +5066,7 @@ L3e71:
         lda  $52
         bit  a:$a9
         jmp  L2f76
-xop34:
+xop34_FILTER_cutoff:
         jsr  get_word
         cmp  #$08
         bcs  L3edc
@@ -5066,7 +5081,7 @@ L3e85:
         sta  $1272
         stx  $1271
         jmp  next_y0
-xop35:
+xop35_FILTER_lp:
         ldy  #$10
         bit  $20a0
         bit  $40a0
@@ -5082,14 +5097,14 @@ xop35:
 L3eb0:
         sta  $1274
         jmp  next_y0
-xop38:
+xop38_FILTER_res:
         jsr  L2e67
         cpx  #$10
         bcs  L3edc
         txa  
         ldy  #$34
         jmp  L3d72
-xop32_WAVE_select:
+xop32_WAVE:
         jsr  get_byte
         cpx  #$04
         bcs  L3edc
@@ -5097,7 +5112,7 @@ xop32_WAVE_select:
         ldx  $77
         sta  $1253,x
         jmp  next_y0
-xop2d:
+xop2d_ENV_num:
         jsr  get_byte
         cpx  #$0a
         bcc  L3ee7
@@ -5169,7 +5184,7 @@ L3f36:
         ora  #$80
 L3f53:
         jmp  L2f76
-op77:
+op77_PUDEF:
         lda  #$1b
         sta  $18
         ldy  fac_exp
@@ -5191,7 +5206,7 @@ op75_TRAP_off:
         lda  #$ff
         sta  $120c
         jmp  next_inc1_y0
-op74_TRAP_set:
+op74_TRAP:
 ; ---- TRAP / RESUME / DO ----
         iny  
         lda  (bcptr),y
@@ -5220,7 +5235,7 @@ collision_reset:
         rts  
 op76:
         jsr  collision_reset
-        jmp  op19_JUMP_abs
+        jmp  op19_GOTO
 op7e_RESUME_next:
         dey  
 op7d_RESUME:
@@ -5332,7 +5347,7 @@ L406e:
         iny  
 L407c:
         rts  
-xop23:
+xop23_TEMPO:
         jsr  get_byte
         txa  
         beq  L4089
@@ -5340,7 +5355,7 @@ xop23:
         jmp  next_y0
 L4089:
         jmp  $24a3
-xop16:
+xop16_WINDOW:
         jsr  get_byte
 L408f:
         cpx  #$28
@@ -5374,7 +5389,7 @@ xop2c:
         lda  #$21
         ldy  #$61
         bne  L40bf
-op5c:
+op5c_COLOR:
         lda  #$a1
         ldx  #$1d
         sta  $3d
@@ -5387,12 +5402,12 @@ op5c:
         lda  #$ee
         ldy  #$69
         jmp  L257d
-xop0d:
+xop0d_RSPPOS:
         lda  #$b0
         ldx  #$83
         ldy  #$03
         bne  L40f4
-xop0e:
+xop0e_RSPRITE:
         lda  #$37
         ldx  #$83
         ldy  #$06
@@ -5413,7 +5428,7 @@ L40f4:
 L4110:
         jsr  fac_to_int
         jmp  L27e7
-op73:
+op73_MID_S_assign:
         jsr  pop_byte
         dex  
         stx  t6f
@@ -5465,7 +5480,7 @@ L416c:
         jmp  next
 L416f:
         jmp  $24a3
-op69_xchg_11e7:
+op69_BUMP:
         jsr  get_byte
         dex  
         cpx  #$02
@@ -5496,7 +5511,7 @@ op6a_RSPCOLOR:
         and  #$0f
         adc  #$01
         jmp  L2eec
-op7a:
+op7a_RWINDOW:
         jsr  get_byte
         cpx  #$02
         beq  L41c9
@@ -5520,6 +5535,7 @@ L41c9:
         asl  a
         bne  L41c6
 xop1f:
+; shared by: $00,$1F ?, $00,$20 ?, $00,$21 ?
         txa  
         clc  
         adc  #$65
@@ -5552,7 +5568,7 @@ L41fc:
         jsr  $ff50
         sta  MMU_LCRA
         jmp  next_y0
-op6b:
+op6b_RGR:
         lda  $d8
         clc  
         rol  a

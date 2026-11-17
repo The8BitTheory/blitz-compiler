@@ -88,6 +88,15 @@ while _a < END:
 for x, txt in names.FAMILY_COMMENT.items():
     a = g(main_tab_lo + x) | g(main_tab_hi + x) << 8
     names.COMMENT_BEFORE.setdefault(a, txt)
+# opcodes sharing one handler -> comment
+_share = {}
+for x in range(0x0e, 0x80):
+    _share.setdefault(g(main_tab_lo + x) | g(main_tab_hi + x) << 8, []).append('$%02X %s' % (x, names.MAIN_OPS.get(x, '?')))
+for x in range(0, 0x45):
+    _share.setdefault(g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8, []).append('$00,$%02X %s' % (x, names.EXT_OPS.get(x, '?')))
+for a_, lst in _share.items():
+    if len(lst) > 1 and a_ not in (0x1da3, 0x2e95):
+        names.COMMENT_BEFORE[a_] = (names.COMMENT_BEFORE.get(a_, '') + '\n' if a_ in names.COMMENT_BEFORE else '') + 'shared by: ' + ', '.join(lst)
 def sym(a):
     if a in names.SYMS: return names.SYMS[a]
     if a in labels and a in starts and LO <= a < END: return labels[a]
