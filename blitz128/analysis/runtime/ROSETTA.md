@@ -75,3 +75,5 @@ Image 2 detail: ext `41` CIRCLE -> handler `$4238`, `42` PAINT -> `$4203`, `43` 
 
 `DRAW TO` continuation (`3D`) and `LOCATE` (`3E`) have no flag byte; their flags are an ordinary integer-constant operand
 (`locate +10,+10` -> `ba ba b3 00 3e`, `locate 10;20` -> `f4 ba a6 80 00 3e`, `draw .. to +5,+5` -> `b5 b5 b3 00 3d`).
+
+`$47` = EXTENSION (`::` command): the tokenized BASIC text of the command follows the opcode unencrypted, up to and including the closing `:` (`::poke 2001,5:` -> `47 97 20 32 30 30 31 2c 35 3a`; the compiler prints `?extensions in <line>`).

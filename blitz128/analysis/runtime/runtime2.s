@@ -1075,6 +1075,10 @@ xop1e_NEW_1:
 init:
 ; init: entry after the loader.  Sets VARTAB=$1C01, installs trampolines, reads header 2 (bytecode start, data table),
 ; then init_vars parses header 1 and gives every variable a 7-byte slot.  Falls into the main loop.
+; BUG (found 17.11.2026): init always runs init_vars in check mode.  For a program with NO scalar variable the size of the variable area is 0, so
+; vbase + 0 == strend ("fits") and init skips op15_CLR.  The array pointer table (the `z*%` array of the manual) is then never initialised and the first
+; array access ends in err_bad_subscript.  With at least one scalar variable the size is > 0, check mode fails, CLR runs and everything works.  A binary patch is not
+; possible in place: "equal" is also the normal case of a chain (same table size), so it cannot simply be turned into a mismatch.  Workaround: any scalar variable in the program.
         lda  #$ff
         sta  $76
         lda  #$01
@@ -1802,7 +1806,12 @@ neg_int_3:
         rol  t6d
         rol  t6c
         bcc  neg_int_2
-op47:
+op47_EXTENSION:
+; EXTENSION ($47): a `::` command of the source.  The compiler embeds the tokenized BASIC text of the command - UNENCRYPTED, up to and including the closing `:` -
+; right behind this opcode (`::poke 2001,5:` -> `47 97 20 32 30 30 31 2c 35 3a`).  The handler saves the IGONE vector ($0308/$0309 -> $026E/$026F), points it at
+; tr_user_ret ($0270), stores the bytecode pointer in $3D/$3E (and $1202/$1203) and calls the BASIC ROM through the user stub (tr_call_user, config C).  The ROM interpreter
+; executes ONE statement from the embedded text and hands control back through IGONE to user_return ($27B2), which restores IGONE and continues at jump_3d3e: bcptr := $3D/$3E
+; (the BASIC text pointer, now at the closing `:`), then next advances one byte.  [sure: VICE trace, see MANUAL.md]
         lda  $0308
         ldx  $0309
         sta  $026e

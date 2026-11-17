@@ -258,3 +258,11 @@ Das gescannte Handbuch wurde am 17.11.2026 gelesen. Es dokumentiert die Direktiv
 (255 Byte Zeilenlänge, 5000 Zeilen, 6000 Sprünge, 1000 Variablen, 255 Arrays, 200 `**FI`-Variablen), das Spezial-Array `z*%` und die Maschinensprache-Regeln (`$3D/$3E` nach SYS wiederherstellen).
 Es bestätigt die Overlay-Befunde aus Abschnitt 13 (Option 4 = Extra-Durchlauf, der die Variablen liest; Startprogramm wird auf das längste Modul verlängert) und sagt, dass Option 3
 keine Variablen übergibt. Der geforderte Dongle fehlt hier: diese Kopie ist eine gecrackte Version (Angabe des Repository-Eigentümers). Es erwähnt nicht den BAD-SUBSCRIPT-Fehler bei Array-Zuweisungen mit konstantem Index und Wert (`runtime/OVERLAY.md`).
+
+---
+
+## 15. Zwei Runtime-Befunde (VICE-Traces, 17.11.2026)
+* **`::` EXTENSION = Opcode `$47`.** Der Compiler legt den getokenten BASIC-Text des Befehls unverschlüsselt und bis zum schließenden `:` hinter dem Opcode ab. Die Runtime setzt IGONE auf `tr_user_ret`,
+  lässt das BASIC-ROM ein Statement ausführen und macht am BASIC-Textzeiger `$3D/$3E` weiter (`jump_3d3e`). Siehe `runtime/names.py` (`OP_COMMENT[0x47]`) und `runtime/MANUAL.md`.
+* **Arrays scheitern in Programmen ohne skalare Variable** (Fehler 18 BAD SUBSCRIPT beim ersten Array-Zugriff). `init` ruft `init_vars` im Prüfmodus auf; bei leerer Variablentabelle ist `vbase + 0 == strend`, die Prüfung besteht und
+  `init` überspringt `op15_CLR`, die Array-Zeigertabelle (`z*%`) wird also nie initialisiert. Workaround: eine skalare Variable deklarieren. Details und Trace: `runtime/OVERLAY.md`.

@@ -51,11 +51,18 @@ Two-module programs, original (fixed) compiler, menu item 4, then run in VICE; t
 | FN defined in module 1, called in module 2 | the call refers to the same slot but the definition does **not** survive the `LOAD` (the body lives in module 1's bytecode, which module 2 overwrites): error 14 in module 2 | `ovl-fnx` |
 | `**FI` | the "fast integer" flag is set on the name in the common table, for **all** modules: order is that of first appearance (the order inside the directive is irrelevant), a module without the directive sees the names as integers too, and a directive in module 2 changes module 1 (which is compiled afterwards, with the merged table): `i=1.5 : poke ..,i*10` gives 10, not 15 | `ovl-fi` (`01 02 03`), `ovl-fi2` (`01 02`), `ovl-fi3` (`0A 0A`) |
 
-## Side finding: array element assignment with constant index and constant value (original runtime)
-`dim a(5) : a(1)=7` raises **error 18 BAD SUBSCRIPT** when the program runs in VICE - no chaining involved, with the original and with the fixed
-compiler, also for `a(0)=7`, `a(15)=7`, `a(16)=7`, `a%(1)=7`. These work: `a(i)=7` (variable index), `a(1)=i` (constant index, variable/float value), `a(i+1)=7`,
-reading `a(1)`. The error comes from the integer-index path of `var_long_ref2` (`jmp err_bad_subscript`, `$2BB6`/`$2BF5`); the trigger seems to be that index
-and value are both integer constants (`b1 b7 e4 07`). Cause not analysed, not tested on real hardware.
+## Side finding: programs without any scalar variable cannot use arrays (cause found 17.11.2026)
+`dim a(5) : a(1)=7` raised error 18 BAD SUBSCRIPT in VICE - with the original and the fixed compiler, no chaining involved. Series of tests: it is **not** the constant index or value but the
+absence of scalar variables. Every failing program (`c1`-`c4`, `c6`, `c7`, `c13`) has an empty variable table, every working one has at least one scalar variable anywhere in the program
+(`i=1`, `x=0` before or `x=1` after the array use all help; `dim a(5),b(5)` without a scalar fails, `x=0 : dim a(5) : a(1)=7` works).
+
+Cause (VICE trace, `init`/`init_vars`): `init` always calls `init_vars` in check mode ($80). The check "does the new variable area fit" is `vbase + size <= strend`. With no scalar variable
+`size` = 0, and at program start `vbase` = `strend` = `$0400` (`$2F-$32` = `00 04 00 04`), so the check passes, check mode stays set, and `init` jumps over `op15_CLR` (`bit flags80 / bpl op15_CLR`).
+With one variable `size` = 7: `vbase+7 > strend`, the flag is cleared, `op15_CLR` runs (breakpoint `$21F2` hit) and re-enters `init_vars` with A=0 (second hit of `$2288`): variables, strings and the
+array pointer table (`z*%`, see `MANUAL.md`) are initialised. Without CLR the pointer for the array is 0 and `var_long_ref` ends in `err_bad_subscript` (`$2B56` `beq $2BB6`).
+The type byte on the stack for a constant integer index is the constant's own token (`$B0` in the failing `c3`, `$B1` in the working `c11`) instead of `$80`; only its bit 7 matters (`bmi`), so it is not the cause.
+No in-place binary patch: "equal" is also the normal case of a chain (modules with the same table size), so making it a mismatch would break overlay chaining. **Workaround: declare any scalar variable.**
+A compiler change could insert a dummy variable when the table is empty (not done).
 
 ## Not done
 * The merge rules were tested with two-module programs; larger sets, multi-dimensional arrays, `**NE/**NG/**RI/**SP` and mixed integer/float uses of one name were not.

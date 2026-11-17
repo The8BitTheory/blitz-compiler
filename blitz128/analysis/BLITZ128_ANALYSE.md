@@ -258,3 +258,11 @@ The scanned instruction manual was read on 17.11.2026. It documents the directiv
 (255-byte lines, 5000 lines, 6000 jumps, 1000 variables, 255 arrays, 200 `**FI` variables), the special array `z*%` and the machine-language rules (restore `$3D/$3E` after SYS).
 It confirms the overlay findings of section 13 (option 4 = extra pass that reads the variables, starting program lengthened to the longest module) and says that option 3
 does not pass variables. The dongle it requires is absent here: this copy is a cracked version (stated by the repository owner). It does not mention the BAD SUBSCRIPT error for array assignments with constant index and value (`runtime/OVERLAY.md`).
+
+---
+
+## 15. Two runtime findings (VICE traces, 17.11.2026)
+* **`::` EXTENSION = opcode `$47`.** The compiler embeds the tokenized BASIC text of the command, unencrypted and up to the closing `:`, behind the opcode. The runtime points IGONE at `tr_user_ret`,
+  lets the BASIC ROM execute one statement and continues at the BASIC text pointer `$3D/$3E` (`jump_3d3e`). See `runtime/names.py` (`OP_COMMENT[0x47]`) and `runtime/MANUAL.md`.
+* **Arrays fail in programs without any scalar variable** (error 18 BAD SUBSCRIPT at the first array access). `init` runs `init_vars` in check mode; with an empty variable table `vbase + 0 == strend`, the check passes and `init` skips
+  `op15_CLR`, so the array pointer table (`z*%`) is never initialised. Workaround: declare a scalar variable. Details and trace: `runtime/OVERLAY.md`.

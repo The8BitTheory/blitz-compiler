@@ -67,7 +67,7 @@ MAIN_OPS = {   # names verified against the compiler's own output (blitzc/tests/
     0x33: 'CHR_S', 0x34: 'LEFT_S', 0x35: 'RIGHT_S', 0x36: 'MID_S', 0x37: 'DEF_FN', 0x38: 'FN_call', 0x39: 'FN_end',
     0x3b: 'PRINT_comma_tab', 0x3c: 'PRINT_semi', 0x3d: 'PRINT_comma', 0x3e: 'PRINT_nl', 0x3f: 'PRINT_cr', 0x40: 'SPC',
     0x41: 'TAB', 0x42: 'CHKOUT', 0x43: 'PRINTH_value', 0x44: 'CHKOUT_cr', 0x45: 'PRINT_end',
-    0x46: 'GET', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
+    0x46: 'GET', 0x47: 'EXTENSION', 0x48: 'CHKIN', 0x49: 'STOP', 0x4a: 'READ', 0x4b: 'SCNCLR_n', 0x4c: 'WAIT', 0x4d: 'POINTER',
     0x4e: 'SYS', 0x4f: 'END', 0x50: 'INPUT_begin', 0x51: 'INPUT_str', 0x52: 'JUMP_if_true', 0x53: 'INPUT_num',
     0x54: 'MOVSPR', 0x56: 'TI_S_assign', 0x58: 'IF_RETURN', 0x59: 'HEX_S', 0x5a: 'JUMP_if_false', 0x5b: 'SCNCLR', 0x5c: 'COLOR',
     0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY', 0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'DOS', 0x63: 'RECORD',
@@ -426,3 +426,14 @@ COMMENT_BEFORE.update({
     0x4448: "int_to_fac_keep_y: a 9-byte helper that lives in the unused first slots of op_hi_tab (opcodes < $0E have no handler).  [sure: code]",
     0x2500: "load_stub_src: copied to $0120 by op5d/5e/5f (83 bytes).  Calls the ROM LOAD ($A1B8) or VERIFY ($9133) in config C, then looks at the load end address ($AC/$AD): $40 -> graphics-area program ($4000 := 0, $76 := $FF), $1C -> normal ($1C00 := 0, $76 := 0), sets the BASIC pointer $2E and restarts the program through the ROM ($5AA6).  [likely]",
 })
+
+OP_COMMENT[0x47] = """EXTENSION ($47): a `::` command of the source.  The compiler embeds the tokenized BASIC text of the command - UNENCRYPTED, up to and including the closing `:` -
+right behind this opcode (`::poke 2001,5:` -> `47 97 20 32 30 30 31 2c 35 3a`).  The handler saves the IGONE vector ($0308/$0309 -> $026E/$026F), points it at
+tr_user_ret ($0270), stores the bytecode pointer in $3D/$3E (and $1202/$1203) and calls the BASIC ROM through the user stub (tr_call_user, config C).  The ROM interpreter
+executes ONE statement from the embedded text and hands control back through IGONE to user_return ($27B2), which restores IGONE and continues at jump_3d3e: bcptr := $3D/$3E
+(the BASIC text pointer, now at the closing `:`), then next advances one byte.  [sure: VICE trace, see MANUAL.md]"""
+COMMENT_BEFORE[0x2221] = COMMENT_BEFORE.get(0x2221, '') + """
+BUG (found 17.11.2026): init always runs init_vars in check mode.  For a program with NO scalar variable the size of the variable area is 0, so
+vbase + 0 == strend ("fits") and init skips op15_CLR.  The array pointer table (the `z*%` array of the manual) is then never initialised and the first
+array access ends in err_bad_subscript.  With at least one scalar variable the size is > 0, check mode fails, CLR runs and everything works.  A binary patch is not
+possible in place: "equal" is also the normal case of a chain (same table size), so it cannot simply be turned into a mismatch.  Workaround: any scalar variable in the program."""
