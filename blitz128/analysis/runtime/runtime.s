@@ -6012,6 +6012,6 @@ xop_lo_tab:
         .byte $61,$62,$c3,$90,$7b,$96,$99,$9c,$b6,$1f,$20,$a3,$a3,$a3,$a3,$a3
         .byte $a3,$a3,$a3,$a3,$e0
 pi_const:
-; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.
+; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the BLITZ!.128 copy used here (cracked version) this constant is missing from image 2.
         .byte $82,$c9,$0f,$da,$a1,$00
 

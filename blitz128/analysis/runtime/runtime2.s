@@ -190,7 +190,7 @@ gfx_xop3b_DRAW:
 ; $1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
 ; Extended-opcode table entries:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
 ; $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE)  $41 -> $4238 (CIRCLE)  $42 -> $4203 (PAINT)  $43 -> $4291 (BOX).
-; NOTE: the original BLITZ!.128 is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
+; NOTE: the BLITZ!.128 copy used here (a cracked version, dongle check removed) is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
 ; are RAM garbage; run_4001_fixed.bin / this listing contain the intended values (see ../../fixed/README.md).
 ; The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].
         jsr  gfx_param_first
@@ -6240,6 +6240,6 @@ xop_lo_tab:
         .byte $f2,$f3,$54,$21,$0c,$27,$2a,$2d,$47,$b0,$b1,$a3,$b9,$be,$cc,$e0
         .byte $18,$38,$03,$91,$71
 pi_const:
-; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.
+; pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the BLITZ!.128 copy used here (cracked version) this constant is missing from image 2.
         .byte $82,$c9,$0f,$da,$a1,$00
 

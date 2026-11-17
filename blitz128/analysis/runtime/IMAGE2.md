@@ -1,4 +1,4 @@
-# Image 2 ($4001 runtime) - what the inserted code is, and the defect in the shipped compiler
+# Image 2 ($4001 runtime) - what the inserted code is, and the defect in the BLITZ!.128 copy used here
 
 `../run_4001.bin` (a compiled program's runtime as executed) is the variant used for programs that contain graphics statements.
 A diff against image 1 (`../run_1c01.bin`, `runtime.s`) shows one large insertion: **`$41A3-$4336` (404 bytes)** at the place of
@@ -16,7 +16,10 @@ image 1's `$1DA3`; everything behind it is shifted by `+$2591` (instead of the p
 Image 1 and image 2 share the whole interpreter; image 2 only adds the graphics statement front ends, which hand over to the C128's own
 graphics ROM.
 
-## The defect: BLITZ!.128 is 10 bytes short  (fixed in branch `fix-graphics-slots`, `blitz128/fixed/`)
+## The defect: this copy of BLITZ!.128 is 10 bytes short  (fixed in branch `overlay-mode`, `blitz128/fixed/`)
+**Provenance.** The `BLITZ!.128` in this repository is a *cracked* version (the dongle check is disabled; stated by the repository owner). Whether the uncracked Skyles distribution
+has the same 10-byte truncation - or whether it was introduced by the crack or by copying - is unknown. "The original" below means this untouched file.
+
 The image-2 template in `BLITZ!.128` ends at `$6C36`, but the runtime goes on to `$6C40`. The compiler copies the full 11 328 bytes, so the
 last 10 bytes of every compiled `$4001` program are whatever RAM lies behind the compiler (VICE: `00 00 00 FF FF FF FF 00 00 00`):
 

@@ -47,5 +47,5 @@ and may contain reading errors. Page numbers are the printed ones. Where the man
 | `**FI` list, max 200 | the flag sits on the name in the common table for all modules | the manual does not say it applies to all modules |
 | ML restores `$3D/$3E` | `jump_3d3e` | agrees |
 | `::` passes a command to the BASIC interpreter | `?extensions in N` messages, probably opcode `$47` / `tr_call_user` | agrees, opcode link not verified |
-| dongle in the user port | compiler and compiled programs run in VICE without any dongle | not explained: the check is absent in this version or not emulated |
+| dongle in the user port | compiler and compiled programs run in VICE without any dongle | explained: the BLITZ!.128 in this repository is a **cracked version** with the dongle check disabled (stated by the repository owner). The crack - or the copying - may also be the origin of the 10-byte truncation of image 2, see `IMAGE2.md` |
 | (nothing) | `dim a(5) : a(1)=7` -> error 18 (constant index and value) | not mentioned in the manual |

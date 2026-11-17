@@ -241,7 +241,7 @@ The `$4001` runtime appended to `BLITZ!.128` ends at `$6C36`, but the runtime ne
 11 328 bytes, so the last 10 bytes of every `$4001` output come from RAM behind the compiler (`00 00 00 FF FF FF FF 00 00 00` in VICE).
 They are the last four entries (`$41-$44`) of the extended-opcode low-byte table (CIRCLE, PAINT, BOX, `$44`) and the constant PI.
 Result: CIRCLE/PAINT/BOX call uninitialised RAM at `$0142`, `π` is garbage. Fix: `blitz128/fixed/` (branch `overlay-mode`, see `fixed/README.md`), appended bytes
-`38 03 91 71 82 C9 0F DA A1 00`. Details of the analysis: `runtime/IMAGE2.md`. Earlier statements here about image 2 and the "RAM pattern behind the template" describe the symptom.
+`38 03 91 71 82 C9 0F DA A1 00`. Details of the analysis: `runtime/IMAGE2.md`. Earlier statements here about image 2 and the "RAM pattern behind the template" describe the symptom. Provenance: the file is a cracked version; whether the uncracked Skyles distribution has the same truncation is unknown.
 
 ---
 
@@ -257,4 +257,4 @@ compiler and runtime in VICE (A: `a=42:b$="hello":c=7`; B reads them: mode 3 wit
 The scanned instruction manual was read on 17.11.2026. It documents the directives (5.4), the extension mechanism (`::`), the five compile sub-options, the limits
 (255-byte lines, 5000 lines, 6000 jumps, 1000 variables, 255 arrays, 200 `**FI` variables), the special array `z*%` and the machine-language rules (restore `$3D/$3E` after SYS).
 It confirms the overlay findings of section 13 (option 4 = extra pass that reads the variables, starting program lengthened to the longest module) and says that option 3
-does not pass variables. It does not mention the dongle being needed by the programs we ran, nor the BAD SUBSCRIPT error for array assignments with constant index and value (`runtime/OVERLAY.md`).
+does not pass variables. The dongle it requires is absent here: this copy is a cracked version (stated by the repository owner). It does not mention the BAD SUBSCRIPT error for array assignments with constant index and value (`runtime/OVERLAY.md`).

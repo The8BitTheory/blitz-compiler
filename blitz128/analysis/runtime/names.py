@@ -298,7 +298,7 @@ Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param
 $1131..), then ends in `jmp $6650` ( = `jsr rom_call_ay / jmp next_y0`) with the address of a graphics-ROM routine in A/Y.
 Extended-opcode table entries:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
 $3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE)  $41 -> $4238 (CIRCLE)  $42 -> $4203 (PAINT)  $43 -> $4291 (BOX).
-NOTE: the original BLITZ!.128 is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
+NOTE: the BLITZ!.128 copy used here (a cracked version, dongle check removed) is 10 bytes short, so in every program it compiles the table entries $41-$44 (and PI behind the table)
 are RAM garbage; run_4001_fixed.bin / this listing contain the intended values (see ../../fixed/README.md).
 The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
     0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
@@ -310,7 +310,7 @@ IMG2_EXTRA_CODE = []   # (CIRCLE/PAINT/BOX are reached through the table once it
 LABELS.update({0x46aa: 'pi_const', 0x2b09: 'pi_load'})
 COMMENT_BEFORE.update({
     0x2b09: "pi_load: FAC1 := PI (copies the 6 bytes at pi_const into $63..$68); reached from the operand-token handling.  [sure: code]",
-    0x46aa: "pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the ORIGINAL BLITZ!.128 this constant is missing from image 2.",
+    0x46aa: "pi_const: floating-point PI in unpacked FAC1 format (exp $82, mantissa C9 0F DA A1, sign $00).  In the BLITZ!.128 copy used here (cracked version) this constant is missing from image 2.",
 })
 
 COMMENT_BEFORE.update({

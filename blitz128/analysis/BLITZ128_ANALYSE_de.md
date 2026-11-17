@@ -241,7 +241,7 @@ Die an `BLITZ!.128` angehängte `$4001`-Runtime endet bei `$6C36`, braucht aber 
 11 328 Bytes, die letzten 10 Bytes jeder `$4001`-Ausgabe stammen daher aus dem RAM hinter dem Compiler (in VICE `00 00 00 FF FF FF FF 00 00 00`).
 Es sind die letzten vier Einträge (`$41-$44`) der Low-Byte-Tabelle der erweiterten Opcodes (CIRCLE, PAINT, BOX, `$44`) und die Konstante PI.
 Folge: CIRCLE/PAINT/BOX rufen nicht initialisiertes RAM bei `$0142` auf, `π` ist Müll. Korrektur: `blitz128/fixed/` (Branch `overlay-mode`, siehe `fixed/README.md`),
-angehängt werden `38 03 91 71 82 C9 0F DA A1 00`. Analyse im Detail: `runtime/IMAGE2.md`.
+angehängt werden `38 03 91 71 82 C9 0F DA A1 00`. Analyse im Detail: `runtime/IMAGE2.md`. Herkunft: die Datei ist eine gecrackte Version; ob die ungecrackte Skyles-Distribution dieselbe Kürzung hat, ist unbekannt.
 
 ---
 
@@ -257,4 +257,4 @@ passt und die Namen Slot für Slot übereinstimmen, sonst wird alles gelöscht. 
 Das gescannte Handbuch wurde am 17.11.2026 gelesen. Es dokumentiert die Direktiven (5.4), den Extension-Mechanismus (`::`), die fünf Unteroptionen des Kompilierens, die Grenzen
 (255 Byte Zeilenlänge, 5000 Zeilen, 6000 Sprünge, 1000 Variablen, 255 Arrays, 200 `**FI`-Variablen), das Spezial-Array `z*%` und die Maschinensprache-Regeln (`$3D/$3E` nach SYS wiederherstellen).
 Es bestätigt die Overlay-Befunde aus Abschnitt 13 (Option 4 = Extra-Durchlauf, der die Variablen liest; Startprogramm wird auf das längste Modul verlängert) und sagt, dass Option 3
-keine Variablen übergibt. Es erwähnt weder, dass die von uns benutzten Programme den Dongle brauchen, noch den BAD-SUBSCRIPT-Fehler bei Array-Zuweisungen mit konstantem Index und Wert (`runtime/OVERLAY.md`).
+keine Variablen übergibt. Der geforderte Dongle fehlt hier: diese Kopie ist eine gecrackte Version (Angabe des Repository-Eigentümers). Es erwähnt nicht den BAD-SUBSCRIPT-Fehler bei Array-Zuweisungen mit konstantem Index und Wert (`runtime/OVERLAY.md`).
