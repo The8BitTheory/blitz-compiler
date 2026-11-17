@@ -16,3 +16,5 @@ What it is (read from the disassembly, not yet annotated line by line):
 
 Consequence: image 1 and image 2 share the whole interpreter; image 2 only adds the graphics statement front ends, which hand
 over to the C128's own graphics ROM. Programs without graphics never need it.
+
+See `runtime2.s` (generated with `python3 mkasm.py --img2`): the whole image 2 as re-assemblable source. Table slots `$41-$43` hold `$4200` in the static template; the handlers `$4203/$4238/$4291` are presumably CIRCLE/PAINT/BOX (open).

@@ -12,8 +12,16 @@ sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
 from dis6502 import decode
 import names
 
-BASE, END = 0x1c01, 0x46b0
-img = open(os.path.join(HERE, '..', 'run_1c01.bin'), 'rb').read()
+IMG = 2 if '--img2' in sys.argv else 1
+def sh(a):
+    """image-1 address -> address in the selected image (image 2 = $4001 runtime with a 404-byte insertion at $1DA3)"""
+    if IMG == 1 or not (0x1c01 <= a < 0x46b0): return a
+    return a + (0x2400 if a < 0x1da3 else 0x2591)
+if IMG == 1:
+    BASE, END, IMGFILE, OUTFILE = 0x1c01, 0x46b0, 'run_1c01.bin', 'runtime.s'
+else:
+    BASE, END, IMGFILE, OUTFILE = 0x4001, 0x46b0 + 0x2591, 'run_4001.bin', 'runtime2.s'
+img = open(os.path.join(HERE, '..', IMGFILE), 'rb').read()
 M = img[2:2 + END - BASE]           # runtime proper
 g = lambda a: M[a - BASE]
 BR = ('BCC','BCS','BEQ','BNE','BMI','BPL','BVC','BVS')
@@ -32,20 +40,33 @@ def disasm(entries, lo, hi):
             pc += n
     return code
 
+if IMG == 2:
+    names.LABELS = {sh(a): n for a, n in names.LABELS.items()}
+    names.COMMENT_BEFORE = {sh(a): t for a, t in names.COMMENT_BEFORE.items()}
+    names.COMMENT = {sh(a): t for a, t in names.COMMENT.items()}
+    names.REF_LABELS = [sh(a) for a in names.REF_LABELS]
+    names.ERR_ENTRIES = {sh(a): v for a, v in names.ERR_ENTRIES.items()}
+    names.SYMS = {(sh(a) if 0x1c01 <= a < 0x46b0 else a): n for a, n in names.SYMS.items()}
+    names.ZP = dict(names.ZP)
+    for _a in names.IMG2_DROP:
+        names.LABELS.pop(_a, None); names.COMMENT_BEFORE.pop(_a, None)
+    names.LABELS.update(names.IMG2_LABELS)
+    names.COMMENT_BEFORE.update(names.IMG2_COMMENT_BEFORE)
+
 # ---- entry points -------------------------------------------------------
-main_tab_hi, main_tab_lo = 0x4443, 0x44b5     # opcodes $0e..$7f
-ext_tab_hi, ext_tab_lo = 0x45b8, 0x4665       # extended opcodes $00 xx, xx = 0..$44
-entries = [0x1c2f, 0x2221] + list(names.EXTRA_CODE)
+main_tab_hi, main_tab_lo = sh(0x4443), sh(0x44b5)     # opcodes $0e..$7f
+ext_tab_hi, ext_tab_lo = sh(0x45b8), sh(0x4665)       # extended opcodes $00 xx, xx = 0..$44
+entries = [sh(0x1c2f), sh(0x2221)] + [sh(a) for a in names.EXTRA_CODE]
 for x in range(0x0e, 0x80): entries.append(g(main_tab_lo + x) | g(main_tab_hi + x) << 8)
 for x in range(0, 0x45):    entries.append(g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8)
-LO, HI = 0x1c2f, 0x4443          # code lives here; tables from $4443 on
+LO, HI = sh(0x1c2f), sh(0x4443)          # code lives here; tables from $4443 on
 code = disasm([e for e in entries if LO <= e < HI], LO, HI)
 
 # trampolines $1C5E..$1CFD are copied to $0202 at run time: shown as data (+ disassembly in comments)
-TR_LO, TR_HI = 0x1c5e, 0x1cfe
+TR_LO, TR_HI = sh(0x1c5e), sh(0x1cfe)
 for a in [a for a in code if TR_LO <= a < TR_HI]: del code[a]
 # $1D00..$1DA2: DOS status buffer / fill
-for a in [a for a in code if 0x1d00 <= a < 0x1da3]: del code[a]
+for a in [a for a in code if sh(0x1d00) <= a < sh(0x1da3)]: del code[a]
 
 # ---- data blocks (explicit layout, see names.DATA) ----------------------
 data = {}   # start -> (kind, length)
@@ -95,7 +116,7 @@ for x in range(0x0e, 0x80):
 for x in range(0, 0x45):
     _share.setdefault(g(ext_tab_lo + x) | g(ext_tab_hi + x) << 8, []).append('$00,$%02X %s' % (x, names.EXT_OPS.get(x, '?')))
 for a_, lst in _share.items():
-    if len(lst) > 1 and a_ not in (0x1da3, 0x2e95):
+    if len(lst) > 1 and a_ not in (sh(0x1da3), sh(0x2e95)):
         names.COMMENT_BEFORE[a_] = (names.COMMENT_BEFORE.get(a_, '') + '\n' if a_ in names.COMMENT_BEFORE else '') + 'shared by: ' + ', '.join(lst)
 def sym(a):
     if a in names.SYMS: return names.SYMS[a]
@@ -180,5 +201,5 @@ while a < end:
     while e < end and e not in code and e not in labels and e not in data and e not in names.COMMENT_BEFORE and e - a < 16: e += 1
     w(bytes_line(a, M[a - BASE:e - BASE])); a = e
 w('')
-open(os.path.join(HERE, 'runtime.s'), 'w').write('\n'.join(out) + '\n')
-print('runtime.s:', len(out), 'lines;', len(code), 'instructions')
+open(os.path.join(HERE, OUTFILE), 'w').write('\n'.join(out) + '\n')
+print(OUTFILE + ':', len(out), 'lines;', len(code), 'instructions')

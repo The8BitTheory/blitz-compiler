@@ -49,3 +49,8 @@ The remaining targets are BASIC statement/function implementations (sprite, soun
 
 ## Image 2
 `IMAGE2.md`: the `$4001` runtime differs from image 1 by a 404-byte insertion (`$41A3-$4336`) that implements the graphics statements which image 1 rejects with error 35.
+
+`runtime2.s` is the same for image 2 (`python3 mkasm.py --img2`, `make check2`, rebuild verified byte-identical, 11 328 bytes).
+The image-1 names are carried over by address shift ($+2400 before the insertion, $+2591 after) and checked: of 76 labelled
+routines only 5 differ in their first instructions, all benign (key operands, buffer address); the graphics front ends are
+named in `names.py` (`IMG2_*`).

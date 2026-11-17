@@ -271,3 +271,24 @@ PAINT $42, BOX $43; $3C [open]).  In THIS runtime image they just raise error 35
 Programs that use graphics are compiled with the $4001 runtime (image 2, +401 bytes of inserted code) - presumably that image
 fills these table slots.  [sure for the error; image-2 role likely]""",
 })
+
+# ---- image 2 specifics (absolute image-2 addresses; applied after the image-1 names were translated) ----------
+IMG2_DROP = [0x4334, 0x4334 - 0x2591 + 0x2591]          # old gfx_ext_hook name does not apply: $4334 is `jmp err_illegal_quantity`
+IMG2_LABELS = {
+    0x4334: 'range_error',
+    0x41a3: 'gfx_xop3b_DRAW', 0x41a8: 'gfx_xop25', 0x41b9: 'gfx_xop3c', 0x41be: 'gfx_xop3d_DRAWTO',
+    0x41cc: 'gfx_xop3e_LOCATE', 0x41e0: 'gfx_xop3f_GSHAPE', 0x4218: 'gfx_xop40_SSHAPE',
+    0x4203: 'gfx_h4203', 0x4238: 'gfx_h4238', 0x4291: 'gfx_h4291',
+    0x41d9: 'gfx_rom_6650_a', 0x431c: 'gfx_param_first', 0x42d5: 'gfx_param_pair', 0x42c1: 'gfx_param_copy',
+    0x42b3: 'gfx_param_mode', 0x432b: 'gfx_next_token',
+}
+IMG2_COMMENT_BEFORE = {
+    0x41a3: """==== IMAGE 2 ONLY: graphics statement front ends ($41A3-$4336, 404 bytes inserted at image-1 $1DA3) ====
+Each handler reads its parameters from the bytecode (gfx_param_first / gfx_param_pair store coordinate pairs in the block at
+$1131..), then ends in `jmp $6650` with the address of a graphics-ROM routine in A/Y.  Entry points that the extended-opcode
+table references:  $3B -> $41A3 (DRAW)  $25 -> $41A8  $3C -> $41B9  $3D -> $41BE (DRAW TO)  $3E -> $41CC (LOCATE)
+$3F -> $41E0 (GSHAPE)  $40 -> $4218 (SSHAPE).  The slots $41-$43 (CIRCLE, PAINT, BOX) hold $4200 in this template (a
+placeholder / patched at compile time - [open]); the three remaining handlers $4203, $4238, $4291 are presumably those.
+The statement names come from ROSETTA.md; the handler/ROM-routine pairing is [likely].""",
+    0x4334: "range_error: `jmp err_illegal_quantity` (bcs target of gfx_param_first: first parameter out of range for the screen mode).  [sure]",
+}
