@@ -38,7 +38,25 @@ Header 1 of every module then carries the same variable count (`varsize = 7 * N`
 survive any `LOAD` between modules. In mode 3 each module gets its own table (B alone: `b$,a,c`) and chaining only works if the tables
 happen to agree. The encryption keys are the same for all modules of one compile run.
 
+## PASS0 merge rules for arrays, DEF FN and `**FI` (tested 17.11.2026)
+Two-module programs, original (fixed) compiler, menu item 4, then run in VICE; the JS port reproduces every output byte for byte
+(`blitzc/tests/overlay/ovl-*`, branch `overlay-mode`).
+
+| what | rule observed | evidence |
+|---|---|---|
+| scalar variables | one table, order of first appearance over all programs in disk order, names unified (see above) | `ovl2`, `ovl3` |
+| arrays | the array slots are numbered consistently in all modules (`a`:`07`, `b%`:`09`, `c$`:`0B` in both), also when module 2 uses them in another order; the arrays and their data **survive `LOAD`** | module 1 dims `a(5),b%(3),c$(2)` and fills them, module 2 (no DIM) reads `07 09 01` correctly, also in the order `c$,b%,a` (`ovl-arrays`) |
+| array DIM in module 2 | a second `DIM` of an array that module 1 already dimensioned raises error 19 REDIM'D ARRAY | `ovl-redim`: error `$13` at `error_common` |
+| DEF FN | FN names are part of the common table (`F X G` in both modules, FN slot operand = slot offset + 2 identical in both); each module may define its own FN | `ovl-fn`: `06 05 06` |
+| FN defined in module 1, called in module 2 | the call refers to the same slot but the definition does **not** survive the `LOAD` (the body lives in module 1's bytecode, which module 2 overwrites): error 14 in module 2 | `ovl-fnx` |
+| `**FI` | the "fast integer" flag is set on the name in the common table, for **all** modules: order is that of first appearance (the order inside the directive is irrelevant), a module without the directive sees the names as integers too, and a directive in module 2 changes module 1 (which is compiled afterwards, with the merged table): `i=1.5 : poke ..,i*10` gives 10, not 15 | `ovl-fi` (`01 02 03`), `ovl-fi2` (`01 02`), `ovl-fi3` (`0A 0A`) |
+
+## Side finding: array element assignment with constant index and constant value (original runtime)
+`dim a(5) : a(1)=7` raises **error 18 BAD SUBSCRIPT** when the program runs in VICE - no chaining involved, with the original and with the fixed
+compiler, also for `a(0)=7`, `a(15)=7`, `a(16)=7`, `a%(1)=7`. These work: `a(i)=7` (variable index), `a(1)=i` (constant index, variable/float value), `a(i+1)=7`,
+reading `a(1)`. The error comes from the integer-index path of `var_long_ref2` (`jmp err_bad_subscript`, `$2BB6`/`$2BF5`); the trigger seems to be that index
+and value are both integer constants (`b1 b7 e4 07`). Cause not analysed, not tested on real hardware.
+
 ## Not done
-* The JavaScript port (`blitzc/js`) implements menu items 1, 3-like (`--plain`) and 5, not item 4 / PASS0 (union table). The union rule above
-  (first appearance over all programs, in disk order) is what a port would have to reproduce - not verified beyond the two-program example.
-* Other details of PASS0 (how arrays, DEF FN, `**FI` variable lists are merged) are untested.
+* The merge rules were tested with two-module programs; larger sets, multi-dimensional arrays, `**NE/**NG/**RI/**SP` and mixed integer/float uses of one name were not.
+* The JavaScript port implements menu item 4 (`compileOverlay`, branch `overlay-mode`); only compile output was compared with the original, the run-time behaviour above was checked with the original compiler's modules.
