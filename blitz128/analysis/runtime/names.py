@@ -67,13 +67,13 @@ MAIN_OPS = {
     0x40: 'PRINT_spc', 0x41: 'PRINT_spc', 0x42: 'PRINT_chan', 0x43: 'PRINT_str', 0x44: 'PRINT_chan', 0x45: 'PRINT_end',
     0x46: 'GET', 0x48: 'CHKIN', 0x49: 'rom_stmt_4bd4', 0x4b: 'rom_stmt_926a',
     0x51: 'INPUT_a', 0x52: 'IF_zero_skip', 0x53: 'INPUT_b', 0x55: 'INPUT_b', 0x57: 'INPUT_a',
-    0x58: 'IF_nonzero', 0x5a: 'IF_float', 0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY',
+    0x58: 'IF_nonzero', 0x5a: 'IF_float', 0x4e: 'SYS', 0x18: 'SYS_x', 0x67: 'BANK', 0x72: 'ERR_str', 0x5d: 'LOAD', 0x5e: 'SAVE', 0x5f: 'VERIFY',
     0x60: 'OPEN', 0x61: 'CLOSE', 0x62: 'dos_block', 0x68: 'XOR_int',
     0x6e: 'JOY', 0x69: 'xchg_11e7', 0x6a: 'RSPCOLOR', 0x74: 'TRAP_set', 0x75: 'TRAP_off',
     0x7d: 'RESUME', 0x7e: 'RESUME_next', 0x7f: 'DO_push',
 }
 EXT_OPS = {
-    0x00: 'GET_ext', 0x1e: 'stub_100_ext',
+    0x00: 'GET_ext', 0x09: 'RSPRITE', 0x1e: 'stub_100_ext',
     0x0f: 'VIC_d024', 0x10: 'VIC_d025', 0x11: 'SPRSAV_to_str', 0x12: 'SPRSAV_from_str', 0x13: 'SPRSAV_copy',
     0x14: 'COLLISION', 0x17: 'obj_select', 0x18: 'SPRITE_enable', 0x19: 'SPRCOLOR', 0x32: 'WAVE_select',
 }
@@ -165,7 +165,7 @@ and return via ($57).  Expression temporaries live on the 6502 stack.  [sure]"""
     0x2178: "alloc_string: reserve A bytes below frespc; runs garbage_collect when it would cross fretop.  [likely]",
     0x4314: "val_string: Blitz's own VAL; collects the digits 16-bit wise, then calls the BASIC ROM multiply/divide-by-10 routines.  [sure, see blitzc README]",
     0x25c5: "hex_byte: print/convert a byte as two hex digits (HEX$).  [likely]",
-    0x1e42: "round_fac: ROM call $8C47 (FAC1 rounding) when facov bit 7 is set.  [likely]",
+    0x1e42: "round_fac: ROM call $8C47 (FAC1 rounding: asl facov / increment mantissa) when facov bit 7 is set.  [sure: ROM disassembly]",
     0x1da6: "FOUT: FAC1 -> string at $0100 (copy of the BASIC ROM routine).  [sure per ANALYSE section 4.2]",
     0x3f93: "collision_reset: $120C..$120D := $FF (COLLISION / event handler bookkeeping)  [open]",
 })
@@ -226,3 +226,8 @@ $127F is the enable bitmask (masks at $45AB).  [likely]""",
     0x3ff1: "SPRSAV family (ext $11-$13): sprite data is 63 bytes at $0E00+n*64 (address from L406e); $11 sprite->string, $12 string->sprite, $13 sprite->sprite.  [likely]",
 })
 COMMENT_BEFORE.pop(0x3eec+0) if False else None
+
+COMMENT_BEFORE.update({
+    0x3fcd: """SYS (op $4E, and op $18 which first skips one token): get_word -> $03/$04 target address, $03D5 -> $02 (bank
+set by the BANK statement, op $67), then KERNAL JSRFAR ($FF6E) through rom_call_ax.  [sure: target $FF6E observed in code]""",
+})

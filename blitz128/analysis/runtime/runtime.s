@@ -264,7 +264,7 @@ L1e37:
         bne  L1e37
         rts  
 round_fac:
-; round_fac: ROM call $8C47 (FAC1 rounding) when facov bit 7 is set.  [likely]
+; round_fac: ROM call $8C47 (FAC1 rounding: asl facov / increment mantissa) when facov bit 7 is set.  [sure: ROM disassembly]
         lda  #$47
         sta  rom_call_lo
         lda  #$8c
@@ -1163,7 +1163,7 @@ xop05:
         txa  
         sta  a:$00,y
         jmp  next_y0
-xop09:
+xop09_RSPRITE:
         jsr  get_byte
         lda  #$b4
         ldy  #$82
@@ -4956,7 +4956,7 @@ op6d:
         jsr  rom_call_ay
         jsr  fac_to_int
         jmp  next_inc1_y0
-op72:
+op72_ERR_str:
         jsr  rom_call_f9_80
         lda  #$01
         sta  intflg
@@ -5236,11 +5236,13 @@ op7d_RESUME:
         jmp  skip_a
 L3fca:
         jmp  fetch
-op18:
+op18_SYS_x:
+; SYS (op $4E, and op $18 which first skips one token): get_word -> $03/$04 target address, $03D5 -> $02 (bank
+; set by the BANK statement, op $67), then KERNAL JSRFAR ($FF6E) through rom_call_ax.  [sure: target $FF6E observed in code]
         inc  bcptr
-        bne  op4e
+        bne  op4e_SYS
         inc  bcptr_hi
-op4e:
+op4e_SYS:
         jsr  get_word
         stx  $04
         sta  $03
@@ -5476,7 +5478,7 @@ op69_xchg_11e7:
         cli  
         pla  
         jmp  L2eec
-op67:
+op67_BANK:
         jsr  get_byte
         cpx  #$10
         bcs  L416f

@@ -38,3 +38,11 @@ reassembly is machine-checked.
   All lie in the BASIC ROM ranges, confirming that `rom_call` is a ROM-call gateway. The addresses with no static counterpart
   (everything except `$4BD4`) come from computed targets (operator tables at `$4556/$455B`, handlers that load A/X at run time);
   they are not yet tied to individual BASIC routines. Not exhaustive: only seven short programs, first hit per run.
+
+## ROM targets (static)
+`rom_targets.txt` lists every constant `rom_call` target found in the code with its callers and the first ROM instructions
+(disassembled from the C128 BASIC ROM images, lo at $4000, hi at $8000). Identified with certainty:
+`$8C47` = FAC1 rounding (used by `round_fac`), `$8CFB` = `INT()` (op `$21`), `$FF6E` = KERNAL JSRFAR (SYS, op `$4E`/`$18`;
+bank from `$03D5`, which `op67` = BANK sets). `$80F9` checks an error number `< $29` (likely `ERR$`, op `$72`).
+`$4BD4` stores the BASIC text pointer in `$1200` (STOP/END family, op `$49`).
+The remaining targets are BASIC statement/function implementations (sprite, sound, graphics area `$6xxx-$8xxx`); their names are still open.
