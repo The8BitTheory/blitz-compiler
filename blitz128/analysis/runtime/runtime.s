@@ -62,6 +62,20 @@ rom_call       = $0287
 rom_call_lo    = $028b
 rom_call_hi    = $028c
 str_copy_b     = $0291
+err_next_without_for = $2497
+err_syntax     = $249a
+err_return_without_gosub = $249d
+err_out_of_data = $24a0
+err_illegal_quantity = $24a3
+err_overflow   = $24a6
+err_out_of_memory = $24a9
+err_bad_subscript = $24ac
+err_redimd_array = $24af
+err_string_too_long = $24b2
+err_formula_too_complex = $24b5
+err_undefd_function = $24b8
+err_cant_resume = $24bb
+err_no_graphics_area = $24be
 MMU_CR         = $ff00
 MMU_LCRA       = $ff01
 MMU_LCRB       = $ff02
@@ -169,10 +183,11 @@ L1c5b:
         .byte $aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa,$aa
         .byte $aa,$3a,$80
 gfx_ext_hook:
-; gfx_ext_hook: ext opcodes $3B-$43 (and $25): DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
-; PAINT $42, BOX $43 ($3C: [open]).  These graphics statements are not in the runtime: the stub jumps to $24BE, the
-; extension-module dispatcher (modules128.d64).  [sure for the opcode->statement map, see ROSETTA.md; hook target [likely]]
-        jmp  $24be
+; gfx_ext_hook: ext opcodes $3B-$43 and $25 (DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+; PAINT $42, BOX $43; $3C [open]).  In THIS runtime image they just raise error 35 NO GRAPHICS AREA (jmp err_no_graphics_area).
+; Programs that use graphics are compiled with the $4001 runtime (image 2, +401 bytes of inserted code) - presumably that image
+; fills these table slots.  [sure for the error; image-2 role likely]
+        jmp  err_no_graphics_area
 fout:
 ; FOUT: FAC1 -> string at $0100 (copy of the BASIC ROM routine).  [sure per ANALYSE section 4.2]
         ldy  #$02
@@ -319,7 +334,7 @@ L1e89:
 L1e98:
         jmp  L31c7
 L1e9b:
-        jmp  $24b2
+        jmp  err_string_too_long
 str_concat:
 ; str_concat: string + string.  Sums the lengths (>255 -> error), allocates (alloc via frespc/garbage_collect) and copies both parts with blkcpy_b.  [likely]
         tax  
@@ -721,7 +736,7 @@ L2136:
         sta  fac_m4
         jmp  next_inc1_y0
 L213b:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 L213e:
         lda  #$00
         sta  t6c
@@ -1202,6 +1217,10 @@ L248b:
         sty  prevop
         jmp  L27eb
 L2497:
+; ERROR ENTRIES.  Each entry is `ldx #errnum` hidden behind BIT opcodes ($2C), so every entry point lies inside the
+; previous instruction; callers `jmp` to the address.  Numbers are the C128 BASIC error numbers (names from the standard list;
+; usage in the runtime checked for 13 OUT OF DATA in READ, 14 in the integer/byte range checks, 16 in the GOSUB stack overflow,
+; 23 in INPUT > 160 chars, 27 in FN call, 35 in the graphics ext opcodes).  They fall into error_common.
         ldx  #$0a
         bit  $0ba2
         bit  $0ca2
@@ -1216,7 +1235,10 @@ L2497:
         bit  $1ba2
         bit  $1fa2
         bit  $23a2
-L24c0:
+error_common:
+; error_common: X = error number.  $7F bit7 := 1.  If no TRAP is active ($120C = $FF, or X >= $80): trap_reset and pass the
+; error to the BASIC ROM through the vector at $0300 (tr_call_vec).  Otherwise: reset the stack (TXS $F8), save the error
+; position / line ($1208-$120F), clear the trap and jump to the TRAP handler line ($120B/$120C, via $379C).  [likely]
         lda  #$80
         sta  $7f
         txa  
@@ -1341,7 +1363,7 @@ L2596:
         tya  
         bne  L2596
 L25a3:
-        jmp  $249a
+        jmp  err_syntax
 op7c_USING_end:
         ror  $77
         lda  #$f2
@@ -2280,7 +2302,7 @@ L2b9d:
         cmp  t6a
         bcc  L2bbb
 L2bb6:
-        jmp  $24ac
+        jmp  err_bad_subscript
 L2bb9:
         iny  
         pla  
@@ -2322,7 +2344,7 @@ L2bdc:
         cmp  t6a
         bcc  L2bfa
 L2bf5:
-        jmp  $24ac
+        jmp  err_bad_subscript
 L2bf8:
         iny  
         pla  
@@ -2664,7 +2686,7 @@ get_word:
         lda  fac_m3
         bpl  L2e57
 L2e19:
-        jmp  $24a3
+        jmp  err_illegal_quantity
         .byte $06,$80,$30,$e2,$a9,$00,$aa,$60
 get_word_signed:
         lda  intflg
@@ -2818,7 +2840,7 @@ L2f0a:
         lda  fac_m3
         jmp  L2afe
 L2f0f:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 L2f12:
         sty  fac_m3
         sty  fac_m4
@@ -3025,7 +3047,7 @@ L305f:
 L3067:
         tax  
         sta  MMU_LCRA
-        jmp  L24c0
+        jmp  error_common
 op48_CHKIN:
         jsr  get_byte
         stx  $15
@@ -3127,7 +3149,7 @@ op36_MID_S:
         jsr  pop_byte
         txa  
         bne  L3121
-        jmp  $24a3
+        jmp  err_illegal_quantity
 op34_LEFT_S:
 ; shared by: $34 LEFT_S, $35 RIGHT_S
         jsr  get_byte
@@ -3254,7 +3276,7 @@ L31c7:
         sta  $18
         jmp  next_inc1
 L31ea:
-        jmp  $24b5
+        jmp  err_formula_too_complex
 op4c_WAIT:
         jsr  get_word
         jsr  pop_byte
@@ -3300,7 +3322,7 @@ op4a_READ:
         eor  (dataptr),y
         cmp  #$ff
         bcc  L324a
-        jmp  $24a0
+        jmp  err_out_of_data
 L324a:
         tay  
         lda  dataptr
@@ -3501,7 +3523,7 @@ L339a:
         inx  
         cpx  #$a1
         bne  L339a
-        jmp  $24b2
+        jmp  err_string_too_long
 L33ac:
         lda  #$00
         sta  $1d00,x
@@ -3560,7 +3582,7 @@ L3409:
         inx  
         cpx  #$a1
         bne  L3409
-        jmp  $24b2
+        jmp  err_string_too_long
 L341b:
         lda  #$00
         sta  $1d00,x
@@ -3753,7 +3775,7 @@ L3554:
         dex  
         cpx  #$08
         bcs  L3565
-        jmp  $24a9
+        jmp  err_out_of_memory
 L3565:
         stx  $40
 L3567:
@@ -3849,7 +3871,7 @@ L35ef:
         cpx  #$0a
         bcc  L35cf
 L35fa:
-        jmp  L2497
+        jmp  err_next_without_for
 op13_NEXT_chk:
         ldy  #$02
         lda  (fstk),y
@@ -4075,7 +4097,7 @@ L3769:
         dex  
         cpx  #$08
         bcs  L3779
-        jmp  $24a9
+        jmp  err_out_of_memory
 L3779:
         stx  fstk_hi
 L377b:
@@ -4128,7 +4150,7 @@ op1d_RETURN:
         cmp  #$f8
         bcs  L37ca
 L37c7:
-        jmp  $249d
+        jmp  err_return_without_gosub
 L37ca:
         lda  (fstk),y
         and  #$03
@@ -4257,7 +4279,7 @@ op38_FN_call:
         jsr  ld_var
         lda  t6b
         bne  L38a4
-        jmp  $24b8
+        jmp  err_undefd_function
 L38a4:
         sta  bcptr_hi
         lda  t6a
@@ -4281,7 +4303,7 @@ L38bb:
         pha  
         jmp  L2841
 L38ca:
-        jmp  $24af
+        jmp  err_redimd_array
 op10_DIM:
 ; ---- FOR / NEXT / flow control ----
         iny  
@@ -4474,7 +4496,7 @@ L3a1e:
         bcc  pop_byte
         jmp  get_byte
 L3a25:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 pop_byte:
 ; pop_byte: pop the previous stack value and convert it to a byte in X (like get_byte for a saved operand).  [likely]
         pla  
@@ -4680,9 +4702,9 @@ L3b90:
         jsr  rom_call_x
         jmp  next
 L3ba3:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 L3ba6:
-        jmp  $249a
+        jmp  err_syntax
 L3ba9:
         sty  $0d
         lda  #$ff
@@ -4815,7 +4837,7 @@ L3c71:
         ldy  #$68
         jmp  L257d
 L3c9b:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 op66_SOUND:
         jsr  get_byte
         dex  
@@ -4897,7 +4919,7 @@ xop26_GRAPHIC:
         beq  L3d55
         ldy  $76
         bmi  L3d55
-        jmp  $24be
+        jmp  err_no_graphics_area
 L3d55:
         lda  #$6c
         ldy  #$6b
@@ -4994,7 +5016,7 @@ xop0f_SPRCOLOR_1:
         sta  MMU_LCRA
         jmp  next_y0
 L3dfa:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 xop0b_WIDTH:
         jsr  get_byte
         dex  
@@ -5117,7 +5139,7 @@ xop2d_ENV_num:
         cpx  #$0a
         bcc  L3ee7
 L3edc:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 xop17_obj_select:
         jsr  get_byte
         dex  
@@ -5219,7 +5241,7 @@ op74_TRAP:
         lda  #$03
         jmp  skip_a
 L3f90:
-        jmp  $24bb
+        jmp  err_cant_resume
 collision_reset:
 ; collision_reset: $120C..$120D := $FF (COLLISION / event handler bookkeeping)  [open]
         ldx  $120d
@@ -5354,7 +5376,7 @@ xop23_TEMPO:
         stx  $1222
         jmp  next_y0
 L4089:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 xop16_WINDOW:
         jsr  get_byte
 L408f:
@@ -5479,7 +5501,7 @@ L4162:
 L416c:
         jmp  next
 L416f:
-        jmp  $24a3
+        jmp  err_illegal_quantity
 op69_BUMP:
         jsr  get_byte
         dex  
@@ -5666,7 +5688,7 @@ L42a5:
         bcc  L42a8
         rts  
 L42a8:
-        jmp  $24a9
+        jmp  err_out_of_memory
 L42ab:
         sbc  #$02
         sta  ptr24
@@ -5896,7 +5918,7 @@ L4421:
         lda  #$64
         bit  $62
         bmi  op_hi_tab
-        jmp  $24a6
+        jmp  err_overflow
 L443c:
         asl  a
         asl  a

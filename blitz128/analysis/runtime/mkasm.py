@@ -103,7 +103,9 @@ def sym(a):
     return None
 
 def operand(mn, mo, v, tg, pc=0):
-    if mo == 'rel': return sym(tg) or '*%+d' % (tg - pc)
+    if mo == 'rel':
+        s_ = sym(tg)
+        return s_ if (s_ and tg not in names.SYMS) else '*%+d' % (tg - pc)
     if mo in ('abs', 'abx', 'aby', 'ind'):
         s = sym(v)
         if s is None: s = ('a:$%02x' if (v < 0x100 and mo != 'ind') else '$%04x') % v
@@ -136,7 +138,7 @@ for a, nm in sorted(names.ZP.items()): w('%-12s = $%02x' % (nm, a)) if False els
 w('; --- zero page / system symbols ---')
 for a, nm in sorted(names.ZP.items()): w('%-14s = $%02x' % (nm, a))
 for a, nm in sorted(names.SYMS.items()):
-    if a >= 0x100 and not (BASE <= a < END): w('%-14s = $%04x' % (nm, a))
+    if a >= 0x100 and (not (BASE <= a < END) or a in names.ERR_ENTRIES): w('%-14s = $%04x' % (nm, a))
 w('')
 
 a = BASE

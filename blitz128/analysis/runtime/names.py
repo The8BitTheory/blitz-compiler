@@ -248,3 +248,26 @@ extension-module dispatcher (modules128.d64).  [sure for the opcode->statement m
 vector in the BASIC ROM (table at $47D8, reached through $4C44 / $2AD2); the runtime only converts the argument and calls it.
 Ops $25 (POS) and $2E (PEEK) have their own handlers.  [likely]""",
 })
+
+ERR_ENTRIES = {   # entry = ldx #n hidden behind BIT opcodes; all fall into error_common ($24C0)
+    0x2497: ('err_next_without_for', 10), 0x249a: ('err_syntax', 11), 0x249d: ('err_return_without_gosub', 12),
+    0x24a0: ('err_out_of_data', 13), 0x24a3: ('err_illegal_quantity', 14), 0x24a6: ('err_overflow', 15),
+    0x24a9: ('err_out_of_memory', 16), 0x24ac: ('err_bad_subscript', 18), 0x24af: ('err_redimd_array', 19),
+    0x24b2: ('err_string_too_long', 23), 0x24b5: ('err_formula_too_complex', 25), 0x24b8: ('err_undefd_function', 27),
+    0x24bb: ('err_cant_resume', 31), 0x24be: ('err_no_graphics_area', 35),
+}
+for _a, (_n, _c) in ERR_ENTRIES.items(): SYMS[_a] = _n
+LABELS[0x24c0] = 'error_common'
+COMMENT_BEFORE.update({
+    0x2497: """ERROR ENTRIES.  Each entry is `ldx #errnum` hidden behind BIT opcodes ($2C), so every entry point lies inside the
+previous instruction; callers `jmp` to the address.  Numbers are the C128 BASIC error numbers (names from the standard list;
+usage in the runtime checked for 13 OUT OF DATA in READ, 14 in the integer/byte range checks, 16 in the GOSUB stack overflow,
+23 in INPUT > 160 chars, 27 in FN call, 35 in the graphics ext opcodes).  They fall into error_common.""",
+    0x24c0: """error_common: X = error number.  $7F bit7 := 1.  If no TRAP is active ($120C = $FF, or X >= $80): trap_reset and pass the
+error to the BASIC ROM through the vector at $0300 (tr_call_vec).  Otherwise: reset the stack (TXS $F8), save the error
+position / line ($1208-$120F), clear the trap and jump to the TRAP handler line ($120B/$120C, via $379C).  [likely]""",
+    0x1da3: """gfx_ext_hook: ext opcodes $3B-$43 and $25 (DRAW $3B, DRAW-TO $3D, LOCATE $3E, GSHAPE $3F, SSHAPE $40, CIRCLE $41,
+PAINT $42, BOX $43; $3C [open]).  In THIS runtime image they just raise error 35 NO GRAPHICS AREA (jmp err_no_graphics_area).
+Programs that use graphics are compiled with the $4001 runtime (image 2, +401 bytes of inserted code) - presumably that image
+fills these table slots.  [sure for the error; image-2 role likely]""",
+})

@@ -42,5 +42,6 @@ Extended opcodes (`00 xx`):
 | `2D-33` ENVELOPE n, A, D, S, R, wave, pw | `34-38` FILTER cutoff, lp, bp, hp, res | `39/3A` SCALE | `3B-43` graphics hook (DRAW DRAW-TO LOCATE GSHAPE SSHAPE CIRCLE PAINT BOX) |
 
 Not yet pinned to a statement: `3B` (main), `44`, `58`, `7F`, ext `1F-21`, `25`, `2C`, `3C`. The graphics statements `3B-43`
-are not implemented in the runtime itself: they jump to the extension dispatcher at `$24BE`.
+are not implemented in this runtime image: they raise error 35 (NO GRAPHICS AREA, `$24BE`). Programs that use graphics are
+compiled with the `$4001` runtime (image 2), which has ~401 bytes of inserted code.
 Corrections to earlier guesses: `xop09` is PEN (not RSPRITE), `op10` is DIM (not FOR), `op17` is POKE, `op69` is BUMP.
