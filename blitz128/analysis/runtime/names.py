@@ -338,3 +338,16 @@ family of BASIC 7 (the REC registers).  Order stash, fetch, swap is [likely] (BA
 compiles `stash 100,4096,0,0` etc. to a bare `b0` (checked with the original compiler).""",
     0x25: "DRAW_alt: enters the DRAW body at `lda fac_m4` (skips the flag-byte fetch).  Never emitted by the compiler in any test; image 1 answers it with error 35.  [open]",
 }
+
+COMMENT_BEFORE[0x2288] = """init_vars: header 1 -> t6a..t6f (6 bytes at $46B0, each XOR $97):  t6a/t6b = variable-name table, t6c/t6d = its end,
+t6e/t6f = size of the variable area (7 bytes per variable).  A = $80 on entry sets CHECK MODE (flags80 bit 7), which `init` always requests:
+  * the new module may keep the variables of the previous one if  vbase + size  <= strend  (it needs no more space than exists) AND
+    every name of its table (2 bytes, XOR key $B7-slot) equals the name stored in the variable slot with the same index (ld_var + compare);
+  * the first mismatch clears flags80 (asl) and leaves the loop: `init` then falls into op15_CLR = all variables are cleared;
+  * without check mode (fresh start) the names are written into the slots (st_var) and strend/fretop are set behind the slot area.
+This is the CHAIN mechanism: a `LOAD` statement (op5d) in a compiled program loads the next module and restarts the runtime; if the new
+module's variable table is a prefix-compatible copy of the old one, the variables survive.  `RUN "x"` (op62 sub-op 12) always clears them.
+Compile mode 4 ('overlay') exists to make every module's table identical (see OVERLAY.md).  [sure: VICE experiments, OVERLAY.md]"""
+OP_COMMENT[0x5d] = """LOAD / SAVE / VERIFY.  LOAD inside a running program is the module-chaining primitive: after the ROM LOAD (stub copied from $2500 to $0120)
+the BASIC text pointer is set to the loaded file and the BASIC ROM restarts the program at $5AA6; the new module's BASIC stub does `SYS` ->
+`start` -> `init` -> init_vars in check mode, so variables are KEPT when the variable tables are compatible (OVERLAY.md).  [sure: experiments]"""

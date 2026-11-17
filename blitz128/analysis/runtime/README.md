@@ -57,3 +57,6 @@ named in `names.py` (`IMG2_*`).
 
 ## Defect found in the original compiler
 Image 2 in `BLITZ!.128` is 10 bytes short, so CIRCLE/PAINT/BOX/`$44` dispatch slots and the constant PI are RAM garbage in every compiled graphics program. Details: `IMAGE2.md`; fix and fixed compiler (V261117): branch `fix-graphics-slots`, folder `blitz128/fixed/`. `runtime2.s` describes image 2 with the missing bytes restored (`fix4001.py`).
+
+## Overlay / chain mode
+`OVERLAY.md`: what compile mode 4 (PASS0) and `LOAD` chaining do, with the VICE experiments. The JS port does not implement mode 4 yet.

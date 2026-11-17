@@ -231,3 +231,11 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (überholt:) `runtime_1c01.asm` ist im Bereich `$23D0–$2437` Datenmüll. Der Bereich muss mit `EOR $45FC,y` entschlüsselt werden. Außerdem sollte man prüfen, ob `JSR $1E2A` noch an anderen Stellen (insbesondere im Compiler-Teil und in Image 2) weiteren Code verschlüsselt.
 
 Aufbau zum Nachstellen: VICE 3.9 aus dem Quellcode, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, Monitor `trace store 27ff`.
+
+---
+
+## 13. Overlay-/Chain-Modus (gelöst 17.11.2026, siehe `runtime/OVERLAY.md`)
+Menüpunkt 4 („... mit Overlay-Funktion“) fügt PASS0 hinzu; dadurch bekommt jedes Modul dieselbe Variablennamen-Tabelle (Vereinigung über alle Programme).
+Zur Laufzeit lädt `LOAD "next",8` das nächste Modul und startet die Runtime neu; `init_vars` läuft im Prüfmodus und behält die Variablen, wenn die Tabelle des neuen Moduls
+passt und die Namen Slot für Slot übereinstimmen, sonst wird alles gelöscht. `RUN "next"` löscht immer. Mit Original-Compiler und -Runtime in VICE bestätigt
+(A: `a=42:b$="hello":c=7`; B liest sie: Modus 3 mit anderer Variablenreihenfolge verliert sie, Modus 4 behält sie). Offener Punkt 4 aus Abschnitt 8 ist damit geklärt.

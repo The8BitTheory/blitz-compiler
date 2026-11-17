@@ -231,3 +231,11 @@ LDA $6E : STA $247B,$379B,$3F87 ; $6E  = $E5
 - (superseded:) `runtime_1c01.asm` is data garbage in the range `$23D0–$2437`. The range has to be decrypted with `EOR $45FC,y`. One should also check whether `JSR $1E2A` encrypts further code elsewhere (especially in the compiler part and in image 2).
 
 Setup to reproduce: VICE 3.9 from source, `--enable-headlessui`, `x128 -warp -sounddev dummy -drive8type 1581 -8 d.d81 -moncommands t.mon -limitcycles 40000000 -keybuf 'load"blitz!.128",8\nrun\n'`, monitor `trace store 27ff`.
+
+---
+
+## 13. Overlay / chain mode (solved 17.11.2026, see `runtime/OVERLAY.md`)
+Menu item 4 ("... with overlay feature") adds PASS0, which gives every compiled module the same variable-name table (union over all programs).
+At run time `LOAD "next",8` loads the next module and restarts the runtime; `init_vars` runs in check mode and keeps the variables when the new
+module's table fits and its names equal the stored names slot by slot, else everything is cleared. `RUN "next"` always clears. Verified with the original
+compiler and runtime in VICE (A: `a=42:b$="hello":c=7`; B reads them: mode 3 with a different variable order loses them, mode 4 keeps them). Open item 4 of section 8 is closed.
