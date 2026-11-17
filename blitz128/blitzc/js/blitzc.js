@@ -12,6 +12,7 @@
 import { run, VARS } from './compiler.gen.js';
 import { Runtime } from './rt.js';
 import { BLITZ_B64 } from './blitzimg.js';
+import { makeD81 } from './d81.js';
 
 let blitzCache = null;
 // the original compiler file, embedded (js/blitzimg.js)
@@ -103,12 +104,55 @@ export function compile(source, blitz, opts = {}) {
   };
 }
 
-// One compile as a message stream, for a Web Worker (js/worker.js) or the page itself.
-// job = {src, blitz|null, like|null, name, runtime, fullSyntax}; post gets the compile() events plus
-//   {type:'done', c, z, errors, extensions}  or  {type:'error', text}
-export function compileJob({ src, blitz, like, name, runtime, fullSyntax }, post) {
+// Program names as they go on disk: PETSCII upper case, at most 14 characters (the compiler cuts C/ names there),
+// unique within one job (a repeated name gets a counter: PROG, PROG2, PROG3 ...).
+export function diskNames(names) {
+  const seen = new Set();
+  return names.map(n => {
+    const base = petscii((n || 'PROG').trim() || 'PROG').slice(0, 14);
+    let out = base;
+    for (let k = 2; seen.has(out); k++) out = base.slice(0, 14 - String(k).length) + k;
+    seen.add(out);
+    return out;
+  });
+}
+
+// Several programs in one go: the first one with runtime (if any), all others without runtime, which only
+// work behind an already loaded runtime. programs = [{src, name, runtime}], same options for all
+// (fullSyntax, keys/pad). A failing program does not stop the rest. Returns [{name, runtime, c, z, errors, extensions, error?}].
+// onEvent gets the compile() events plus {type:'program', index, count, name, runtime} before each program.
+export function compileMany(programs, blitz, opts = {}, onEvent = null) {
+  const names = diskNames(programs.map(p => p.name));
+  return programs.map((p, index) => {
+    const runtime = p.runtime !== false;
+    if (onEvent) onEvent({ type: 'program', index, count: programs.length, name: names[index], runtime });
+    try {
+      const r = compile(p.src, blitz || null, { ...opts, name: names[index], runtime, onEvent });
+      return { name: names[index], runtime, c: r.c, z: r.z, errors: r.errors, extensions: r.extensions };
+    } catch (e) {
+      if (onEvent) onEvent({ type: 'message', text: names[index] + ': ' + e.message });
+      return { name: names[index], runtime, c: null, z: null, errors: 1, extensions: 0, error: e.message };
+    }
+  });
+}
+
+// All outputs of compileMany() as .d81 image: C/NAME and Z/NAME per program.
+export function d81Of(results, diskName = 'BLITZC') {
+  const files = [];
+  for (const r of results) { if (r.c) files.push({ name: 'C/' + r.name, data: r.c }); if (r.z) files.push({ name: 'Z/' + r.name, data: r.z }); }
+  return makeD81(diskName, '01', files);
+}
+
+// One job as a message stream, for a Web Worker (js/worker.js) or the page itself.
+// job = {programs: [{src, name, runtime}], blitz|null, like|null, fullSyntax}  (old form {src, name, runtime, ...} still works)
+//   post gets the compile() events plus {type:'program', ...} and finally
+//   {type:'done', results: [{name, runtime, c, z, errors, extensions, error?}], d81: Uint8Array|null, errors, extensions}  or  {type:'error', text}
+export function compileJob(job, post) {
   try {
-    const r = compile(src, blitz || null, { name, runtime, fullSyntax, ...(like ? keysOf(like) : {}), onEvent: post });
-    post({ type: 'done', c: r.c, z: r.z, errors: r.errors, extensions: r.extensions });
+    const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
+    const results = compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
+    const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
+    post({ type: 'done', results, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
+           c: results[0].c, z: results[0].z });
   } catch (e) { post({ type: 'error', text: e.message }); }
 }

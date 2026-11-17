@@ -1,6 +1,6 @@
 // node js/test.js  - rebuild every tests/expected/<name> with the reference keys and compare byte by byte
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { compile, keysOf } from './blitzc.js';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { compile, compileMany, compileJob, d81Of, diskNames, keysOf } from './blitzc.js';
 const here = new URL('..', import.meta.url).pathname;
 const blitz = null;   // embedded image (js/blitzimg.js)
 let fail = 0;
@@ -29,4 +29,31 @@ for (const t of readdirSync(here + 'tests/expected').sort()) {
   if (errs.length) { fail++; console.log('FAIL', t, errs.join('; ')); }
   else console.log('ok  ', t, `C/ ${r.c.length} B, Z/ ${r.z ? r.z.length : 0} B, errors ${r.errors}`);
 }
+
+// several programs in one go: first with runtime, the rest without; each result equals the single compile
+if (!only) {
+  const src = n => readFileSync(here + 'tests/src/' + n + '.prg');
+  const { keys, pad } = keysOf(readFileSync(here + 'tests/expected/CRAWL/c.prg'));
+  const progs = [{ src: src('CRAWL'), name: 'CRAWL', runtime: true }, { src: src('t1'), name: 't1', runtime: false }, { src: src('stmt1'), name: 'T1', runtime: false }];
+  const events = [];
+  const res = compileMany(progs, null, { keys, pad }, e => { if (e.type === 'program') events.push(e.name + (e.runtime ? '+' : '-')); });
+  const same = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
+  const bad = [];
+  if (events.join() !== 'CRAWL+,T1-,T12-') bad.push('program events ' + events.join());   // names upper case, duplicates numbered
+  [['CRAWL', true, 'CRAWL'], ['t1', false, 'T1'], ['stmt1', false, 'T12']].forEach(([f, rt, nm], i) => {
+    const one = compile(src(f), null, { keys, pad, runtime: rt, name: nm });
+    if (!same(res[i].c, one.c) || !same(res[i].z, one.z)) bad.push(nm + ': multi result differs from single compile');
+  });
+  const la = r => r.c[0] | r.c[1] << 8;
+  if ((la(res[0]) !== 0x1c01 && la(res[0]) !== 0x4001) || la(res[1]) !== 0x46b0 || la(res[2]) !== 0x46b0) bad.push('load addresses ' + res.map(r => la(r).toString(16)));
+  const img = d81Of(res);
+  if (img.length !== 819200 || img[40 * 40 * 256 - 40 * 256 + 2] !== 0x44) bad.push('d81 header');
+  // job form as the worker sees it
+  let done; compileJob({ programs: progs, blitz: null, like: readFileSync(here + 'tests/expected/CRAWL/c.prg'), fullSyntax: false }, m => { if (m.type === 'done') done = m; });
+  if (!done || done.results.length !== 3 || !same(done.d81, img)) bad.push('compileJob result');
+  if (diskNames(['a very long program name', 'a very long program name']).join() !== 'A VERY LONG PR,A VERY LONG P2') bad.push('diskNames ' + diskNames(['a very long program name', 'a very long program name']));
+  writeFileSyncIf(process.env.D81_OUT, img);
+  if (bad.length) { fail++; console.log('FAIL multi', bad.join('; ')); } else console.log('ok   multi (3 programs, d81 ' + img.length + ' B)');
+}
+function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

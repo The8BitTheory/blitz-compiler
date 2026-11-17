@@ -37,6 +37,10 @@ node js/test.js                                   # alle tests/expected nachbaue
 bash oracle/compare.sh x.prg ...                  # Original (VICE) gegen Port, gleiche Schlüssel
 MODE=65 bash oracle/compare.sh x.prg             # Modus: 1, 4 (volle Syntax), 35 (ohne Runtime), 65 (beides)
 ```
+Mehrere Programme (Stand 17.11.2026): `--plain a.prg,b.prg` kompiliert weitere Programme **ohne Runtime** (sie laufen hinter dem Programm mit Runtime, das zuerst kommt; `-` statt `<in.prg>` = keines), `--d81 out.d81` schreibt alle `C/`- und `Z/`-Dateien auf ein 1581-Image. Ausgabe dann `c-<name>.prg`, `z-<name>.prg`. API: `compileMany([{src,name,runtime}], blitz, opts)`, `d81Of(results)` (`js/d81.js`). `D/` und `P/` sind Zwischendateien, die der Compiler am Ende selbst löscht, sie gehören nicht zur Ausgabe.
+```
+node js/cli.js crawl.prg out/ --plain lib1.prg,lib2.prg --d81 out/all.d81
+```
 Browser: `js/blitzc.html` direkt öffnen (eine Datei, gebaut mit `tools/bundle.py`; `js/index.html` ist die Modul-Fassung für einen Webserver). API: `compile(srcPrg, blitzPrg|null, {name, runtime, fullSyntax, keys, pad})` (null = eingebettete BLITZ!.128 aus `js/blitzimg.js`, erzeugt mit `tools/embed.py`) aus `js/blitzc.js` → `{c, z, errors, screen}`.
 
 Aufbau:
@@ -57,3 +61,6 @@ Befunde aus der Portierung:
 - `rt.js` übersetzt die Cursor-Ausgabe des Compilers (HOME/DOWN + Zahl = aktuelle Zeile, `PASSn`, Meldungszeilen) in Ereignisse; `compile(..., {onEvent})` ergänzt Position und Gesamtzahl der Quellzeilen (`sourceLines()`), `r.messages` liefert die Meldungen, `r.screen` bleibt unverändert.
 - Ereignisse: `start`, `pass`, `progress {pass,line,index,total}`, `message {text}`. PASS0 läuft nur im Mehrprogramm-Modus (T8), der Port bedient nur Einzelprogramme.
 - Die Seite kompiliert in einem Web Worker (`js/worker.js`; in `blitzc.html` per Blob-URL, geht auch von `file://`), damit der Fortschritt live erscheint; ohne Worker läuft derselbe Code in der Seite.
+
+### Mehrere Programme im Browser (Stand 17.11.2026)
+Das Feld „Programm mit Runtime“ bleibt; darunter steht die Liste „Programme ohne Runtime“ (mehrere Dateien auf einmal hinzufügbar, Name je Eintrag änderbar, Entfernen). Enthält die Liste ein Element, darf das Runtime-Feld leer bleiben. Reihenfolge: Runtime-Programm zuerst. Optionen (volle Syntax, Referenzdatei) gelten für alle. Ausgabe: je Programm `c-…` und `z-…` einzeln, bei mehreren Programmen zusätzlich ein `.d81` mit `C/NAME` und `Z/NAME`. Namen: höchstens 14 Zeichen, Dubletten werden nummeriert. Ein fehlerhaftes Programm hält die anderen nicht auf. `node js/test.js` prüft zusätzlich, dass Mehrfachläufe gleich den Einzelläufen sind.

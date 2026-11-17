@@ -6,7 +6,7 @@ def mod(n):
     s = open(os.path.join(J, n)).read()
     s = re.sub(r'^import .*?;\s*$', '', s, flags=re.M)
     return re.sub(r'^export ', '', s, flags=re.M)
-code = '\n'.join(mod(n) for n in ['blitzimg.js', 'cbmfloat.js', 'rt.js', 'compiler.gen.js', 'blitzc.js'])
+code = '\n'.join(mod(n) for n in ['blitzimg.js', 'cbmfloat.js', 'd81.js', 'rt.js', 'compiler.gen.js', 'blitzc.js'])
 page = open(os.path.join(J, 'index.html')).read()
 # the compiler code goes into a text block: the page starts a Web Worker from it (Blob URL, works from file://)
 # and falls back to running it inside the page if no worker can be started
