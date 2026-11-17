@@ -55,5 +55,31 @@ if (!only) {
   writeFileSyncIf(process.env.D81_OUT, img);
   if (bad.length) { fail++; console.log('FAIL multi', bad.join('; ')); } else console.log('ok   multi (3 programs, d81 ' + img.length + ' B)');
 }
+
+// overlay mode (original menu item 4): tests/overlay/<case>/ {case.json, src/<name>.prg, expected/<name>.prg}; keys and padding come from the references
+{
+  const { compileOverlay } = await import('./blitzc.js');
+  const od = here + 'tests/overlay/';
+  for (const t of existsSync(od) ? readdirSync(od).sort() : []) {
+    if (only && !t.startsWith(only)) continue;
+    const cfg = JSON.parse(readFileSync(od + t + '/case.json', 'utf8'));
+    const progs = cfg.order.map(n => ({ name: n, src: readFileSync(od + t + '/src/' + n + '.prg') }));
+    const exp = cfg.order.map(n => readFileSync(od + t + '/expected/' + n + '.prg'));
+    const ks = exp.map(keysOf);
+    let r;
+    try { r = compileOverlay(progs, blitz, { fullSyntax: cfg.full, keys: ks[0].keys, pads: ks.map(k => k.pad) }); }
+    catch (e) { console.log('FAIL overlay', t, 'exception', e.message); fail++; continue; }
+    const errs = [];
+    r.forEach((x, i) => {
+      const a = x.c, b = exp[i];
+      if (!a) { errs.push(x.name + ': missing'); return; }
+      const n = Math.min(a.length, b.length);
+      for (let k = 0; k < n; k++) if (a[k] !== b[k]) { errs.push(`${x.name}: first diff at offset ${k} (got ${a[k].toString(16)} want ${b[k].toString(16)})`); return; }
+      if (a.length !== b.length) errs.push(`${x.name}: length ${a.length} vs ${b.length}`);
+    });
+    if (errs.length) { fail++; console.log('FAIL overlay', t, errs.join('; ')); }
+    else console.log('ok   overlay ' + t, r.map(x => `${x.name} ${x.c.length} B`).join(', '));
+  }
+}
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

@@ -47,6 +47,13 @@ export function keysOf(c) {
   const pad = Array.from(c.subarray(H + 18, H + 18 + (ent - hdr)));
   return { keys, pad };
 }
+// RND(0) values for several programs in one session (overlay mode): keys once, then per program J% and its padding bytes.
+export function rndForMany(keys, pads) {
+  const [w1, w2, w3, w4, w5, w6] = keys;
+  const q = [w1, w3, w4, w5, w6, w2].map(k => (k + 0.5) / 256);
+  for (const pad of pads) { q.push((pad.length + 0.5) / 10); for (const b of pad) q.push((b + 0.5) / 255); }
+  return q;
+}
 export function validKey(k) { return (k & 15) !== 0 && (k & 240) !== 0; }
 
 // Keyboard input that drives the original menus.
@@ -136,10 +143,58 @@ export function compileMany(programs, blitz, opts = {}, onEvent = null) {
   });
 }
 
+// Overlay mode = original menu item 4 ("all programs ... with overlay feature"), driven exactly like the original: the compiler gets a source
+// disk (device 8) with all programs and an empty target disk (device 9), runs PASS0 over all of them - which gives every module the SAME
+// variable-name table - and then PASS1/PASS2 per program. The first module contains the runtime, the others do not (they start behind it,
+// at $46B0 / $6C41). Output files carry the plain program names (no C/ prefix, no Z/ file), like the original writes them; chain them with
+// LOAD "NAME",8 - variables then survive (see analysis/runtime/OVERLAY.md).
+// programs = [{src, name}] (>= 2 makes sense); opts: fullSyntax, keys/pads (reference run: keys = 6 key bytes, pads = one padding array per program).
+// Returns [{name, runtime, c, z: null, errors, extensions, diskName}] in program order. onEvent gets the compile() events (progress refers to the
+// program named in the last {type:'program'} event), {type:'program', index, count, name, runtime} when PASS1 reaches a program.
+export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
+  const names = diskNames(programs.map(p => p.name));
+  const files = {}; programs.forEach((p, i) => { files[names[i]] = p.src; });
+  const lines = programs.map(p => sourceLines(p.src)), pos = lines.map(l => new Map(l.map((n, i) => [n, i + 1])));
+  const lower = names.map(n => n.toLowerCase());
+  let cur = 0, lastProg = -1; const lastLine = {}, per = [];
+  const ev = e => {
+    if (e.type === 'working') {
+      const i = lower.indexOf(e.name.trim().toLowerCase()); if (i >= 0) cur = i;
+      if (e.pass === 1 && i >= 0 && i !== lastProg) {
+        lastProg = i; for (const k in lastLine) delete lastLine[k];
+        if (onEvent) onEvent({ type: 'program', index: i, count: programs.length, name: names[i], runtime: i === 0, overlay: true });
+      }
+      return;
+    }
+    if (e.type === 'progress') {
+      e.index = pos[cur].get(e.line) || 0; e.total = lines[cur].length;
+      if (!e.index || e.line <= (lastLine[e.pass] ?? -1)) return;
+      lastLine[e.pass] = e.line;
+    }
+    if (e.type === 'pass' && e.pass === 0) for (const k in lastLine) delete lastLine[k];
+    if (e.type === 'message') { const m = /errors:\s*(\d+)\s+extensions:\s*(\d+)/i.exec(e.text); if (m) per.push([+m[1], +m[2]]); }
+    if (onEvent) onEvent(e);
+  };
+  const rnd = opts.keys ? rndForMany(opts.keys, opts.pads || programs.map(() => [])) : null;
+  const rt = new Runtime(blitz || blitzImage(), {
+    files, split: true, rnd, maxSteps: opts.maxSteps, onEvent: ev,
+    keys: (opts.fullSyntax ? '6' : '3') + '4' + 'YY' + 'Y'.repeat(programs.length + 2),   // menu, item 4, "insert source disk" Y, "format target" Y, then "continue after errors?" Y
+    lines: ['8', '9'],
+  });
+  if (onEvent) onEvent({ type: 'start', total: lines[0].length });
+  rt.init(VARS);
+  run(rt);
+  const target = rt.disk(9);
+  return programs.map((p, i) => ({
+    name: names[i], runtime: i === 0, c: target.has(names[i]) ? Uint8Array.from(target.get(names[i])) : null, z: null,
+    errors: per[i] ? per[i][0] : 0, extensions: per[i] ? per[i][1] : 0, diskName: names[i],
+  }));
+}
+
 // All outputs of compileMany() as .d81 image: C/NAME and Z/NAME per program.
 export function d81Of(results, diskName = 'BLITZC') {
   const files = [];
-  for (const r of results) { if (r.c) files.push({ name: 'C/' + r.name, data: r.c }); if (r.z) files.push({ name: 'Z/' + r.name, data: r.z }); }
+  for (const r of results) { if (r.c) files.push({ name: r.diskName || 'C/' + r.name, data: r.c }); if (r.z) files.push({ name: 'Z/' + r.name, data: r.z }); }
   return makeD81(diskName, '01', files);
 }
 
@@ -150,9 +205,11 @@ export function d81Of(results, diskName = 'BLITZC') {
 export function compileJob(job, post) {
   try {
     const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
-    const results = compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
+    const overlay = !!job.overlay && programs.length > 1;   // "Gemeinsame Variablentabelle": original menu item 4
+    const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
+      : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
-    post({ type: 'done', results, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
+    post({ type: 'done', results, overlay, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
            c: results[0].c, z: results[0].z });
   } catch (e) { post({ type: 'error', text: e.message }); }
 }
