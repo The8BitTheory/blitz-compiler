@@ -264,5 +264,12 @@ does not pass variables. The dongle it requires is absent here: this copy is a c
 ## 15. Two runtime findings (VICE traces, 17.11.2026)
 * **`::` EXTENSION = opcode `$47`.** The compiler embeds the tokenized BASIC text of the command, unencrypted and up to the closing `:`, behind the opcode. The runtime points IGONE at `tr_user_ret`,
   lets the BASIC ROM execute one statement and continues at the BASIC text pointer `$3D/$3E` (`jump_3d3e`). See `runtime/names.py` (`OP_COMMENT[0x47]`) and `runtime/MANUAL.md`.
+Quelle	Ergebnis
+:: PRINT"Y":A=3 |	PRINT"Y" passed through, A=3 compiled
+:: PRINT"Y":PRINT"Z":A=3	| only PRINT"Y" passed through, PRINT"Z" compiled, A=3 compiled
+A=1:::PRINT"Y":A=3| wie oben, A=1 kompiliert, PRINT"Y" passed through, A=3 compiled
+A=1:: PRINT"Y" | A=1 compiled, PRINT"Y" compiled - not passed through
+:: PRINT"Y:Q":A=3 |	PRINT"Y:Q" passed through, A=3 compiled. colon in quotes is handled correctly
+
 * **Arrays fail in programs without any scalar variable** (error 18 BAD SUBSCRIPT at the first array access). `init` runs `init_vars` in check mode; with an empty variable table `vbase + 0 == strend`, the check passes and `init` skips
   `op15_CLR`, so the array pointer table (`z*%`) is never initialised. Workaround: declare a scalar variable. Details and trace: `runtime/OVERLAY.md`.
