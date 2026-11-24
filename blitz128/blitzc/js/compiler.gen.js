@@ -2850,7 +2850,7 @@ export function run(rt){
       v.L2_i=rt.toInt((v.F_f/256));
       rt.poke(5635,v.L2_i);
       rt.poke(5634,(v.F_f-(v.L2_i*256)));
-      rt.poke((v.F_f+254),v.RI_i);
+      rt.poke(((v.F_f-v.TE_i)+254),v.RI_i);
       rt.sys(5816);
       v.C_i=rt.toInt((16385+v.TE_i));
     case 32216: // L7DD8

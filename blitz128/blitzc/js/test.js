@@ -110,5 +110,18 @@ if (!only) {
   try { compile(readFileSync(here + 'tests/src/LIVE10WORK.prg'), null, { runtimeKind: 'improved' }); } catch (e) { bad.push('LIVE10WORK: ' + e.message); }
   if (bad.length) { fail++; console.log('FAIL improved', bad.join('; ')); } else console.log('ok   improved runtime (detection, key round trip, fast math choice)');
 }
+// **RI n: the runtime reads the trampoline length at offset $FE of its image ($1CFF for image 1, $40FF for image 2 = graphics programs).
+// The original compiler writes the image-2 value to the wrong place ($40FF stays 0); the JS port fixes that (tools/bc2js.py).
+if (!only) {
+  const bad = [];
+  for (const kind of ['original', 'improved'])
+    for (const [n, la, at] of [['ri1', 0x1c01, 0x1cff], ['ri2', 0x4001, 0x40ff]]) {
+      const r = compile(readFileSync(here + 'tests/src/' + n + '.prg'), null, { runtimeKind: kind });
+      const got = r.c[0] | r.c[1] << 8;
+      if (got !== la) bad.push(`${kind} ${n}: load address $${got.toString(16)}`);
+      else if (r.c[at - la + 2] !== 77) bad.push(`${kind} ${n}: $${at.toString(16)} = ${r.c[at - la + 2]}, want 77`);
+    }
+  if (bad.length) { fail++; console.log('FAIL **RI', bad.join('; ')); } else console.log('ok   **RI byte at $1CFF (image 1) / $40FF (image 2), original and improved runtime');
+}
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

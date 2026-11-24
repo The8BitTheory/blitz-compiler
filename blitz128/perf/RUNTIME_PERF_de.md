@@ -48,9 +48,12 @@ Nur `xop2a_FAST`/`xop29_SLOW` kehren mit CR≠A in die Hauptschleife zurück. Al
 `io_status_check` (CHKIN, CHKOUT, CLOSE, OPEN), `op45_PRINT_end` (PRINT, SPC, CR, INPUT), `rom_call` (INPUT-Wiederholung, STR$-Argumente) oder ein eigenes
 `sta $ff01` (INT, fac_to_int, STR$, GET, SPRCOLOR, SPRITE, JOY, RSPCOLOR, DMA). In beiden Runtimes behoben (V261123).
 
-### Nebenbefund (wahrscheinlich, nicht getestet): `**RI` in Grafikprogrammen
+### Nebenbefund (bestätigter Fehler): `**RI` in Grafikprogrammen
 Für Image 2 pokt der Compiler das RI-Flag nach `F+254`, wobei F das Ende von Image 2 in seinem Speicher ist (`$CDA3` im Original), also hinter den Teil,
-den er schreibt; für Image 1 pokt er korrekt nach `$1CFF`. `REM **RI` wirkt also vermutlich nicht in Programmen, die mit der `$4001`-Runtime übersetzt werden.
+den er schreibt; für Image 1 pokt er korrekt nach `$1CFF`. Die Runtime liest das Flag bei Offset `$FE` ihres Images (bei Image 2 `$40FF`). In
+Grafikprogrammen (`$4001`-Runtime) wird `**RI` daher ignoriert: `$40FF` ist immer 0, die Trampoline ($0202 ff., im BASIC-Eingabepuffer) werden nach einem `::`-Befehl (EXTENSION) nie wiederhergestellt, und der
+Fehlzugriff landet in ungenutztem RAM (`$CDA3`) der memory map des Compilers. Der JS-Compiler behebt das (Hook in `blitzc/tools/bc2js.py`, Poke nach Start+254;
+Test in `blitzc/js/test.js`); der Original-Compiler hat den Fehler weiterhin.
 
 ## Benchmarks (`bench/`)
 | Programm | Inhalt |

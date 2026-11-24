@@ -48,9 +48,12 @@ Only `xop2a_FAST`/`xop29_SLOW` return to the main loop with CR≠A. All others r
 `io_status_check` (CHKIN, CHKOUT, CLOSE, OPEN), `op45_PRINT_end` (PRINT, SPC, CR, INPUT), `rom_call` (INPUT re-prompt, STR$ args), or an own
 `sta $ff01` (INT, fac_to_int, STR$, GET, SPRCOLOR, SPRITE, JOY, RSPCOLOR, DMA). Fixed in both runtimes (V261123).
 
-### Side finding (likely, not tested): `**RI` in graphics programs
+### Side finding (confirmed bug): `**RI` in graphics programs
 For image 2 the compiler pokes the RI flag to `F+254` where F is the end of image 2 in its memory (`$CDA3` in the original), i.e. behind the
-part it writes; for image 1 it pokes `$1CFF` correctly. So `REM **RI` probably has no effect in programs compiled with the `$4001` runtime.
+part it writes; for image 1 it pokes `$1CFF` correctly. The runtime reads the flag at offset `$FE` of its image (`$40FF` for image 2). So in
+graphics programs (`$4001` runtime) `**RI` is ignored: `$40FF` is always 0, the trampolines ($0202 ff., in the BASIC input buffer) are never restored after a `::` command (EXTENSION), and the stray write
+hits unused RAM (`$CDA3`) in the compiler's memory map. The JS compiler fixes this (hook in `blitzc/tools/bc2js.py`, poke to start+254; test in
+`blitzc/js/test.js`); the original compiler still has the bug.
 
 ## Benchmarks (`bench/`)
 | Program | Contents |
