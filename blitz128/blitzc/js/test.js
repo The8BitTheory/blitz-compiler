@@ -1,8 +1,8 @@
 // node js/test.js  - rebuild every tests/expected/<name> with the reference keys and compare byte by byte
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
-import { compile, compileMany, compileJob, d81Of, diskNames, keysOf } from './blitzc.js';
+import { compile, compileMany, compileJob, d81Of, diskNames, keysOf, blitzImage } from './blitzc.js';
 const here = new URL('..', import.meta.url).pathname;
-const blitz = null;   // embedded image (js/blitzimg.js)
+const blitz = blitzImage('fixed');   // the references need the fixed build (V261123): 10-byte fix + FAST/SLOW delta (fixRef)
 // The references were made with the original V860929 runtime.  The embedded build (V261123) also carries the FAST/SLOW fix
 // (tools/patch_blitz128.py): two bytes in each runtime image.  Apply that known delta to a reference before comparing.
 function fixRef(b) {

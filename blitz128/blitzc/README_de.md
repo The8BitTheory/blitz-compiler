@@ -8,7 +8,7 @@ Ziel: Der Compiler läuft ohne Emulator (Node und Browser). Eingabe ist ein geto
 
 
 ## Runtime-Wahl: Original oder Improved 2026 (Stand 23.11.2026)
-In das Programm mit Runtime kommt entweder die **Original-Runtime** (V261123, Standard) oder die **Improved 2026 Runtime**
+In das Programm mit Runtime kommt entweder die **Original-Runtime** (unveränderte Skyles-V860929 von 1986 mit ihren Fehlern, Standard) oder die **Improved Runtime** (V261123, enthält die Fixes)
 (`../runtime2026/`: gleicher Bytecode, schnellere Variablen-/Arrayzugriffe und NEXT, optional Fast Math; etwa 10–26 % kürzere Laufzeit, siehe `../runtime2026/README_de.md`).
 ```
 node js/cli.js prog.prg out/ --runtime improved                  # Fast Math automatisch (wenn das Programm * / ^ SQR LOG EXP COS SIN TAN ATN nutzt)

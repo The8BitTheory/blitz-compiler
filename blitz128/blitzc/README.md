@@ -2,7 +2,7 @@
 
 # blitzc – a re-implementation of the Blitz! 128 compiler (Skyles, V860929)
 
-> **Fixed build V261123.** The `BLITZ!.128` of this repository (V860929, a cracked copy) is 10 bytes short (whether the uncracked Skyles distribution is too is unknown); programs with graphics statements (the `$4001` runtime) then contain RAM garbage instead of the tail of the dispatch table (CIRCLE, PAINT, BOX, `$44`) and the constant PI. In addition, FAST/SLOW leave the MMU in a ROM configuration, so bytecode above `$8000` that follows is read from ROM. `tools/patch_blitz128.py` repairs both (`fixed/blitz!.128.prg`, version string V261123); this port embeds the fixed build. The test references were made with the original V860929 runtime: `js/test.js` and `tools/chrome-test.py` apply the known 2-byte FAST/SLOW delta before comparing. Details: `tools/patch_blitz128.py`, `../fixed/README.md`.
+> **Fixed build V261123.** The `BLITZ!.128` of this repository (V860929, a cracked copy) is 10 bytes short (whether the uncracked Skyles distribution is too is unknown); programs with graphics statements (the `$4001` runtime) then contain RAM garbage instead of the tail of the dispatch table (CIRCLE, PAINT, BOX, `$44`) and the constant PI. In addition, FAST/SLOW leave the MMU in a ROM configuration, so bytecode above `$8000` that follows is read from ROM. `tools/patch_blitz128.py` repairs both (`fixed/blitz!.128.prg`, version string V261123); this port embeds the fixed build for the Improved runtime and the untouched file for the "Original runtime" option; the page shows the compiler build date (2026-11-24). The test references were made with the original V860929 runtime: `js/test.js` and `tools/chrome-test.py` apply the known 2-byte FAST/SLOW delta before comparing. Details: `tools/patch_blitz128.py`, `../fixed/README.md`.
 
 Goal: the compiler runs without an emulator (Node and browser). Input is a tokenized BASIC 7 PRG, output is `C/`, `Z/` and `D/`, byte-identical to the original for the same six random keys.
 
@@ -30,7 +30,7 @@ Format notes:
 - Programs with graphics commands are produced as the `$4001` variant (header at `$6C41`).
 
 ## Runtime choice: original or Improved 2026 (as of 23 Nov 2026)
-The runtime copied into the program with runtime can be the **original runtime** (V261123, default) or the **Improved 2026 runtime**
+The runtime copied into the program with runtime can be the **original runtime** (untouched Skyles V860929 of 1986 with its defects, default) or the **Improved runtime** (V261123, includes the fixes)
 (`../runtime2026/`: same bytecode, faster variable/array access and NEXT, optional fast math; about 10-26 % shorter run time, see `../runtime2026/README.md`).
 ```
 node js/cli.js prog.prg out/ --runtime improved                  # fast math automatic (when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN)

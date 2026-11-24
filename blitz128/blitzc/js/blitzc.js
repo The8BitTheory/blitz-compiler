@@ -3,7 +3,7 @@
 //   import { compile } from './blitzc.js';
 //   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
-//   runtimeKind: 'original' (default, V261123) or 'improved' (Improved 2026 runtime, see runtime2026/)
+//   runtimeKind: 'original' (default, untouched Skyles V860929 of 1986) or 'improved' (Improved runtime V261123, see runtime2026/)
 //   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
 //               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
@@ -13,18 +13,20 @@
 // every C/ file, exactly like the original does from memory.
 import { run, VARS } from './compiler.gen.js';
 import { Runtime } from './rt.js';
-import { BLITZ_B64 } from './blitzimg.js';
+import { BLITZ_B64, BLITZ_ORIG_B64 } from './blitzimg.js';
 import { makeD81 } from './d81.js';
 import { RT2026 } from './rt2026img.js';
 
-let blitzCache = null;
-// the original compiler file, embedded (js/blitzimg.js)
-export function blitzImage() {
-  if (!blitzCache) {
-    const bin = typeof atob === 'function' ? atob(BLITZ_B64) : Buffer.from(BLITZ_B64, 'base64').toString('latin1');
-    blitzCache = Uint8Array.from(bin, c => c.charCodeAt(0));
+const blitzCache = {};
+// the compiler file, embedded (js/blitzimg.js): 'original' = untouched Skyles V860929 (1986), else the fixed build V261123
+export function blitzImage(kind) {
+  const k = kind === 'original' ? 'original' : 'fixed';
+  if (!blitzCache[k]) {
+    const b64 = k === 'original' ? BLITZ_ORIG_B64 : BLITZ_B64;
+    const bin = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('latin1');
+    blitzCache[k] = Uint8Array.from(bin, c => c.charCodeAt(0));
   }
-  return blitzCache;
+  return blitzCache[k];
 }
 
 const petscii = s => s.toUpperCase();
@@ -160,7 +162,7 @@ export function compile(source, blitz, opts = {}) {
     opts.onEvent(ev);
   });
   const improved = opts.improvedRuntime !== undefined ? opts.improvedRuntime : runtimeFor(opts, [source]);
-  const rt = new Runtime(blitz || blitzImage(), {
+  const rt = new Runtime(blitz || blitzImage(improved ? 'improved' : 'original'), {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
     rnd, maxSteps: opts.maxSteps, onEvent, improved,
@@ -253,7 +255,7 @@ export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
   };
   const rnd = opts.keys ? rndForMany(opts.keys, opts.pads || programs.map(() => [])) : null;
   const improved = runtimeFor(opts, programs.map(p => p.src));
-  const rt = new Runtime(blitz || blitzImage(), {
+  const rt = new Runtime(blitz || blitzImage(improved ? 'improved' : 'original'), {
     files, split: true, rnd, maxSteps: opts.maxSteps, onEvent: ev, improved,
     keys: (opts.fullSyntax ? '6' : '3') + '4' + 'YY' + 'Y'.repeat(programs.length + 2),   // menu, item 4, "insert source disk" Y, "format target" Y, then "continue after errors?" Y
     lines: ['8', '9'],

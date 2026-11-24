@@ -40,7 +40,7 @@
 </head>
 <body>
 <h1>blitzc</h1>
-<p>Port of the Blitz!&nbsp;128 compiler (Skyles V860929, fixed build V261123) in JavaScript. Everything runs locally in the browser.<span id="srvhint">
+<p>Port of the Blitz!&nbsp;128 compiler (Skyles, 1986) in JavaScript. Compiler build of 2026-11-24. Everything runs locally in the browser.<span id="srvhint">
 Open this page through a local web server (e.g. <code>npx serve js</code>), because ES modules do not load from <code>file://</code>.</span></p>
 
 <label>Program with runtime <small>(tokenized BASIC 7 PRG; may stay empty if the list below has a program)</small></label>
@@ -62,19 +62,19 @@ gets a 2-byte header that checks for pending collision events and holds the stat
 <label style="font-weight:normal"><input type="checkbox" id="shared" checked disabled> Shared variable table <small id="sharedhint">(needs at least 2 programs)</small></label>
 <label>Runtime <small>(copied into the program with runtime; all programs of one run use the same)</small></label>
 <select id="rtkind">
-  <option value="original">Original runtime (V261123)</option>
-  <option value="improved">Improved 2026 runtime</option>
+  <option value="original">Original runtime (Skyles, 1986)</option>
+  <option value="improved">Improved runtime (V261123)</option>
 </select>
-<label style="font-weight:normal">Fast math <small>(Improved 2026 runtime only)</small>
+<label style="font-weight:normal">Fast math <small>(Improved runtime only)</small>
 <select id="fastmath">
   <option value="auto">automatic (when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN)</option>
   <option value="on">on</option>
   <option value="off">off</option>
 </select></label>
-<small class="optnote"><b>Original</b>: the Skyles runtime with the FAST/SLOW fix. <b>Improved 2026</b>: same bytecode, faster variable and array access
+<small class="optnote"><b>Original</b>: the untouched Skyles runtime of 1986, with its known defects (e.g. FAST/SLOW, truncated graphics runtime image). <b>Improved</b> (V261123, includes the fixes): same bytecode, faster variable and array access
 and NEXT (about 10&ndash;20&nbsp;% shorter run time), about 1.4&nbsp;KB longer; with <b>fast math</b> also a faster multiplication and SIN/COS/TAN/ATN/SQR/LOG/EXP/^
 (results bit-identical to the ROM, about 25&nbsp;% faster floating-point code, about 3.2&nbsp;KB longer, 2&nbsp;KB tables are built behind the program at start).
-The improved runtime needs <code>$FC00-$FEFF</code> (common RAM): the program must end below <code>$FC00</code>, and the string space is 768 bytes smaller.</small>
+The Improved runtime needs <code>$FC00-$FEFF</code> (common RAM): the program must end below <code>$FC00</code>, and the string space is 768 bytes smaller.</small>
 <br><button id="go">Compile</button>
 <p id="status" aria-live="polite"></p>
 <div class="files" id="files"></div>
@@ -212,7 +212,7 @@ function finish(m) {
   $('files').replaceChildren(...box);
   $('status').className = m.errors ? 'err' : '';
   $('status').textContent = `Done in ${sec} s – ${m.results.length} program${m.results.length > 1 ? 's' : ''}, errors: ${m.errors}, extensions: ${m.extensions}` +
-    (m.runtimeKind === 'improved' ? ` – Improved 2026 runtime${m.fastMath ? ' with fast math' : ''}` : ' – original runtime');
+    (m.runtimeKind === 'improved' ? ` – Improved runtime${m.fastMath ? ' with fast math' : ''}` : ' – Original runtime');
 }
 
 $('go').onclick = async () => {

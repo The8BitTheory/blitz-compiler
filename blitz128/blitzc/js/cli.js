@@ -5,7 +5,7 @@
 //   --overlay: with --plain, compile all programs in ONE run like menu item 4 of the original ("overlay"): one common variable table, first
 //              program with runtime; files are named like the programs (<name>.prg, no C/ prefix, no Z/ file) - chain them with LOAD "NAME",8
 //   --no-runtime: C/ without runtime routines; --full: RESUME and COLLISION with full syntax (original menu 4-6)
-//   --runtime original|improved: Original runtime (V261123, default) or Improved 2026 runtime (all programs of one run use the same)
+//   --runtime original|improved: Original runtime (Skyles 1986, default) or Improved runtime (V261123) (all programs of one run use the same)
 //   --fastmath auto|on|off: improved runtime only, fast multiplication + SQR/LOG/EXP/SIN/COS/TAN/ATN (auto = when the program uses them)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
