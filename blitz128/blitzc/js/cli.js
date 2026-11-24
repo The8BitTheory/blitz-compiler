@@ -5,7 +5,7 @@
 //   --overlay: with --plain, compile all programs in ONE run like menu item 4 of the original ("overlay"): one common variable table, first
 //              program with runtime; files are named like the programs (<name>.prg, no C/ prefix, no Z/ file) - chain them with LOAD "NAME",8
 //   --no-runtime: C/ without runtime routines; --full: RESUME and COLLISION with full syntax (original menu 4-6)
-//   --runtime original|improved: Original runtime (Skyles 1986, default) or Improved runtime (V261123) (all programs of one run use the same)
+//   --runtime original|improved: Original runtime (Skyles 1986) or Improved runtime (V261123, default) (all programs of one run use the same)
 //   --fastmath auto|on|off: improved runtime only, fast multiplication + SQR/LOG/EXP/SIN/COS/TAN/ATN (auto = when the program uses them)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -25,7 +25,7 @@ if (opt.keys) { keys = hex(opt.keys); pad = hex(opt.pad || ''); }
 if (keys && !keys.every(validKey)) console.error('warning: original never produces keys with a zero nibble');
 if (opt.runtime && !['original', 'improved'].includes(opt.runtime)) { console.error('--runtime original|improved'); process.exit(2); }
 if (opt.fastmath && !['auto', 'on', 'off'].includes(opt.fastmath)) { console.error('--fastmath auto|on|off'); process.exit(2); }
-const common = { keys, pad, fullSyntax: !!opt.full, runtimeKind: opt.runtime || 'original',
+const common = { keys, pad, fullSyntax: !!opt.full, runtimeKind: opt.runtime || 'improved',
   fastMath: opt.fastmath === 'on' ? true : opt.fastmath === 'off' ? false : 'auto' };
 const plain = (opt.plain || '').split(',').filter(Boolean);
 mkdirSync(pos[1], { recursive: true });

@@ -30,7 +30,7 @@ Format notes:
 - Programs with graphics commands are produced as the `$4001` variant (header at `$6C41`).
 
 ## Runtime choice: original or Improved 2026 (as of 23 Nov 2026)
-The runtime copied into the program with runtime can be the **original runtime** (untouched Skyles V860929 of 1986 with its defects, default) or the **Improved runtime** (V261123, includes the fixes)
+The runtime copied into the program with runtime can be the **original runtime** (untouched Skyles V860929 of 1986 with its defects) or the **Improved runtime** (V261123, includes the fixes, default)
 (`../runtime2026/`: same bytecode, faster variable/array access and NEXT, optional fast math; about 10-26 % shorter run time, see `../runtime2026/README.md`).
 ```
 node js/cli.js prog.prg out/ --runtime improved                  # fast math automatic (when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN)
