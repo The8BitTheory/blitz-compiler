@@ -3,6 +3,8 @@
 //   import { compile } from './blitzc.js';
 //   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
+//   runtimeKind: 'original' (default, V261123) or 'improved' (Improved 2026 runtime, see runtime2026/)
+//   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
 //               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
 //   r.c  -> C/NAME (Uint8Array), r.z -> Z/NAME, r.errors, r.screen
@@ -13,6 +15,7 @@ import { run, VARS } from './compiler.gen.js';
 import { Runtime } from './rt.js';
 import { BLITZ_B64 } from './blitzimg.js';
 import { makeD81 } from './d81.js';
+import { RT2026 } from './rt2026img.js';
 
 let blitzCache = null;
 // the original compiler file, embedded (js/blitzimg.js)
@@ -26,6 +29,67 @@ export function blitzImage() {
 
 const petscii = s => s.toUpperCase();
 
+// ---------- Improved 2026 runtime
+const b64 = t => Uint8Array.from(typeof atob === 'function' ? atob(t) : Buffer.from(t, 'base64').toString('latin1'), c => c.charCodeAt(0));
+const rtCache = {};
+// decoded variant of js/rt2026img.js: {kind, img1, img2} with ext as Uint8Array
+export function improvedRuntime(fastMath) {
+  const k = fastMath && RT2026.fastmath ? 'fastmath' : 'plain';
+  if (!rtCache[k]) {
+    const v = RT2026[k], dec = d => ({ ...d, ext: b64(d.ext) });
+    rtCache[k] = { kind: k, img1: dec(v[1]), img2: dec(v[2]) };
+  }
+  return rtCache[k];
+}
+// Does a tokenized BASIC 7 program use floating-point multiplication/division/power or SQR LOG EXP COS SIN TAN ATN?
+// (tokens outside strings, REM and DATA lines)
+const MATH_TOKENS = new Set([0xac, 0xad, 0xae, 0xba, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1]);
+export function usesMath(prg) {
+  const la = prg[0] | prg[1] << 8;
+  for (let p = 2; p + 3 < prg.length;) {
+    const next = prg[p] | prg[p + 1] << 8;
+    if (!next) break;
+    let q = false;
+    for (let i = p + 4; i < prg.length && prg[i]; i++) {
+      const b = prg[i];
+      if (b === 0x22) q = !q;
+      else if (!q && (b === 0x8f || b === 0x83)) break;        // REM, DATA: rest of the line is text
+      else if (!q && (b === 0xce || b === 0xfe)) i++;          // two-byte tokens of BASIC 7
+      else if (!q && MATH_TOKENS.has(b)) return true;
+    }
+    p = next - la + 2;
+  }
+  return false;
+}
+// the runtime choice for one job: all programs of a job use the same runtime (modules without runtime run behind the first one)
+function runtimeFor(opts, sources) {
+  if (opts.runtimeKind !== 'improved') return null;
+  const fm = opts.fastMath === undefined || opts.fastMath === 'auto' ? sources.some(usesMath) : !!opts.fastMath;
+  return improvedRuntime(fm);
+}
+// header address of a C/ file: behind the runtime image (original or improved, plain or fastmath), or the load address without runtime
+function headerAddr(c) {
+  const la = c[0] | c[1] << 8;
+  if (la !== 0x1c01 && la !== 0x4001) return la;
+  const img = la === 0x1c01 ? 1 : 2, cands = [la === 0x1c01 ? 0x46b0 : 0x6c41];
+  for (const k of ['plain', 'fastmath']) if (RT2026[k]) cands.push(RT2026[k][img].end);
+  // the header is followed by 0-9 padding bytes and then the entry point (header 2 word 3, XOR $79)
+  for (const h of cands) {
+    const H = h - la + 2; if (H + 18 > c.length) continue;
+    const ent = (c[H + 6] ^ 0x79) | (c[H + 7] ^ 0x79) << 8;
+    if (ent >= h + 18 && ent <= h + 27) return h;
+  }
+  return cands[0];
+}
+// which runtime a C/ file carries: 'original', 'improved', 'improved+fastmath' (null without runtime)
+export function runtimeKindOf(c) {
+  const la = c[0] | c[1] << 8;
+  if (la !== 0x1c01 && la !== 0x4001) return null;
+  const img = la === 0x1c01 ? 1 : 2, h = headerAddr(c);
+  if (h === (img === 1 ? 0x46b0 : 0x6c41)) return 'original';
+  return RT2026.fastmath && h === RT2026.fastmath[img].end ? 'improved+fastmath' : 'improved';
+}
+
 // RND(0) values that make the original produce the given keys/padding:
 // order of RND calls: keys W1,W3,W4,W5,W6,W2 (K0..K5 = W1..W6), then J%=INT(RND*10), then J% pad bytes INT(RND*255).
 export function rndFor(keys, pad) {
@@ -38,7 +102,7 @@ export function rndFor(keys, pad) {
 // Read keys and padding back out of a C/ file (for byte-identical rebuilds).
 export function keysOf(c) {
   const la = c[0] | c[1] << 8;
-  const hdrAt = la === 0x1c01 ? 0x46b0 : la === 0x4001 ? 0x6c41 : la;   // without runtime the file starts at the header
+  const hdrAt = headerAddr(c);                                           // without runtime the file starts at the header
   const H = hdrAt - la + 2;
   let a = 0x2f; const keys = [];
   for (let i = 0; i < 6; i++) { a ^= c[H + 12 + i]; keys.push(a); }
@@ -95,20 +159,31 @@ export function compile(source, blitz, opts = {}) {
     }
     opts.onEvent(ev);
   });
+  const improved = opts.improvedRuntime !== undefined ? opts.improvedRuntime : runtimeFor(opts, [source]);
   const rt = new Runtime(blitz || blitzImage(), {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
-    rnd, maxSteps: opts.maxSteps, onEvent,
+    rnd, maxSteps: opts.maxSteps, onEvent, improved,
   });
   if (onEvent) onEvent({ type: 'start', total: lines.length });
   rt.init(VARS);
   run(rt);
   const get = n => rt.files.has(n) ? Uint8Array.from(rt.files.get(n)) : null;
+  const c = get('C/' + name);
+  checkTop(c, improved);
   return {
-    c: get('C/' + name), z: get('Z/' + name),
+    c, z: get('Z/' + name),
     errors: rt.v.X1_f + rt.v.X3_f, extensions: rt.v.X0_f,
     screen: rt.screen, messages: rt.messages, files: rt.files,
+    runtimeKind: improved ? 'improved' : 'original', fastMath: improved ? improved.kind === 'fastmath' : false,
   };
+}
+
+// The improved runtime shares the top page $FC00-$FEFF between bank 0 and bank 1: the program must end below it.
+function checkTop(c, improved) {
+  if (!improved || !c) return;
+  const end = (c[0] | c[1] << 8) + c.length - 2;
+  if (end > 0xfc00) throw new Error('program ends at $' + end.toString(16) + ': the Improved 2026 runtime needs $FC00-$FEFF, use the original runtime');
 }
 
 // Program names as they go on disk: PETSCII upper case, at most 14 characters (the compiler cuts C/ names there),
@@ -130,11 +205,12 @@ export function diskNames(names) {
 // onEvent gets the compile() events plus {type:'program', index, count, name, runtime} before each program.
 export function compileMany(programs, blitz, opts = {}, onEvent = null) {
   const names = diskNames(programs.map(p => p.name));
+  const improvedRuntime = runtimeFor(opts, programs.map(p => p.src));
   return programs.map((p, index) => {
     const runtime = p.runtime !== false;
     if (onEvent) onEvent({ type: 'program', index, count: programs.length, name: names[index], runtime });
     try {
-      const r = compile(p.src, blitz || null, { ...opts, name: names[index], runtime, onEvent });
+      const r = compile(p.src, blitz || null, { ...opts, name: names[index], runtime, onEvent, improvedRuntime });
       return { name: names[index], runtime, c: r.c, z: r.z, errors: r.errors, extensions: r.extensions };
     } catch (e) {
       if (onEvent) onEvent({ type: 'message', text: names[index] + ': ' + e.message });
@@ -176,8 +252,9 @@ export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
     if (onEvent) onEvent(e);
   };
   const rnd = opts.keys ? rndForMany(opts.keys, opts.pads || programs.map(() => [])) : null;
+  const improved = runtimeFor(opts, programs.map(p => p.src));
   const rt = new Runtime(blitz || blitzImage(), {
-    files, split: true, rnd, maxSteps: opts.maxSteps, onEvent: ev,
+    files, split: true, rnd, maxSteps: opts.maxSteps, onEvent: ev, improved,
     keys: (opts.fullSyntax ? '6' : '3') + '4' + 'YY' + 'Y'.repeat(programs.length + 2),   // menu, item 4, "insert source disk" Y, "format target" Y, then "continue after errors?" Y
     lines: ['8', '9'],
   });
@@ -185,6 +262,7 @@ export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
   rt.init(VARS);
   run(rt);
   const target = rt.disk(9);
+  for (const n of names) if (target.has(n)) checkTop(Uint8Array.from(target.get(n)), improved);
   return programs.map((p, i) => ({
     name: names[i], runtime: i === 0, c: target.has(names[i]) ? Uint8Array.from(target.get(names[i])) : null, z: null,
     errors: per[i] ? per[i][0] : 0, extensions: per[i] ? per[i][1] : 0, diskName: names[i],
@@ -206,10 +284,12 @@ export function compileJob(job, post) {
   try {
     const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
     const overlay = !!job.overlay && programs.length > 1;   // "Shared variable table" checkbox: original menu item 4
-    const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
-      : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...(job.like ? keysOf(job.like) : {}) }, post);
+    const rk = { runtimeKind: job.runtimeKind, fastMath: job.fastMath };
+    const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...rk, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
+      : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...rk, ...(job.like ? keysOf(job.like) : {}) }, post);
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
+    const imp = runtimeFor(rk, programs.map(p => p.src));
     post({ type: 'done', results, overlay, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
-           c: results[0].c, z: results[0].z });
+           c: results[0].c, z: results[0].z, runtimeKind: imp ? 'improved' : 'original', fastMath: !!imp && imp.kind === 'fastmath' });
   } catch (e) { post({ type: 'error', text: e.message }); }
 }

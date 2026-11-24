@@ -2,10 +2,22 @@
 
 # blitzc – Nachbau des Blitz! 128 Compilers (Skyles, V860929)
 
-> **Korrigierte Fassung V261117.** Die `BLITZ!.128` dieses Repositorys (V860929, eine gecrackte Kopie) ist 10 Bytes zu kurz (ob die ungecrackte Skyles-Distribution es auch ist, ist unbekannt); Programme mit Grafikbefehlen (Runtime `$4001`) enthalten dadurch RAM-Müll statt des Tabellenendes (CIRCLE, PAINT, BOX, `$44`) und der Konstante PI. `tools/patch_blitz128.py` hängt die fehlenden Bytes an (`fixed/blitz!.128.prg`, Version V261117); dieser Port bettet die korrigierte Fassung ein.
+> **Korrigierte Fassung V261123.** Die `BLITZ!.128` dieses Repositorys (V860929, eine gecrackte Kopie) ist 10 Bytes zu kurz (ob die ungecrackte Skyles-Distribution es auch ist, ist unbekannt); Programme mit Grafikbefehlen (Runtime `$4001`) enthalten dadurch RAM-Müll statt des Tabellenendes (CIRCLE, PAINT, BOX, `$44`) und der Konstante PI. Außerdem lassen FAST/SLOW die MMU in einer ROM-Konfiguration stehen, sodass danach folgender Bytecode oberhalb von `$8000` aus dem ROM gelesen wird. `tools/patch_blitz128.py` behebt beides (`fixed/blitz!.128.prg`, Version V261123); dieser Port bettet die korrigierte Fassung ein. Die Testreferenzen stammen von der Original-Runtime V860929: `js/test.js` und `tools/chrome-test.py` rechnen vor dem Vergleich das bekannte 2-Byte-Delta von FAST/SLOW ein. Details: `tools/patch_blitz128.py`, `../fixed/README.md`.
 
 Ziel: Der Compiler läuft ohne Emulator (Node und Browser). Eingabe ist ein getokentes BASIC-7-PRG, Ausgabe `C/`, `Z/` und `D/`, byte-identisch zum Original bei denselben sechs Zufallsschlüsseln.
 
+
+## Runtime-Wahl: Original oder Improved 2026 (Stand 23.11.2026)
+In das Programm mit Runtime kommt entweder die **Original-Runtime** (V261123, Standard) oder die **Improved 2026 Runtime**
+(`../runtime2026/`: gleicher Bytecode, schnellere Variablen-/Arrayzugriffe und NEXT, optional Fast Math; etwa 10–26 % kürzere Laufzeit, siehe `../runtime2026/README_de.md`).
+```
+node js/cli.js prog.prg out/ --runtime improved                  # Fast Math automatisch (wenn das Programm * / ^ SQR LOG EXP COS SIN TAN ATN nutzt)
+node js/cli.js prog.prg out/ --runtime improved --fastmath off   # oder on
+```
+API: `compile(src, null, {runtimeKind: 'improved', fastMath: 'auto'|true|false})`, dieselben Optionen für `compileMany`, `compileOverlay` und `compileJob`
+(alle Programme eines Laufs bekommen dieselbe Runtime); `r.runtimeKind`, `r.fastMath`; `runtimeKindOf(c)` sagt, welche Runtime eine C/-Datei enthält, `keysOf()`
+liest beide Arten. Die Improved-Runtime braucht `$FC00–$FEFF`: Programme, die oberhalb von `$FC00` enden, weist der Compiler ab.
+Browserseite: Felder „Runtime“ und „Fast math“. Die Runtime-Größe erreicht den übersetzten Compiler über `T1%`/`TE%` (`tools/bc2js.py` → `rt.rtEnd1()`/`rt.rtLen2()`).
 ## Stand
 - `oracle/`: Original-Compiler headless in VICE 3.9 (Prüfstein)
   - `build-vice.sh` baut x128/c1541/petcat ohne root nach `~/vice`

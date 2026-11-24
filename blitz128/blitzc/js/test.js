@@ -3,6 +3,15 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { compile, compileMany, compileJob, d81Of, diskNames, keysOf } from './blitzc.js';
 const here = new URL('..', import.meta.url).pathname;
 const blitz = null;   // embedded image (js/blitzimg.js)
+// The references were made with the original V860929 runtime.  The embedded build (V261123) also carries the FAST/SLOW fix
+// (tools/patch_blitz128.py): two bytes in each runtime image.  Apply that known delta to a reference before comparing.
+function fixRef(b) {
+  b = Uint8Array.from(b); const la = b[0] | b[1] << 8;
+  const put = (addr, lo, hi) => { const i = addr - la + 2; if (i >= 2 && i + 1 < b.length) { b[i] = lo; b[i + 1] = hi; } };
+  if (la === 0x1c01) put(0x3dc2, 0xf4, 0x3d);
+  if (la === 0x4001) put(0x6353, 0x85, 0x63);
+  return b;
+}
 let fail = 0;
 const only = process.argv[2];
 for (const t of readdirSync(here + 'tests/expected').sort()) {
@@ -11,7 +20,7 @@ for (const t of readdirSync(here + 'tests/expected').sort()) {
   // <name>.m4 = full syntax, .m35 = without runtime, .m65 = both (original menu keys)
   const [base, m] = t.split('.m'); const mode = { runtime: !(m === '35' || m === '65'), fullSyntax: m === '4' || m === '65' };
   const src = readFileSync(here + 'tests/src/' + base + '.prg');
-  const ec = readFileSync(ex + 'c.prg'); const ez = existsSync(ex + 'z.prg') ? readFileSync(ex + 'z.prg') : null;
+  const ec = fixRef(readFileSync(ex + 'c.prg')); const ez = existsSync(ex + 'z.prg') ? readFileSync(ex + 'z.prg') : null;
   const { keys, pad } = keysOf(ec);
   let r;
   try { r = compile(src, blitz, { keys, pad, ...mode }); }
@@ -64,7 +73,7 @@ if (!only) {
     if (only && !t.startsWith(only)) continue;
     const cfg = JSON.parse(readFileSync(od + t + '/case.json', 'utf8'));
     const progs = cfg.order.map(n => ({ name: n, src: readFileSync(od + t + '/src/' + n + '.prg') }));
-    const exp = cfg.order.map(n => readFileSync(od + t + '/expected/' + n + '.prg'));
+    const exp = cfg.order.map(n => fixRef(readFileSync(od + t + '/expected/' + n + '.prg')));
     const ks = exp.map(keysOf);
     let r;
     try { r = compileOverlay(progs, blitz, { fullSyntax: cfg.full, keys: ks[0].keys, pads: ks.map(k => k.pad) }); }
@@ -80,6 +89,26 @@ if (!only) {
     if (errs.length) { fail++; console.log('FAIL overlay', t, errs.join('; ')); }
     else console.log('ok   overlay ' + t, r.map(x => `${x.name} ${x.c.length} B`).join(', '));
   }
+}
+// Improved 2026 runtime: detection, key round trip (keysOf -> compile gives the same file), automatic fast math, $FC00 limit
+if (!only) {
+  const { usesMath, runtimeKindOf } = await import('./blitzc.js');
+  const bad = [];
+  const same = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
+  for (const n of ['t1', 'expr', 'floats', 'CRAWL', 'LIVE10WORK']) {
+    const src = readFileSync(here + 'tests/src/' + n + '.prg');
+    for (const fastMath of ['auto', true, false]) {
+      const a = compile(src, null, { runtimeKind: 'improved', fastMath });
+      const want = fastMath === 'auto' ? usesMath(src) : fastMath;
+      if (a.fastMath !== want) bad.push(`${n} ${fastMath}: fastMath ${a.fastMath}`);
+      if (runtimeKindOf(a.c) !== (want ? 'improved+fastmath' : 'improved')) bad.push(`${n} ${fastMath}: runtimeKindOf ${runtimeKindOf(a.c)}`);
+      const b = compile(src, null, { runtimeKind: 'improved', fastMath, ...keysOf(a.c) });
+      if (!same(a.c, b.c) || !same(a.z, b.z)) bad.push(`${n} ${fastMath}: keysOf round trip differs`);
+    }
+  }
+  if (usesMath(readFileSync(here + 'tests/src/t1.prg')) !== true || usesMath(readFileSync(here + 'tests/src/stmt1.prg')) !== false) bad.push('usesMath t1/stmt1');
+  try { compile(readFileSync(here + 'tests/src/LIVE10WORK.prg'), null, { runtimeKind: 'improved' }); } catch (e) { bad.push('LIVE10WORK: ' + e.message); }
+  if (bad.length) { fail++; console.log('FAIL improved', bad.join('; ')); } else console.log('ok   improved runtime (detection, key round trip, fast math choice)');
 }
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);
