@@ -1,8 +1,9 @@
-# Fixed Blitz!128 compiler (V261117)
+# Fixed Blitz!128 compiler (V261123)
 
-`blitz!.128.prg` here is the `BLITZ!.128` of this repository (Skyles V860929) with one defect repaired. That copy is a **cracked version** (the dongle check is disabled; stated by the repository owner). The fix is made by
+`blitz!.128.prg` here is the `BLITZ!.128` of this repository (Skyles V860929) with two defects repaired (V261117: image 2 truncated;
+V261123: additionally the FAST/SLOW defect, see below). That copy is a **cracked version** (the dongle check is disabled; stated by the repository owner). The fix is made by
 `../blitzc/tools/patch_blitz128.py` (which checks that its input is the untouched file, sha1 `de85d699...`).
-The title screen shows **V261117** (yymmdd of the fix); the untouched file shows V860929. The untouched file is left in place.
+The title screen shows **V261123** (yymmdd of the latest fix); the untouched file shows V860929. The untouched file is left in place.
 
 ## The defect
 `BLITZ!.128` contains two runtime images that the compiler copies into every compiled `C/` file: image 1 for normal programs and
@@ -25,6 +26,19 @@ Image 1 (programs without graphics) is complete and unaffected.
 Append the missing bytes `38 03 91 71 82 C9 0F DA A1 00` (file size 45 222):
 CIRCLE -> `$4238`, PAINT -> `$4203`, BOX -> `$4291`, `$44` -> `$4D71` (the high bytes `$42 $42 $42 $4D` were already in the file), PI as in image 1.
 Compiled programs have to be recompiled; nothing else changes (keys, headers, image 1 are as before).
+
+## Second defect: FAST/SLOW (fixed in V261123)
+`FAST` and `SLOW` (ext. opcodes `$2A`/`$29`) write `$02` to the MMU configuration register `$FF00` (I/O on for `$D011`/`$D030`) and return to the
+main loop with `jmp skip2` without selecting configuration A (`$FF01`) again. In configuration `$02` the BASIC ROM covers `$8000-$BFFF` and the
+KERNAL ROM `$C000-$FFFF`: the next tokens are fetched from ROM if the bytecode at that point lies above `$8000` (programs with more than about 15 KB
+of bytecode), until a variable access passes a trampoline. Seen in VICE: `X=1 : FAST : PRINT "A"; : SLOW : POKE 2000,7 : END` at `$887x` ends in
+error 27, at `$A49x` the POKE is missing (`perf/test/gen_fast8000.py`). The other 19 handlers that write `$FF00` restore configuration A
+(audit in `perf/RUNTIME_PERF.md`).
+
+**Fix:** the operand of `jmp skip2` points at the existing tail `sta $ff01 : jmp next_y0` of SPRCOLOR (`next_y0` = `skip2` with prevop = 0,
+which holds at statement level anyway). No new bytes: image 1 `$3DC2`: `E7 27` → `F4 3D`, image 2 `$6353`: `78 4D` → `85 63`.
+The compiler itself runs on image 1, so it has the fix too. Checked in VICE with the programs of `gen_fast8000.py` (all correct now) and by compiling
+`perf/test/nexttest.prg` with the fixed original compiler: C/ and Z/ byte-identical to the JS port.
 
 ## How it was checked (VICE 3.10, `x128`, original compiler running headless)
 * Program `graphic 1,1 : circle 1,100,100,20,10 : box 1,10,10,50,50 : paint 1,60,60 : graphic 0 : end`:

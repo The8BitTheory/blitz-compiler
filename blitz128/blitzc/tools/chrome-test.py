@@ -8,12 +8,19 @@ H = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 page = open(os.path.join(H, 'js', 'blitzc.html')).read()
 code = re.search(r'<script type="text/plain" id="wsrc">\n(.*?)\n</script>', page, re.S).group(1).replace('<\\/script', '</script')
 b64 = lambda p: base64.b64encode(open(p, 'rb').read()).decode()
+def b64ref(p):
+    # references come from the original V860929 runtime; the embedded build V261123 carries the FAST/SLOW fix (2 bytes per image)
+    b = bytearray(open(p, 'rb').read()); la = b[0] | b[1] << 8
+    for img_la, addr, new in ((0x1c01, 0x3dc2, b'\xf4\x3d'), (0x4001, 0x6353, b'\x85\x63')):
+        i = addr - la + 2
+        if la == img_la and i + 2 <= len(b): b[i:i + 2] = new
+    return base64.b64encode(bytes(b)).decode()
 tests = []
 for d in sorted(glob.glob(os.path.join(H, 'tests', 'expected', '*'))):
     t = os.path.basename(d); base = t.split('.m')[0]
     src = os.path.join(H, 'tests', 'src', base + '.prg')
     if not (os.path.exists(os.path.join(d, 'c.prg')) and os.path.exists(src)): continue
-    e = {'name': t, 'src': b64(src), 'c': b64(os.path.join(d, 'c.prg'))}
+    e = {'name': t, 'src': b64(src), 'c': b64ref(os.path.join(d, 'c.prg'))}
     if os.path.exists(os.path.join(d, 'z.prg')): e['z'] = b64(os.path.join(d, 'z.prg'))
     tests.append(e)
 ov = []
@@ -21,7 +28,7 @@ for d in sorted(glob.glob(os.path.join(H, 'tests', 'overlay', '*'))):
     cfg = json.load(open(os.path.join(d, 'case.json')))
     ov.append({'name': os.path.basename(d), 'full': cfg['full'], 'order': cfg['order'],
                'src': [b64(os.path.join(d, 'src', n + '.prg')) for n in cfg['order']],
-               'exp': [b64(os.path.join(d, 'expected', n + '.prg')) for n in cfg['order']]})
+               'exp': [b64ref(os.path.join(d, 'expected', n + '.prg')) for n in cfg['order']]})
 runner = '''
 const b2u=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const api=new Function(WSRC+'\\nreturn {compile,keysOf,compileOverlay};')();

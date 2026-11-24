@@ -109,6 +109,20 @@ export class Runtime {
       this.data.push(t); p += n + 3;
     }
     this.dp = 0;
+    // Improved 2026 runtime (runtime2026/build.py, js/rt2026img.js): patch the runtime images in memory and put the extension block behind
+    // each image; the compiler then writes image + extension (T1% / TE% via rtEnd1/rtLen2) and places header and bytecode behind them.
+    // Image 2 (graphics programs) sits behind the compiler program at txtTop, like in the original file.
+    this.end1 = null; this.len2 = null;
+    if (opts.improved) {
+      const { img1, img2 } = opts.improved;
+      for (const [a, bs] of img1.patches) mem.set(bs, a);
+      mem.set(img1.ext, img1.extAt);
+      this.end1 = img1.extAt + img1.ext.length;
+      const at2 = a => ve + a - 0x4001;
+      for (const [a, bs] of img2.patches) mem.set(bs, at2(a));
+      mem.set(img2.ext, at2(img2.extAt));
+      this.len2 = img2.extAt + img2.ext.length - 0x4001;
+    }
     // BASIC state
     this.v = {}; this.A = []; this.rs = []; this.fs = [];
     this.st = 0; this.steps = 0; this.maxSteps = opts.maxSteps || 5e8;
@@ -127,6 +141,9 @@ export class Runtime {
     this.rndq = opts.rnd ? opts.rnd.slice() : null;
   }
   init(VARS) { this.VARS = VARS; this.clr(); }
+  // compiler.gen.js: T1% (end of runtime image 1 = header address of $1C01 programs) and TE% (length of runtime image 2)
+  rtEnd1(dflt) { return this.end1 ?? dflt; }
+  rtLen2(dflt) { return this.len2 ?? dflt; }
   clr() { for (const [, js, t] of this.VARS) this.v[js] = t === '$' ? '' : 0; }
   tick() { if (++this.steps > this.maxSteps) throw new Error('step limit'); }
   end() { this.closeAll(); return true; }

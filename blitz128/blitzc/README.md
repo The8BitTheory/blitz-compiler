@@ -2,7 +2,7 @@
 
 # blitzc – a re-implementation of the Blitz! 128 compiler (Skyles, V860929)
 
-> **Fixed build V261117.** The `BLITZ!.128` of this repository (V860929, a cracked copy) is 10 bytes short (whether the uncracked Skyles distribution is too is unknown); programs with graphics statements (the `$4001` runtime) then contain RAM garbage instead of the tail of the dispatch table (CIRCLE, PAINT, BOX, `$44`) and the constant PI. `tools/patch_blitz128.py` appends the missing bytes (`fixed/blitz!.128.prg`, version string V261117); this port embeds the fixed build. Details: `tools/patch_blitz128.py`.
+> **Fixed build V261123.** The `BLITZ!.128` of this repository (V860929, a cracked copy) is 10 bytes short (whether the uncracked Skyles distribution is too is unknown); programs with graphics statements (the `$4001` runtime) then contain RAM garbage instead of the tail of the dispatch table (CIRCLE, PAINT, BOX, `$44`) and the constant PI. In addition, FAST/SLOW leave the MMU in a ROM configuration, so bytecode above `$8000` that follows is read from ROM. `tools/patch_blitz128.py` repairs both (`fixed/blitz!.128.prg`, version string V261123); this port embeds the fixed build. The test references were made with the original V860929 runtime: `js/test.js` and `tools/chrome-test.py` apply the known 2-byte FAST/SLOW delta before comparing. Details: `tools/patch_blitz128.py`, `../fixed/README.md`.
 
 Goal: the compiler runs without an emulator (Node and browser). Input is a tokenized BASIC 7 PRG, output is `C/`, `Z/` and `D/`, byte-identical to the original for the same six random keys.
 
@@ -28,6 +28,18 @@ Format notes:
 - Jump targets: 2 bytes hi/lo, raw XOR keys 3/4. IF-skip `1F nn` is relative.
 - `Z/` does not contain every line (lines with DO at the start of the program are missing), still to be clarified.
 - Programs with graphics commands are produced as the `$4001` variant (header at `$6C41`).
+
+## Runtime choice: original or Improved 2026 (as of 23 Nov 2026)
+The runtime copied into the program with runtime can be the **original runtime** (V261123, default) or the **Improved 2026 runtime**
+(`../runtime2026/`: same bytecode, faster variable/array access and NEXT, optional fast math; about 10-26 % shorter run time, see `../runtime2026/README.md`).
+```
+node js/cli.js prog.prg out/ --runtime improved                  # fast math automatic (when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN)
+node js/cli.js prog.prg out/ --runtime improved --fastmath off   # or on
+```
+API: `compile(src, null, {runtimeKind: 'improved', fastMath: 'auto'|true|false})`, the same options for `compileMany`, `compileOverlay` and `compileJob`
+(all programs of one run use the same runtime); `r.runtimeKind`, `r.fastMath`; `runtimeKindOf(c)` tells which runtime a C/ file carries, `keysOf()`
+reads both kinds. The improved runtime needs `$FC00-$FEFF`: the compiler refuses programs that end above `$FC00`.
+Browser page: fields "Runtime" and "Fast math". The runtime size reaches the translated compiler through `T1%`/`TE%` (`tools/bc2js.py` -> `rt.rtEnd1()`/`rt.rtLen2()`).
 
 ## JS port (as of 15 Nov 2026)
 
@@ -58,6 +70,7 @@ Findings from the port:
 - `$1D00` in C/ is the buffer used by VAL (string copy without end null, max. 160 bytes) and INPUT# (with end null). It holds the last status line `00, OK,00,00` and possibly remains of a long constant.
 - Floating-point constants: VAL is a Blitz-specific routine (`$4314`) that collects the digits in 16 bits and then calls arithmetic routines in the C128 BASIC ROM (×10, ÷10, addition, rounding). `js/cbmfloat.js` ports this code, including the ROM routines, instruction by instruction with the carry flag to JS; **no ROM needed**. Checked with `node tools/fincheck.mjs 500000`: 500,000 random numbers against the original code on the 6502 core (`js/cpu6502.js`, which needs the BASIC ROM hi 318019-04 from VICE for this), 0 differences.
 - Oracle: large sources need more frames, e.g. `FRAMES=40000 TMO=580 CYCLES=9000000000`.
+- Deliberate deviation from the original: `**RI n` in graphics programs (runtime image 2, `$4001`). The original compiler pokes the value to the end of its copy of the image (start+TE%+254) instead of start+254, so `$40FF` stays 0 and the runtime never restores the trampolines. The JS port pokes to the correct address (hook in `tools/bc2js.py`); output differs from the original compiler only in that byte (and only if `**RI` is used).
 - `Z/` is a BASIC program (load address `$0401`): per line `04 08`, address as line number, text `= nnn `.
 - Variants: full RESUME/COLLISION syntax = menu 4–6 (`TA%=2`), without runtime = second menu item 5 (`T9%=1`), which appears only with dual drive or two drives. The port internally drives menu 1/4 and 3/6 with devices 8→9; the drive setup has no other influence. C/ without runtime starts directly with the header (load address `$46B0` or `$6C41`). Test names: `<name>.m4`, `.m35`, `.m65`.
 
