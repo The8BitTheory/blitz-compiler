@@ -63,6 +63,7 @@ gets a 2-byte header that checks for pending collision events and holds the stat
 <label>Runtime <small>(copied into the program with runtime; all programs of one run use the same)</small></label>
 <select id="rtkind">
   <option value="improved" selected>Improved runtime (V261123)</option>
+  <option value="fixed">Fixed original runtime (V261123, no speed-ups)</option>
   <option value="original">Original runtime (Skyles, 1986)</option>
 </select>
 <label style="font-weight:normal">Fast math <small>(Improved runtime only)</small>
@@ -71,7 +72,7 @@ gets a 2-byte header that checks for pending collision events and holds the stat
   <option value="on">on</option>
   <option value="off">off</option>
 </select></label>
-<small class="optnote"><b>Original</b>: the untouched Skyles runtime of 1986, with its known defects (e.g. FAST/SLOW, truncated graphics runtime image). <b>Improved</b> (V261123, includes the fixes): same bytecode, faster variable and array access
+<small class="optnote"><b>Original</b>: the untouched Skyles runtime of 1986, with its known defects (e.g. FAST/SLOW, truncated graphics runtime image). <b>Fixed original</b> (V261123): the original runtime byte for byte with all bug fixes (truncated graphics image, FAST/SLOW, <code>**RI</code> in graphics programs) and no speed-ups, same speed and size as the original. <b>Improved</b> (V261123, includes the fixes): same bytecode, faster variable and array access
 and NEXT (about 10&ndash;20&nbsp;% shorter run time), about 1.4&nbsp;KB longer; with <b>fast math</b> also a faster multiplication and SIN/COS/TAN/ATN/SQR/LOG/EXP/^
 (results bit-identical to the ROM, about 25&nbsp;% faster floating-point code, about 3.2&nbsp;KB longer, 2&nbsp;KB tables are built behind the program at start).
 The Improved runtime needs <code>$FC00-$FEFF</code> (common RAM): the program must end below <code>$FC00</code>, and the string space is 768 bytes smaller.</small>
@@ -212,7 +213,7 @@ function finish(m) {
   $('files').replaceChildren(...box);
   $('status').className = m.errors ? 'err' : '';
   $('status').textContent = `Done in ${sec} s – ${m.results.length} program${m.results.length > 1 ? 's' : ''}, errors: ${m.errors}, extensions: ${m.extensions}` +
-    (m.runtimeKind === 'improved' ? ` – Improved runtime${m.fastMath ? ' with fast math' : ''}` : ' – Original runtime');
+    (m.runtimeKind === 'improved' ? ` – Improved runtime${m.fastMath ? ' with fast math' : ''}` : m.runtimeKind === 'fixed' ? ' – Fixed original runtime' : ' – Original runtime');
 }
 
 $('go').onclick = async () => {

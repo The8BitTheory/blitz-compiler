@@ -110,18 +110,40 @@ if (!only) {
   try { compile(readFileSync(here + 'tests/src/LIVE10WORK.prg'), null, { runtimeKind: 'improved' }); } catch (e) { bad.push('LIVE10WORK: ' + e.message); }
   if (bad.length) { fail++; console.log('FAIL improved', bad.join('; ')); } else console.log('ok   improved runtime (detection, key round trip, fast math choice)');
 }
+// Fixed original runtime: the original runtime with all bug fixes and nothing else (no extension block, same size as the original)
+if (!only) {
+  const bad = [];
+  const same = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
+  const { runtimeKindOf } = await import('./blitzc.js');
+  for (const n of ['t1', 'CRAWL', 'LIVE10WORK', 'ri1', 'ri2']) {
+    const src = readFileSync(here + 'tests/src/' + n + '.prg');
+    const o = compile(src, null, { runtimeKind: 'original' });
+    const f = compile(src, null, { runtimeKind: 'fixed', ...keysOf(o.c) });
+    const ref = compile(src, blitzImage('fixed'), keysOf(o.c));      // the fixed build as the references use it
+    if (f.runtimeKind !== 'fixed') bad.push(`${n}: runtimeKind ${f.runtimeKind}`);
+    if (runtimeKindOf(f.c) !== 'fixed') bad.push(`${n}: runtimeKindOf fixed -> ${runtimeKindOf(f.c)}`);
+    if (runtimeKindOf(o.c) !== 'original') bad.push(`${n}: runtimeKindOf original -> ${runtimeKindOf(o.c)}`);
+    if (!same(f.c, ref.c) || !same(f.z, ref.z)) bad.push(`${n}: differs from the fixed build output`);
+    if (f.c.length !== o.c.length) bad.push(`${n}: size ${f.c.length} vs original ${o.c.length}`);   // no extension block
+    // against the original only the known fixes differ: FAST/SLOW operand (2 bytes per image) and, in image 2, the truncated tail (10 bytes)
+    let d = 0; for (let i = 0; i < f.c.length; i++) if (f.c[i] !== o.c[i]) d++;
+    if (d === 0 || d > 12) bad.push(`${n}: ${d} bytes differ from the original (expected 2, or 12 with graphics)`);
+    if (n === 'ri2' && f.c[0x40ff - 0x4001 + 2] !== 77) bad.push('ri2: **RI byte missing');
+  }
+  if (bad.length) { fail++; console.log('FAIL fixed runtime', bad.join('; ')); } else console.log('ok   fixed original runtime (only the fixes differ from the original)');
+}
 // **RI n: the runtime reads the trampoline length at offset $FE of its image ($1CFF for image 1, $40FF for image 2 = graphics programs).
 // The original compiler writes the image-2 value to the wrong place ($40FF stays 0); the JS port fixes that (tools/bc2js.py).
 if (!only) {
   const bad = [];
-  for (const kind of ['original', 'improved'])
+  for (const kind of ['original', 'fixed', 'improved'])
     for (const [n, la, at] of [['ri1', 0x1c01, 0x1cff], ['ri2', 0x4001, 0x40ff]]) {
       const r = compile(readFileSync(here + 'tests/src/' + n + '.prg'), null, { runtimeKind: kind });
       const got = r.c[0] | r.c[1] << 8;
       if (got !== la) bad.push(`${kind} ${n}: load address $${got.toString(16)}`);
       else if (r.c[at - la + 2] !== 77) bad.push(`${kind} ${n}: $${at.toString(16)} = ${r.c[at - la + 2]}, want 77`);
     }
-  if (bad.length) { fail++; console.log('FAIL **RI', bad.join('; ')); } else console.log('ok   **RI byte at $1CFF (image 1) / $40FF (image 2), original and improved runtime');
+  if (bad.length) { fail++; console.log('FAIL **RI', bad.join('; ')); } else console.log('ok   **RI byte at $1CFF (image 1) / $40FF (image 2), original, fixed and improved runtime');
 }
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

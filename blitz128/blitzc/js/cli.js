@@ -5,7 +5,8 @@
 //   --overlay: with --plain, compile all programs in ONE run like menu item 4 of the original ("overlay"): one common variable table, first
 //              program with runtime; files are named like the programs (<name>.prg, no C/ prefix, no Z/ file) - chain them with LOAD "NAME",8
 //   --no-runtime: C/ without runtime routines; --full: RESUME and COLLISION with full syntax (original menu 4-6)
-//   --runtime original|improved: Original runtime (Skyles 1986) or Improved runtime (V261123, default) (all programs of one run use the same)
+//   --runtime original|fixed|improved: Original runtime (Skyles 1986, untouched), Fixed original runtime (V261123: all bug fixes, no speed-ups)
+//              or Improved runtime (V261123 + speed-ups, default) (all programs of one run use the same)
 //   --fastmath auto|on|off: improved runtime only, fast multiplication + SQR/LOG/EXP/SIN/COS/TAN/ATN (auto = when the program uses them)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -23,7 +24,7 @@ let keys, pad;
 if (opt.like) ({ keys, pad } = keysOf(readFileSync(opt.like)));
 if (opt.keys) { keys = hex(opt.keys); pad = hex(opt.pad || ''); }
 if (keys && !keys.every(validKey)) console.error('warning: original never produces keys with a zero nibble');
-if (opt.runtime && !['original', 'improved'].includes(opt.runtime)) { console.error('--runtime original|improved'); process.exit(2); }
+if (opt.runtime && !['original', 'fixed', 'improved'].includes(opt.runtime)) { console.error('--runtime original|fixed|improved'); process.exit(2); }
 if (opt.fastmath && !['auto', 'on', 'off'].includes(opt.fastmath)) { console.error('--fastmath auto|on|off'); process.exit(2); }
 const common = { keys, pad, fullSyntax: !!opt.full, runtimeKind: opt.runtime || 'improved',
   fastMath: opt.fastmath === 'on' ? true : opt.fastmath === 'off' ? false : 'auto' };
@@ -53,5 +54,5 @@ if (r.c) writeFileSync(pos[1] + '/c.prg', r.c);
 if (r.z) writeFileSync(pos[1] + '/z.prg', r.z);
 writeFileSync(pos[1] + '/screen.txt', r.screen);
 console.log(`errors: ${r.errors}  extensions: ${r.extensions}  C/ ${r.c ? r.c.length : '-'} B  Z/ ${r.z ? r.z.length : '-'} B` +
-  (r.runtimeKind === 'improved' ? `  runtime: Improved 2026${r.fastMath ? ' + fastmath' : ''}` : ''));
+  (r.runtimeKind === 'improved' ? `  runtime: Improved 2026${r.fastMath ? ' + fastmath' : ''}` : r.runtimeKind === 'fixed' ? '  runtime: Fixed original (V261123)' : '  runtime: Original'));
 process.exit(r.errors ? 1 : 0);

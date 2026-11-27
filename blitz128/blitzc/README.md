@@ -29,15 +29,16 @@ Format notes:
 - `Z/` does not contain every line (lines with DO at the start of the program are missing), still to be clarified.
 - Programs with graphics commands are produced as the `$4001` variant (header at `$6C41`).
 
-## Runtime choice: original or Improved 2026 (as of 23 Nov 2026)
-The runtime copied into the program with runtime can be the **original runtime** (untouched Skyles V860929 of 1986 with its defects) or the **Improved runtime** (V261123, includes the fixes, default)
+## Runtime choice: original, fixed original or Improved 2026 (as of 27 Nov 2026)
+The runtime copied into the program with runtime can be the **original runtime** (untouched Skyles V860929 of 1986 with its defects), the **fixed original runtime** (V261123: the original byte for byte plus all bug fixes - truncated image 2, FAST/SLOW, `**RI` in graphics programs - and no speed-ups; same size and speed as the original) or the **Improved runtime** (V261123, includes the fixes, default)
 (`../runtime2026/`: same bytecode, faster variable/array access and NEXT, optional fast math; about 10-26 % shorter run time, see `../runtime2026/README.md`).
 ```
+node js/cli.js prog.prg out/ --runtime fixed                     # original runtime with all bug fixes, no speed-ups
 node js/cli.js prog.prg out/ --runtime improved                  # fast math automatic (when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN)
 node js/cli.js prog.prg out/ --runtime improved --fastmath off   # or on
 ```
 API: `compile(src, null, {runtimeKind: 'improved', fastMath: 'auto'|true|false})`, the same options for `compileMany`, `compileOverlay` and `compileJob`
-(all programs of one run use the same runtime); `r.runtimeKind`, `r.fastMath`; `runtimeKindOf(c)` tells which runtime a C/ file carries, `keysOf()`
+(all programs of one run use the same runtime); `r.runtimeKind`, `r.fastMath`; `runtimeKindOf(c)` tells which runtime a C/ file carries ('original', 'fixed', 'improved', 'improved+fastmath'), `keysOf()`
 reads both kinds. The improved runtime needs `$FC00-$FEFF`: the compiler refuses programs that end above `$FC00`.
 Browser page: fields "Runtime" and "Fast math". The runtime size reaches the translated compiler through `T1%`/`TE%` (`tools/bc2js.py` -> `rt.rtEnd1()`/`rt.rtLen2()`).
 

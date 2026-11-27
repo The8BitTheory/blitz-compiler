@@ -50,6 +50,8 @@ The compiler itself runs on image 1, so it has the fix too. Checked in VICE with
   reference outputs byte for byte, and two outputs of the fixed original compiler (above) byte for byte.
 
 ## Use
+In the JavaScript compiler the runtime of this build is available as `--runtime fixed` ("Fixed original runtime", page: Runtime selection): the original runtime image byte for byte with the fixes of this document and the `**RI` fix of the JS compiler, without any of the speed-ups of `../runtime2026/`.
+
 Real disk: copy `blitz!.128.prg` onto your Blitz disk under the name `BLITZ!.128`, e.g. with VICE's `c1541`:
 `c1541 -attach disk.d81 -delete "blitz!.128" -write blitz\!.128.prg "blitz!.128"`.
 Programs compiled **before** the fix that use graphics statements or π must be recompiled with it.

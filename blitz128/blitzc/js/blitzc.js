@@ -3,7 +3,8 @@
 //   import { compile } from './blitzc.js';
 //   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
-//   runtimeKind: 'original' (default, untouched Skyles V860929 of 1986) or 'improved' (Improved runtime V261123, see runtime2026/)
+//   runtimeKind: 'original' (default, untouched Skyles V860929 of 1986), 'fixed' (Fixed original runtime V261123: the original with all
+//                bug fixes, no speed-ups, see fixed/) or 'improved' (Improved runtime V261123, fixes + speed-ups, see runtime2026/)
 //   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
 //               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
@@ -19,8 +20,9 @@ import { RT2026 } from './rt2026img.js';
 
 const blitzCache = {};
 // the compiler file, embedded (js/blitzimg.js): 'original' = untouched Skyles V860929 (1986), else the fixed build V261123
+// (its runtime images are what the 'fixed' runtime copies unchanged; 'improved' adds the extension block to them)
 export function blitzImage(kind) {
-  const k = kind === 'original' ? 'original' : 'fixed';
+  const k = kind === 'original' ? 'original' : 'fixed';   // 'fixed' and 'improved' both start from the fixed build
   if (!blitzCache[k]) {
     const b64 = k === 'original' ? BLITZ_ORIG_B64 : BLITZ_B64;
     const bin = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('latin1');
@@ -63,6 +65,10 @@ export function usesMath(prg) {
   }
   return false;
 }
+// the compiler image for a job: 'original' = untouched, 'fixed' and 'improved' = fixed build V261123
+const imageKindFor = (opts, improved) => improved || opts.runtimeKind === 'fixed' ? 'fixed' : 'original';
+// the runtime kind reported for a job
+const kindFor = (opts, improved) => improved ? 'improved' : opts.runtimeKind === 'fixed' ? 'fixed' : 'original';
 // the runtime choice for one job: all programs of a job use the same runtime (modules without runtime run behind the first one)
 function runtimeFor(opts, sources) {
   if (opts.runtimeKind !== 'improved') return null;
@@ -83,12 +89,16 @@ function headerAddr(c) {
   }
   return cands[0];
 }
-// which runtime a C/ file carries: 'original', 'improved', 'improved+fastmath' (null without runtime)
+// which runtime a C/ file carries: 'original', 'fixed', 'improved', 'improved+fastmath' (null without runtime)
 export function runtimeKindOf(c) {
   const la = c[0] | c[1] << 8;
   if (la !== 0x1c01 && la !== 0x4001) return null;
   const img = la === 0x1c01 ? 1 : 2, h = headerAddr(c);
-  if (h === (img === 1 ? 0x46b0 : 0x6c41)) return 'original';
+  if (h === (img === 1 ? 0x46b0 : 0x6c41)) {
+    // 'fixed' differs from 'original' in the FAST/SLOW jump operand of each image (tools/patch_blitz128.py): $3DC2 = F4 3D / $6353 = 85 63
+    const at = (img === 1 ? 0x3dc2 : 0x6353) - la + 2;
+    return c[at] === (img === 1 ? 0xf4 : 0x85) && c[at + 1] === (img === 1 ? 0x3d : 0x63) ? 'fixed' : 'original';
+  }
   return RT2026.fastmath && h === RT2026.fastmath[img].end ? 'improved+fastmath' : 'improved';
 }
 
@@ -162,7 +172,7 @@ export function compile(source, blitz, opts = {}) {
     opts.onEvent(ev);
   });
   const improved = opts.improvedRuntime !== undefined ? opts.improvedRuntime : runtimeFor(opts, [source]);
-  const rt = new Runtime(blitz || blitzImage(improved ? 'improved' : 'original'), {
+  const rt = new Runtime(blitz || blitzImage(imageKindFor(opts, improved)), {
     files: { [name]: source },
     ...menuInput(opts.runtime !== false, !!opts.fullSyntax, name),
     rnd, maxSteps: opts.maxSteps, onEvent, improved,
@@ -177,7 +187,7 @@ export function compile(source, blitz, opts = {}) {
     c, z: get('Z/' + name),
     errors: rt.v.X1_f + rt.v.X3_f, extensions: rt.v.X0_f,
     screen: rt.screen, messages: rt.messages, files: rt.files,
-    runtimeKind: improved ? 'improved' : 'original', fastMath: improved ? improved.kind === 'fastmath' : false,
+    runtimeKind: kindFor(opts, improved), fastMath: improved ? improved.kind === 'fastmath' : false,
   };
 }
 
@@ -255,7 +265,7 @@ export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
   };
   const rnd = opts.keys ? rndForMany(opts.keys, opts.pads || programs.map(() => [])) : null;
   const improved = runtimeFor(opts, programs.map(p => p.src));
-  const rt = new Runtime(blitz || blitzImage(improved ? 'improved' : 'original'), {
+  const rt = new Runtime(blitz || blitzImage(imageKindFor(opts, improved)), {
     files, split: true, rnd, maxSteps: opts.maxSteps, onEvent: ev, improved,
     keys: (opts.fullSyntax ? '6' : '3') + '4' + 'YY' + 'Y'.repeat(programs.length + 2),   // menu, item 4, "insert source disk" Y, "format target" Y, then "continue after errors?" Y
     lines: ['8', '9'],
@@ -292,6 +302,6 @@ export function compileJob(job, post) {
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
     const imp = runtimeFor(rk, programs.map(p => p.src));
     post({ type: 'done', results, overlay, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
-           c: results[0].c, z: results[0].z, runtimeKind: imp ? 'improved' : 'original', fastMath: !!imp && imp.kind === 'fastmath' });
+           c: results[0].c, z: results[0].z, runtimeKind: imp ? 'improved' : kindFor(rk, null), fastMath: !!imp && imp.kind === 'fastmath' });
   } catch (e) { post({ type: 'error', text: e.message }); }
 }

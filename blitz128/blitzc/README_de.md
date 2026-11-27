@@ -7,8 +7,8 @@
 Ziel: Der Compiler läuft ohne Emulator (Node und Browser). Eingabe ist ein getokentes BASIC-7-PRG, Ausgabe `C/`, `Z/` und `D/`, byte-identisch zum Original bei denselben sechs Zufallsschlüsseln.
 
 
-## Runtime-Wahl: Original oder Improved 2026 (Stand 23.11.2026)
-In das Programm mit Runtime kommt entweder die **Original-Runtime** (unveränderte Skyles-V860929 von 1986 mit ihren Fehlern) oder die **Improved Runtime** (V261123, enthält die Fixes, Standard)
+## Runtime-Wahl: Original, Fixed Original oder Improved 2026 (Stand 27.11.2026)
+In das Programm mit Runtime kommt entweder die **Original-Runtime** (unveränderte Skyles-V860929 von 1986 mit ihren Fehlern), die **Fixed Original Runtime** (V261123: das Original Byte für Byte plus alle Fehlerkorrekturen – abgeschnittenes Image 2, FAST/SLOW, `**RI` in Grafikprogrammen – und keine Beschleunigungen; gleiche Größe und Geschwindigkeit wie das Original; CLI `--runtime fixed`) oder die **Improved Runtime** (V261123, enthält die Fixes, Standard)
 (`../runtime2026/`: gleicher Bytecode, schnellere Variablen-/Arrayzugriffe und NEXT, optional Fast Math; etwa 10–26 % kürzere Laufzeit, siehe `../runtime2026/README_de.md`).
 ```
 node js/cli.js prog.prg out/ --runtime improved                  # Fast Math automatisch (wenn das Programm * / ^ SQR LOG EXP COS SIN TAN ATN nutzt)
