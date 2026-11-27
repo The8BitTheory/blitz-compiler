@@ -23,7 +23,7 @@ for (const t of readdirSync(here + 'tests/expected').sort()) {
   const ec = fixRef(readFileSync(ex + 'c.prg')); const ez = existsSync(ex + 'z.prg') ? readFileSync(ex + 'z.prg') : null;
   const { keys, pad } = keysOf(ec);
   let r;
-  try { r = compile(src, blitz, { keys, pad, ...mode }); }
+  try { r = compile(src, blitz, { keys, pad, ...mode, runtimeKind: 'original' }); }
   catch (e) { console.log('FAIL', t, 'exception', e.message); fail++; continue; }
   const cmp = (a, b, what) => {
     if (!a || !b) return `${what}: missing (${!!a}/${!!b})`;
@@ -45,12 +45,12 @@ if (!only) {
   const { keys, pad } = keysOf(readFileSync(here + 'tests/expected/CRAWL/c.prg'));
   const progs = [{ src: src('CRAWL'), name: 'CRAWL', runtime: true }, { src: src('t1'), name: 't1', runtime: false }, { src: src('stmt1'), name: 'T1', runtime: false }];
   const events = [];
-  const res = compileMany(progs, null, { keys, pad }, e => { if (e.type === 'program') events.push(e.name + (e.runtime ? '+' : '-')); });
+  const res = compileMany(progs, null, { keys, pad, runtimeKind: 'original' }, e => { if (e.type === 'program') events.push(e.name + (e.runtime ? '+' : '-')); });
   const same = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
   const bad = [];
   if (events.join() !== 'CRAWL+,T1-,T12-') bad.push('program events ' + events.join());   // names upper case, duplicates numbered
   [['CRAWL', true, 'CRAWL'], ['t1', false, 'T1'], ['stmt1', false, 'T12']].forEach(([f, rt, nm], i) => {
-    const one = compile(src(f), null, { keys, pad, runtime: rt, name: nm });
+    const one = compile(src(f), null, { keys, pad, runtime: rt, name: nm, runtimeKind: 'original' });
     if (!same(res[i].c, one.c) || !same(res[i].z, one.z)) bad.push(nm + ': multi result differs from single compile');
   });
   const la = r => r.c[0] | r.c[1] << 8;
@@ -58,7 +58,7 @@ if (!only) {
   const img = d81Of(res);
   if (img.length !== 819200 || img[40 * 40 * 256 - 40 * 256 + 2] !== 0x44) bad.push('d81 header');
   // job form as the worker sees it
-  let done; compileJob({ programs: progs, blitz: null, like: readFileSync(here + 'tests/expected/CRAWL/c.prg'), fullSyntax: false }, m => { if (m.type === 'done') done = m; });
+  let done; compileJob({ programs: progs, blitz: null, like: readFileSync(here + 'tests/expected/CRAWL/c.prg'), fullSyntax: false, runtimeKind: 'original' }, m => { if (m.type === 'done') done = m; });
   if (!done || done.results.length !== 3 || !same(done.d81, img)) bad.push('compileJob result');
   if (diskNames(['a very long program name', 'a very long program name']).join() !== 'A VERY LONG PR,A VERY LONG P2') bad.push('diskNames ' + diskNames(['a very long program name', 'a very long program name']));
   writeFileSyncIf(process.env.D81_OUT, img);
@@ -76,7 +76,7 @@ if (!only) {
     const exp = cfg.order.map(n => fixRef(readFileSync(od + t + '/expected/' + n + '.prg')));
     const ks = exp.map(keysOf);
     let r;
-    try { r = compileOverlay(progs, blitz, { fullSyntax: cfg.full, keys: ks[0].keys, pads: ks.map(k => k.pad) }); }
+    try { r = compileOverlay(progs, blitz, { runtimeKind: 'original', fullSyntax: cfg.full, keys: ks[0].keys, pads: ks.map(k => k.pad) }); }
     catch (e) { console.log('FAIL overlay', t, 'exception', e.message); fail++; continue; }
     const errs = [];
     r.forEach((x, i) => {
@@ -119,7 +119,7 @@ if (!only) {
     const src = readFileSync(here + 'tests/src/' + n + '.prg');
     const o = compile(src, null, { runtimeKind: 'original' });
     const f = compile(src, null, { runtimeKind: 'fixed', ...keysOf(o.c) });
-    const ref = compile(src, blitzImage('fixed'), keysOf(o.c));      // the fixed build as the references use it
+    const ref = compile(src, blitzImage('fixed'), { runtimeKind: 'fixed', ...keysOf(o.c) });      // the fixed build as the references use it
     if (f.runtimeKind !== 'fixed') bad.push(`${n}: runtimeKind ${f.runtimeKind}`);
     if (runtimeKindOf(f.c) !== 'fixed') bad.push(`${n}: runtimeKindOf fixed -> ${runtimeKindOf(f.c)}`);
     if (runtimeKindOf(o.c) !== 'original') bad.push(`${n}: runtimeKindOf original -> ${runtimeKindOf(o.c)}`);

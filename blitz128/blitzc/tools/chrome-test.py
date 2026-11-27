@@ -36,7 +36,7 @@ const T=%s; const out=[]; let fail=0;
 for(const t of T){
   const [base,m]=t.name.split('.m'); const mode={runtime:!(m==='35'||m==='65'),fullSyntax:m==='4'||m==='65'};
   const ec=b2u(t.c); const {keys,pad}=api.keysOf(ec);
-  let r; try{ r=api.compile(b2u(t.src),null,{keys,pad,...mode}); }catch(e){ out.push('FAIL '+t.name+' exception '+e.message); fail++; continue; }
+  let r; try{ r=api.compile(b2u(t.src),null,{keys,pad,...mode,runtimeKind:'original'}); }catch(e){ out.push('FAIL '+t.name+' exception '+e.message); fail++; continue; }
   const cmp=(a,b,w)=>{ if(!a||!b) return w+': missing'; const n=Math.min(a.length,b.length);
     for(let i=0;i<n;i++) if(a[i]!==b[i]) return w+': first diff at offset '+i+' got '+a[i].toString(16)+' want '+b[i].toString(16)+' len '+a.length+'/'+b.length;
     return a.length===b.length?null:w+': length '+a.length+' vs '+b.length; };
@@ -46,7 +46,7 @@ for(const t of T){
 const O=%s;
 for(const t of O){
   const exp=t.exp.map(b2u), ks=exp.map(api.keysOf);
-  let r; try{ r=api.compileOverlay(t.order.map((n,i)=>({name:n,src:b2u(t.src[i])})),null,{fullSyntax:t.full,keys:ks[0].keys,pads:ks.map(k=>k.pad)}); }catch(e){ out.push('FAIL overlay '+t.name+' exception '+e.message); fail++; continue; }
+  let r; try{ r=api.compileOverlay(t.order.map((n,i)=>({name:n,src:b2u(t.src[i])})),null,{runtimeKind:'original',fullSyntax:t.full,keys:ks[0].keys,pads:ks.map(k=>k.pad)}); }catch(e){ out.push('FAIL overlay '+t.name+' exception '+e.message); fail++; continue; }
   const errs=[]; r.forEach((x,i)=>{ const a=x.c,b=exp[i]; if(!a){errs.push(x.name+': missing');return;} const n=Math.min(a.length,b.length);
     for(let k=0;k<n;k++) if(a[k]!==b[k]){errs.push(x.name+': first diff at '+k);return;} if(a.length!==b.length) errs.push(x.name+': length '+a.length+' vs '+b.length); });
   if(errs.length){fail++; out.push('FAIL overlay '+t.name+' '+errs.join('; '));} else out.push('ok   overlay '+t.name+' '+r.map(x=>x.name+' '+x.c.length).join(', '));

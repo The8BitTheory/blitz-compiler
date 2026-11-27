@@ -35,7 +35,7 @@ A port of the Blitz! 128 compiler to JavaScript, in [blitzc/](blitzc/): [blitzc/
 | Fixed original runtime | `fixed` | V261123: original byte for byte plus the two runtime fixes; no speed-ups, same size and speed as original |
 | Improved runtime | `improved` | V261123 fixes plus speed-ups, optionally fast math |
 
-**Defaults differ:** CLI and page default to `improved`; the JavaScript API defaults to `original` when `runtimeKind` is omitted. The `**RI` compiler fix applies to all three.
+**Default:** CLI, page and JavaScript API all default to `improved` (API: when `runtimeKind` is omitted). The `**RI` compiler fix applies to all three.
 
 ### Browser page
 
@@ -90,7 +90,7 @@ node js/cli.js a.prg out/ --plain b.prg,c.prg --overlay [--full] [--d81 out/all.
 
 ### JavaScript API
 
-[blitzc/js/blitzc.js](blitzc/js/blitzc.js), ES module. **API default `runtimeKind` is `'original'`** (CLI and page: `'improved'`); pass `runtimeKind` explicitly.
+[blitzc/js/blitzc.js](blitzc/js/blitzc.js), ES module. **API default `runtimeKind` is `'improved'`** (as in CLI and page); pass `runtimeKind: 'original'` or `'fixed'` explicitly for the other variants.
 
 - `compile(src, blitz|null, opts)` returns `{c, z, errors, extensions, screen, messages, files, runtimeKind, fastMath}`. `blitz` null = embedded `BLITZ!.128`. Options: `name` (`'PROG'`), `runtime` (`true`; `false` = no runtime), `fullSyntax` (`false`), `keys` (6 bytes), `pad`, `runtimeKind` (`'original'`\|`'fixed'`\|`'improved'`, default `'original'`), `fastMath` (`'auto'` default, `true`, `false`), `onEvent(ev)` (events `start`, `pass`, `progress`, `message`), `maxSteps`. Throws if a program with the improved runtime ends above `$FC00`.
 - `compileMany([{src,name,runtime}], blitz, opts, onEvent)` returns one result per program (`name, runtime, c, z, errors, extensions, error?`); extra event `program`; a failing program does not stop the others. First program with runtime, others without, separate variable tables.

@@ -35,7 +35,7 @@ Ein Port des Blitz!-128-Compilers nach JavaScript, in [blitzc/](blitzc/): [blitz
 | Fixed original runtime | `fixed` | V261123: Original Byte für Byte plus die beiden Runtime-Korrekturen; keine Beschleunigungen, gleiche Größe und Geschwindigkeit wie original |
 | Improved runtime | `improved` | V261123-Korrekturen plus Beschleunigungen, optional fast math |
 
-**Die Vorgaben unterscheiden sich:** CLI und Seite verwenden standardmäßig `improved`; die JavaScript-API verwendet `original`, wenn `runtimeKind` fehlt. Die `**RI`-Korrektur des Compilers gilt für alle drei.
+**Vorgabe:** CLI, Seite und JavaScript-API verwenden alle standardmäßig `improved` (API: wenn `runtimeKind` fehlt). Die `**RI`-Korrektur des Compilers gilt für alle drei.
 
 ### Browser-Seite
 
@@ -90,7 +90,7 @@ node js/cli.js a.prg out/ --plain b.prg,c.prg --overlay [--full] [--d81 out/all.
 
 ### JavaScript-API
 
-[blitzc/js/blitzc.js](blitzc/js/blitzc.js), ES-Modul. **Der API-Default für `runtimeKind` ist `'original'`** (CLI und Seite: `'improved'`); `runtimeKind` daher explizit angeben.
+[blitzc/js/blitzc.js](blitzc/js/blitzc.js), ES-Modul. **Der API-Default für `runtimeKind` ist `'improved'`** (wie bei CLI und Seite); für die anderen Varianten `runtimeKind: 'original'` oder `'fixed'` explizit angeben.
 
 - `compile(src, blitz|null, opts)` liefert `{c, z, errors, extensions, screen, messages, files, runtimeKind, fastMath}`. `blitz` null = eingebettete `BLITZ!.128`. Optionen: `name` (`'PROG'`), `runtime` (`true`; `false` = keine Runtime), `fullSyntax` (`false`), `keys` (6 Bytes), `pad`, `runtimeKind` (`'original'`\|`'fixed'`\|`'improved'`, Vorgabe `'original'`), `fastMath` (`'auto'` Vorgabe, `true`, `false`), `onEvent(ev)` (Events `start`, `pass`, `progress`, `message`), `maxSteps`. Wirft einen Fehler, wenn ein Programm mit der improved Runtime oberhalb von `$FC00` endet.
 - `compileMany([{src,name,runtime}], blitz, opts, onEvent)` liefert ein Ergebnis pro Programm (`name, runtime, c, z, errors, extensions, error?`); zusätzliches Event `program`; ein fehlschlagendes Programm stoppt die anderen nicht. Erstes Programm mit Runtime, die anderen ohne, getrennte Variablentabellen.
