@@ -6183,7 +6183,7 @@ function run(rt){
 //   import { compile } from './blitzc.js';
 //   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
-//   runtimeKind: 'original' (default, untouched Skyles V860929 of 1986), 'fixed' (Fixed original runtime V261123: the original with all
+//   runtimeKind: 'improved' (default), 'original' (untouched Skyles V860929 of 1986), 'fixed' (Fixed original runtime V261123: the original with all
 //                bug fixes, no speed-ups, see fixed/) or 'improved' (Improved runtime V261123, fixes + speed-ups, see runtime2026/)
 //   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
@@ -6245,12 +6245,13 @@ function usesMath(prg) {
   return false;
 }
 // the compiler image for a job: 'original' = untouched, 'fixed' and 'improved' = fixed build V261123
-const imageKindFor = (opts, improved) => improved || opts.runtimeKind === 'fixed' ? 'fixed' : 'original';
+const imageKindFor = (opts, improved) => improved || kindOf(opts) === 'fixed' ? 'fixed' : 'original';
 // the runtime kind reported for a job
-const kindFor = (opts, improved) => improved ? 'improved' : opts.runtimeKind === 'fixed' ? 'fixed' : 'original';
+const kindFor = (opts, improved) => improved ? 'improved' : kindOf(opts) === 'fixed' ? 'fixed' : 'original';
 // the runtime choice for one job: all programs of a job use the same runtime (modules without runtime run behind the first one)
+const kindOf = opts => opts.runtimeKind ?? 'improved';   // default: Improved runtime (like CLI and page)
 function runtimeFor(opts, sources) {
-  if (opts.runtimeKind !== 'improved') return null;
+  if (kindOf(opts) !== 'improved') return null;
   const fm = opts.fastMath === undefined || opts.fastMath === 'auto' ? sources.some(usesMath) : !!opts.fastMath;
   return improvedRuntime(fm);
 }
