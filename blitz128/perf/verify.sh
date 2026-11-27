@@ -18,7 +18,7 @@ addrs() {   # init / END / error handler of the original runtime image the file 
 how() { grep -a -h -o "^#[45] (Stop on  exec ff..)\|^>C:07d0.*\|^\.C:$2 .* X:[0-9A-F]*" $1 | head -1 | sed 's/^#4.*/WAIT GETIN/; s/^#5.*/WAIT CHRIN/; s/^\.C:.* X:\(..\).*/ERROR X=\1/' | cut -c1-40; }
 for src in $PRGS; do
   n=$(basename ${src%.prg}); d=out/v/$n; mkdir -p $d/o $d/$TAG
-  node ../blitzc/js/cli.js $src $d/o/ > $d/o/compile.txt 2>&1
+  node ../blitzc/js/cli.js $src $d/o/ --runtime original > $d/o/compile.txt 2>&1
   node ../blitzc/js/cli.js $src $d/$TAG/ --runtime improved "${OPTS[@]}" > $d/$TAG/compile.txt 2>&1
   A=$(addrs $d/o/c.prg); B=$(addrs $d/$TAG/c.prg)
   if [ -z "$A" ] || [ -z "$B" ]; then echo "skip $n (no C/ file: $(tail -1 $d/$TAG/compile.txt))"; skip=$((skip+1)); continue; fi

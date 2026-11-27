@@ -9,7 +9,7 @@ for f in "$@"; do
   n=$(basename "$f" .prg); [ $MODE != 1 ] && n=$n.m$MODE; o=$OUT/$n
   FRAMES=${FRAMES:-8000} TMO=${TMO:-590} CYCLES=${CYCLES:-900000000} bash $HERE/compile.sh "$f" $o/orig "$MK" >/dev/null
   if [ ! -f $o/orig/c.prg ]; then echo "SKIP $n (original produced no C/: $(grep -i -m1 error $o/orig/screen.txt))"; continue; fi
-  node $HERE/../js/cli.js "$f" $o/port $PF --like $o/orig/c.prg >/dev/null
+  node $HERE/../js/cli.js "$f" $o/port --runtime original $PF --like $o/orig/c.prg >/dev/null
   r=""; for x in c z; do
     if [ -f $o/orig/$x.prg ] || [ -f $o/port/$x.prg ]; then cmp -s $o/orig/$x.prg $o/port/$x.prg || r="$r $x/differs"; fi
   done

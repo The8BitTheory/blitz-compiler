@@ -31,7 +31,7 @@ for c in ../blitzc/tests/overlay/*/; do
   order=$(python3 -c "import json;print(' '.join(json.load(open('$c/case.json'))['order']))")
   full=$(python3 -c "import json;print('--full' if json.load(open('$c/case.json')).get('full') else '')")
   set -- $order; first=$1; shift; plain=$(for m in "$@"; do printf "%s," "$c/src/$m.prg"; done)
-  node ../blitzc/js/cli.js $c/src/$first.prg $d/o/ --plain ${plain%,} --overlay $full --keys 7b,cb,84,6d,96,a8 --d81 $d/o/all.d81 > $d/o/compile.txt 2>&1
+  node ../blitzc/js/cli.js $c/src/$first.prg $d/o/ --plain ${plain%,} --overlay $full --keys 7b,cb,84,6d,96,a8 --d81 $d/o/all.d81 --runtime original > $d/o/compile.txt 2>&1
   node ../blitzc/js/cli.js $c/src/$first.prg $d/i/ --plain ${plain%,} --overlay $full --keys 7b,cb,84,6d,96,a8 --d81 $d/i/all.d81 --runtime improved "${OPTS[@]}" > $d/i/compile.txt 2>&1
   F=$(echo $first | tr A-Z a-z)
   run $d/o/all.d81 $F $d/o/r; run $d/i/all.d81 $F $d/i/r

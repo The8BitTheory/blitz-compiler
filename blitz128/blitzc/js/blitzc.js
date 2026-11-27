@@ -3,7 +3,7 @@
 //   import { compile } from './blitzc.js';
 //   const r = compile(sourcePrg, null, {   // null = embedded BLITZ!.128, or pass your own file name: 'PROG', runtime: true, fullSyntax: false, keys, pad });
 //   runtime:    false = C/ without runtime routines (original menu: two drives, then 5)
-//   runtimeKind: 'original' (default, untouched Skyles V860929 of 1986), 'fixed' (Fixed original runtime V261123: the original with all
+//   runtimeKind: 'original' (API default, untouched Skyles V860929 of 1986), 'fixed' (Fixed original runtime V261123: the original with all
 //                bug fixes, no speed-ups, see fixed/) or 'improved' (Improved runtime V261123, fixes + speed-ups, see runtime2026/)
 //   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
