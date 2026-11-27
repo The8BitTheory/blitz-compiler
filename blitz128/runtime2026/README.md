@@ -4,7 +4,7 @@
 
 A faster runtime for programs compiled with the JavaScript compiler (`blitzc/js`). Choose it with `--runtime improved` (CLI), `runtimeKind: 'improved'` (API)
 or "Improved 2026 runtime" on the browser page. The bytecode is unchanged; the compiler and the original runtime remain the reference
-("Original runtime", V261123 = Skyles runtime + the 10-byte fix + the FAST/SLOW fix, see `fixed/README.md`).
+(`original` = the untouched Skyles V860929 runtime of 1986 with its defects; `fixed` = "Fixed original runtime" V261123, the original runtime byte for byte plus all bug fixes and no speed-ups, see `fixed/README.md`; `improved` = Improved 2026 runtime, fixes plus speed-ups).
 Measurements, profiles and the evaluation behind it: `perf/RUNTIME_PERF.md`.
 
 ## What is faster
@@ -25,6 +25,8 @@ Results (cycles from start to END, `perf/bench2.sh`, VICE 3.10):
 | `str` (string building) | 8.21 M | −12.0 % | −12.0 % |
 | `arr` (array access) | 6.09 M | −20.0 % | −19.0 % |
 | `sieve` (`FOR … STEP I`, `F%()`) | 14.54 M | −15.9 % | −15.5 % |
+
+The Original column compares against the original and fixed runtime (identical speed).
 
 Fast math costs about 50,000 cycles at start (table build); programs that only use `*` in integer contexts are therefore not faster with it.
 FDIV is not replaced: a bit-identical division faster than 1.5× is not possible (see `perf/RUNTIME_PERF.md`).

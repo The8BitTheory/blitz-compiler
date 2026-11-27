@@ -4,7 +4,7 @@
 
 Eine schnellere Runtime für Programme, die der JavaScript-Compiler (`blitzc/js`) übersetzt. Auswahl mit `--runtime improved` (CLI), `runtimeKind: 'improved'` (API)
 oder „Improved 2026 runtime“ auf der Browserseite. Der Bytecode bleibt unverändert. Compiler und Original-Runtime bleiben die Referenz
-(„Original runtime“, V261123 = Skyles-Runtime + 10-Byte-Fix + FAST/SLOW-Fix, siehe `fixed/README.md`).
+(`original` = die unveränderte Skyles-Runtime V860929 von 1986 mit ihren Fehlern; `fixed` = „Fixed Original Runtime“ V261123, die Original-Runtime Byte für Byte samt allen Fehlerkorrekturen und ohne Beschleunigungen, siehe `fixed/README.md`; `improved` = Improved Runtime, Fehlerkorrekturen plus Beschleunigungen).
 Messungen, Profile und die Bewertung dahinter: `perf/RUNTIME_PERF_de.md`.
 
 ## Was schneller ist
@@ -25,6 +25,8 @@ Ergebnisse (Takte vom Start bis END, `perf/bench2.sh`, VICE 3.10):
 | `str` (Strings aufbauen) | 8,21 M | −12,0 % | −12,0 % |
 | `arr` (Arrayzugriffe) | 6,09 M | −20,0 % | −19,0 % |
 | `sieve` (`FOR … STEP I`, `F%()`) | 14,54 M | −15,9 % | −15,5 % |
+
+Die Spalte „Original“ vergleicht mit der Original-Runtime bzw. Fixed Original Runtime (gleiche Geschwindigkeit).
 
 Fast Math kostet beim Start etwa 50.000 Takte (Tabellenaufbau). Programme, die `*` nur in Integer-Rechnungen verwenden, werden damit also nicht schneller.
 FDIV wird nicht ersetzt: Eine bitgleiche Division, die mehr als 1,5× schneller ist, geht nicht (siehe `perf/RUNTIME_PERF_de.md`).
