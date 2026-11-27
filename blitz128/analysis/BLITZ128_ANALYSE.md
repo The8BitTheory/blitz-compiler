@@ -267,7 +267,7 @@ does not pass variables. The dongle it requires is absent here: this copy is a c
 Source	Result
 :: PRINT"Y":A=3 |	PRINT"Y" passed through, A=3 compiled
 :: PRINT"Y":PRINT"Z":A=3	| only PRINT"Y" passed through, PRINT"Z" compiled, A=3 compiled
-A=1:::PRINT"Y":A=3| wie oben, A=1 kompiliert, PRINT"Y" passed through, A=3 compiled
+A=1:::PRINT"Y":A=3| as above, A=1 compiled, PRINT"Y" passed through, A=3 compiled
 A=1:: PRINT"Y" | A=1 compiled, PRINT"Y" compiled - not passed through
 :: PRINT"Y:Q":A=3 |	PRINT"Y:Q" passed through, A=3 compiled. colon in quotes is handled correctly
 
