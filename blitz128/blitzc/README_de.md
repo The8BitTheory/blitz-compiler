@@ -18,6 +18,23 @@ API: `compile(src, null, {runtimeKind: 'improved', fastMath: 'auto'|true|false})
 (alle Programme eines Laufs bekommen dieselbe Runtime); `r.runtimeKind`, `r.fastMath`; `runtimeKindOf(c)` sagt, welche Runtime eine C/-Datei enthält, `keysOf()`
 liest beide Arten. Die Improved-Runtime braucht `$FC00–$FEFF`: Programme, die oberhalb von `$FC00` enden, weist der Compiler ab.
 Browserseite: Felder „Runtime“ und „Fast math“. Die Runtime-Größe erreicht den übersetzten Compiler über `T1%`/`TE%` (`tools/bc2js.py` → `rt.rtEnd1()`/`rt.rtLen2()`).
+## VDC-BASIC als USR/SYS: Option vdcSys (Stand 28.11.2026)
+Für Programme mit [VDC-BASIC v3](https://github.com/the8bittheory/vdc-basic): Befehle der Erweiterung werden nicht kompiliert, der Compiler
+gibt sie (mit `::` davor) zur Laufzeit an den Interpreter. Mit der Option werden die VDC-BASIC-Befehle vorher umgewandelt (`js/vdc2sys.js`,
+arbeitet auf dem tokenisierten Programm): jeder Parameter wird `YY=USR(Ausdruck)`, der Befehl ein `SYS` in VDCSYS (`vdcsys/vdcsys.s`, als
+`js/vdcsysimg.js` eingebettet durch `tools/embed_vdcsys.py`, Ladeadresse `$1300`); `RGD(e)` wird vor seine Anweisung gezogen (USR, SYS, PEEK),
+aus `IF ... THEN::Befehl` wird `IF ... THEN <Aufrufe>`, und hinter den REM-Zeilen am Anfang kommt eine Zeile `BLOAD"VDCSYS",B0:SYS4864` dazu.
+Unterstützt: `VDL VMC VMF SYN RGW RGO RGA RGD RST DISP ATTR VDM VDR` (VMC/VMF in der Form mit drei Parametern); andere VDC-BASIC-Befehle sind
+ein Fehler mit Zeilennummer; das Programm darf YY und Y0-Y9 nicht verwenden. VDCSYS braucht VDC-BASIC v3 (VDL und VDM laufen über dessen Code;
+SYS 4864 prüft die Version). Gemessen mit vertrot (vdc-basic, examples/vertrot, Improved Runtime, VICE): 339,6 -> 272,5 ms pro Bild,
+2,66 -> 3,28 fps, gleiche Pixel.
+```
+node js/cli.js prog.prg out/ --vdcsys            # out/vdcsys.prg neben c.prg (und VDCSYS in --d81)
+```
+API: `compile(src, null, {vdcSys: true})` -> `r.vdcsys` (die Datei VDCSYS), `r.converted = {prg, commands, initLine}`; dieselbe Option für
+`compileMany`, `compileOverlay`, `compileJob` (Meldung `done`: `vdcsys`); `d81Of()` legt VDCSYS dazu. Browser-Seite: Checkbox
+„VDC-BASIC commands as USR/SYS calls (VDCSYS)“, Download-Link `vdcsys.prg`.
+
 ## Stand
 - `oracle/`: Original-Compiler headless in VICE 3.9 (Prüfstein)
   - `build-vice.sh` baut x128/c1541/petcat ohne root nach `~/vice`

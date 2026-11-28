@@ -42,6 +42,22 @@ API: `compile(src, null, {runtimeKind: 'improved', fastMath: 'auto'|true|false})
 reads both kinds. The improved runtime needs `$FC00-$FEFF`: the compiler refuses programs that end above `$FC00`.
 Browser page: fields "Runtime" and "Fast math". The runtime size reaches the translated compiler through `T1%`/`TE%` (`tools/bc2js.py` -> `rt.rtEnd1()`/`rt.rtLen2()`).
 
+## VDC-BASIC as USR/SYS: option vdcSys (as of 28 Nov 2026)
+For programs with [VDC-BASIC v3](https://github.com/the8bittheory/vdc-basic): commands of the extension are not compiled, the compiler hands
+them (`::` in front) to the interpreter at run time. With the option the VDC-BASIC commands are converted first (`js/vdc2sys.js`, works on the
+tokenized program): every parameter becomes `YY=USR(expression)`, the command one `SYS` into VDCSYS (`vdcsys/vdcsys.s`, embedded as
+`js/vdcsysimg.js` by `tools/embed_vdcsys.py`, load address `$1300`); `RGD(e)` is computed in front of its statement (USR, SYS, PEEK),
+`IF ... THEN::cmd` becomes `IF ... THEN <calls>`, and a line `BLOAD"VDCSYS",B0:SYS4864` is added behind the REM lines at the start.
+Supported: `VDL VMC VMF SYN RGW RGO RGA RGD RST DISP ATTR VDM VDR` (VMC/VMF in the three parameter form); other VDC-BASIC commands are an error
+with the line number; the program must not use YY and Y0-Y9. VDCSYS needs VDC-BASIC v3 (VDL and VDM run its code; SYS 4864 checks the version).
+Measured with vertrot (vdc-basic, examples/vertrot, Improved runtime, VICE): 339.6 -> 272.5 ms per frame, 2.66 -> 3.28 fps, same pixels.
+```
+node js/cli.js prog.prg out/ --vdcsys            # out/vdcsys.prg next to c.prg (and VDCSYS in --d81)
+```
+API: `compile(src, null, {vdcSys: true})` -> `r.vdcsys` (the VDCSYS file), `r.converted = {prg, commands, initLine}`; the same option for
+`compileMany`, `compileOverlay`, `compileJob` (`done` message: `vdcsys`); `d81Of()` adds VDCSYS. Browser page: checkbox
+"VDC-BASIC commands as USR/SYS calls (VDCSYS)", download link `vdcsys.prg`.
+
 ## JS port (as of 15 Nov 2026)
 
 `js/` contains the compiler as a stand-alone program for Node and browser. **All 51 reference runs are byte-identical to the original (C/ and Z/)**, in all four variants (with/without runtime × restricted/full RESUME/COLLISION syntax), including CRAWL, all LIVE sources of the D81 (up to 56 KB source, 45 KB C/), error cases, directives, the `$4001` variant, and 80 floating-point constants.

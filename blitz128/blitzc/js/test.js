@@ -145,5 +145,33 @@ if (!only) {
     }
   if (bad.length) { fail++; console.log('FAIL **RI', bad.join('; ')); } else console.log('ok   **RI byte at $1CFF (image 1) / $40FF (image 2), original, fixed and improved runtime');
 }
+// vdc2sys (vdcSys option): VDC-BASIC commands become USR/SYS calls of VDCSYS; checked on a small tokenized program
+if (!only) {
+  const { programLines, linkProgram } = await import('./vdc2sys.js');
+  const A = s => [...s].map(c => c.charCodeAt(0));
+  // tokens: REM $8F, IF $8B, THEN $A7, = $B2, USR $B7, SYS $9E, PEEK $C2, BLOAD $FE $11, VDL $FE $3E, SYN $FE $34, VMW $FE $2A, RGD $CE $0B
+  const prg = (lines) => linkProgram(0x1c01, lines.map(([num, body]) => ({ num, body })));
+  const src = prg([[1, [0x8f, ...A(' **NE')]], [20, [0x3a, 0x3a, 0xfe, 0x3e, ...A(' 1,2,3,4,X')]],
+    [30, [...A('T'), 0xb2, 0xce, 0x0b, ...A('(255)')]], [40, [0x8b, ...A(' A '), 0xa7, 0x3a, 0x3a, 0xfe, 0x34, ...A(' 20,1,21,2')]]]);
+  const U = a => [...A('YY'), 0xb2, 0xb7, ...A('(' + a + ')')], S = n => [0x9e, ...A(String(n))], J = parts => parts.flatMap((p, i) => i ? [0x3a, ...p] : p);
+  const want = [[1, [0x8f, ...A(' **NE')]], [2, [0xfe, 0x11, ...A('"VDCSYS",B0:'), ...S(4864)]],
+    [20, J([U('1'), U('2'), U('3'), U('4'), U('X'), S(4867)])],
+    [30, J([U('255'), S(4888), [...A('Y0'), 0xb2, 0xc2, ...A('(4906)')], [...A('T'), 0xb2, ...A('Y0')]])],
+    [40, [0x8b, ...A(' A '), 0xa7, 0x20, ...J([U('20'), U('1'), U('21'), U('2'), S(4876)])]]];
+  const bad = [];
+  const r = compile(src, null, { vdcSys: true });
+  const got = programLines(r.converted.prg).lines;
+  if (JSON.stringify(got.map(l => [l.num, l.body])) !== JSON.stringify(want)) bad.push('converted program differs: ' + JSON.stringify(got.map(l => [l.num, l.body])));
+  if (!r.vdcsys || r.vdcsys[0] !== 0x00 || r.vdcsys[1] !== 0x13) bad.push('VDCSYS missing or not at $1300');
+  if (r.errors) bad.push(`compile errors: ${r.errors}`);
+  if (r.extensions) bad.push(`extensions left: ${r.extensions}`);
+  const m = compileMany([{ src, name: 'V', runtime: true }], null, { vdcSys: true });
+  if (!d81Of(m).length || !m[0].vdcsys) bad.push('compileMany: VDCSYS missing');
+  for (const [body, msg] of [[[0xfe, 0x2a, ...A(' 1,2')], 'VMW is not supported'], [[...A('YY'), 0xb2, ...A('1')], 'uses the variable YY']]) {
+    try { compile(prg([[10, body]]), null, { vdcSys: true }); bad.push('no error for: ' + msg); }
+    catch (e) { if (!e.message.includes(msg)) bad.push(`error "${e.message}" instead of "${msg}"`); }
+  }
+  if (bad.length) { fail++; console.log('FAIL vdc2sys', bad.join('; ')); } else console.log('ok   vdc2sys: VDL/RGD/IF THEN::SYN as USR/SYS, init line, VDCSYS file, errors for VMW and YY');
+}
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

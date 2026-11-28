@@ -8,6 +8,9 @@
 //   fastMath:   improved runtime only: 'auto' (default: on when the program uses * / ^ SQR LOG EXP COS SIN TAN ATN), true, false
 //   fullSyntax: true  = "RESUME and COLLISION with full syntax" (original menu 4-6), else
 //               "no COLLISION command, RESUME with linenumber only" (menu 1-3)
+//   vdcSys:     true = convert the VDC-BASIC commands into USR/SYS calls of VDCSYS first (js/vdc2sys.js), so that the whole program is
+//               compiled (no :: needed); r.vdcsys = the VDCSYS file (load address $1300, BLOADed by the converted program, needs
+//               VDC-BASIC v3), r.converted = {prg, commands, initLine}. Unsupported VDC-BASIC commands throw an Error with the line number.
 //   r.c  -> C/NAME (Uint8Array), r.z -> Z/NAME, r.errors, r.screen
 //
 // blitzPrg is the original BLITZ!.128 file: its runtime images are copied into
@@ -17,6 +20,10 @@ import { Runtime } from './rt.js';
 import { BLITZ_B64, BLITZ_ORIG_B64 } from './blitzimg.js';
 import { makeD81 } from './d81.js';
 import { RT2026 } from './rt2026img.js';
+import { vdc2sys } from './vdc2sys.js';
+import { VDCSYS } from './vdcsysimg.js';
+
+export { VDCSYS };
 
 const blitzCache = {};
 // the compiler file, embedded (js/blitzimg.js): 'original' = untouched Skyles V860929 (1986), else the fixed build V261123
@@ -160,6 +167,8 @@ export function sourceLines(prg) {
 //   {type:'message', text}                         everything else the compiler prints (?extensions in N, errors, summary)
 export function compile(source, blitz, opts = {}) {
   const name = petscii(opts.name || 'PROG');
+  const conv = opts.vdcSys ? vdc2sys(source) : null;
+  if (conv) source = conv.prg;
   let rnd = null;
   if (opts.keys) rnd = rndFor(opts.keys, opts.pad || []);
   const lines = sourceLines(source), pos = new Map(lines.map((n, i) => [n, i + 1]));
@@ -189,7 +198,14 @@ export function compile(source, blitz, opts = {}) {
     errors: rt.v.X1_f + rt.v.X3_f, extensions: rt.v.X0_f,
     screen: rt.screen, messages: rt.messages, files: rt.files,
     runtimeKind: kindFor(opts, improved), fastMath: improved ? improved.kind === 'fastmath' : false,
+    vdcsys: conv ? VDCSYS : null, converted: conv,
   };
+}
+
+// vdcSys option for several programs: every program converted once (an error becomes the result of that program)
+function convertAll(programs, opts) {
+  if (!opts.vdcSys) return programs.map(p => ({ p }));
+  return programs.map(p => { try { const c = vdc2sys(p.src); return { p: { ...p, src: c.prg }, conv: c }; } catch (e) { return { p, error: e.message }; } });
 }
 
 // The improved runtime shares the top page $FC00-$FEFF between bank 0 and bank 1: the program must end below it.
@@ -218,16 +234,22 @@ export function diskNames(names) {
 // onEvent gets the compile() events plus {type:'program', index, count, name, runtime} before each program.
 export function compileMany(programs, blitz, opts = {}, onEvent = null) {
   const names = diskNames(programs.map(p => p.name));
-  const improvedRuntime = runtimeFor(opts, programs.map(p => p.src));
-  return programs.map((p, index) => {
+  const conv = convertAll(programs, opts);
+  const improvedRuntime = runtimeFor(opts, conv.map(x => x.p.src));
+  return conv.map(({ p, conv: cv, error }, index) => {
     const runtime = p.runtime !== false;
     if (onEvent) onEvent({ type: 'program', index, count: programs.length, name: names[index], runtime });
+    const vdcsys = cv ? VDCSYS : null;
+    if (error) {
+      if (onEvent) onEvent({ type: 'message', text: names[index] + ': ' + error });
+      return { name: names[index], runtime, c: null, z: null, errors: 1, extensions: 0, error, vdcsys: null };
+    }
     try {
-      const r = compile(p.src, blitz || null, { ...opts, name: names[index], runtime, onEvent, improvedRuntime });
-      return { name: names[index], runtime, c: r.c, z: r.z, errors: r.errors, extensions: r.extensions };
+      const r = compile(p.src, blitz || null, { ...opts, vdcSys: false, name: names[index], runtime, onEvent, improvedRuntime });
+      return { name: names[index], runtime, c: r.c, z: r.z, errors: r.errors, extensions: r.extensions, vdcsys, converted: cv };
     } catch (e) {
       if (onEvent) onEvent({ type: 'message', text: names[index] + ': ' + e.message });
-      return { name: names[index], runtime, c: null, z: null, errors: 1, extensions: 0, error: e.message };
+      return { name: names[index], runtime, c: null, z: null, errors: 1, extensions: 0, error: e.message, vdcsys: null };
     }
   });
 }
@@ -240,7 +262,10 @@ export function compileMany(programs, blitz, opts = {}, onEvent = null) {
 // programs = [{src, name}] (>= 2 makes sense); opts: fullSyntax, keys/pads (reference run: keys = 6 key bytes, pads = one padding array per program).
 // Returns [{name, runtime, c, z: null, errors, extensions, diskName}] in program order. onEvent gets the compile() events (progress refers to the
 // program named in the last {type:'program'} event), {type:'program', index, count, name, runtime} when PASS1 reaches a program.
-export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
+export function compileOverlay(programs0, blitz, opts = {}, onEvent = null) {
+  const conv = convertAll(programs0, opts), bad = conv.find(x => x.error);
+  if (bad) throw new Error(bad.error);
+  const programs = conv.map(x => x.p), vdcsys = opts.vdcSys ? VDCSYS : null;
   const names = diskNames(programs.map(p => p.name));
   const files = {}; programs.forEach((p, i) => { files[names[i]] = p.src; });
   const lines = programs.map(p => sourceLines(p.src)), pos = lines.map(l => new Map(l.map((n, i) => [n, i + 1])));
@@ -278,14 +303,15 @@ export function compileOverlay(programs, blitz, opts = {}, onEvent = null) {
   for (const n of names) if (target.has(n)) checkTop(Uint8Array.from(target.get(n)), improved);
   return programs.map((p, i) => ({
     name: names[i], runtime: i === 0, c: target.has(names[i]) ? Uint8Array.from(target.get(names[i])) : null, z: null,
-    errors: per[i] ? per[i][0] : 0, extensions: per[i] ? per[i][1] : 0, diskName: names[i],
+    errors: per[i] ? per[i][0] : 0, extensions: per[i] ? per[i][1] : 0, diskName: names[i], vdcsys, converted: conv[i].conv,
   }));
 }
 
-// All outputs of compileMany() as .d81 image: C/NAME and Z/NAME per program.
+// All outputs of compileMany() as .d81 image: C/NAME and Z/NAME per program (and VDCSYS when the vdcSys option was used).
 export function d81Of(results, diskName = 'BLITZC') {
   const files = [];
   for (const r of results) { if (r.c) files.push({ name: r.diskName || 'C/' + r.name, data: r.c }); if (r.z) files.push({ name: 'Z/' + r.name, data: r.z }); }
+  if (results.some(r => r.vdcsys)) files.push({ name: 'VDCSYS', data: VDCSYS });
   return makeD81(diskName, '01', files);
 }
 
@@ -297,12 +323,13 @@ export function compileJob(job, post) {
   try {
     const programs = job.programs || [{ src: job.src, name: job.name, runtime: job.runtime }];
     const overlay = !!job.overlay && programs.length > 1;   // "Shared variable table" checkbox: original menu item 4
-    const rk = { runtimeKind: job.runtimeKind, fastMath: job.fastMath };
+    const rk = { runtimeKind: job.runtimeKind, fastMath: job.fastMath, vdcSys: !!job.vdcSys };
     const results = overlay ? compileOverlay(programs, job.blitz, { fullSyntax: job.fullSyntax, ...rk, ...(job.like ? { keys: keysOf(job.like).keys } : {}) }, post)
       : compileMany(programs, job.blitz, { fullSyntax: job.fullSyntax, ...rk, ...(job.like ? keysOf(job.like) : {}) }, post);
     const sum = k => results.reduce((a, r) => a + (r[k] || 0), 0);
-    const imp = runtimeFor(rk, programs.map(p => p.src));
-    post({ type: 'done', results, overlay, d81: results.length > 1 ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
+    const imp = runtimeFor(rk, results.map((r, i) => r.converted ? r.converted.prg : programs[i].src));
+    const vdcsys = results.some(r => r.vdcsys) ? VDCSYS : null;
+    post({ type: 'done', results, overlay, vdcsys, d81: results.length > 1 || vdcsys ? d81Of(results) : null, errors: sum('errors'), extensions: sum('extensions'),
            c: results[0].c, z: results[0].z, runtimeKind: imp ? 'improved' : kindFor(rk, null), fastMath: !!imp && imp.kind === 'fastmath' });
   } catch (e) { post({ type: 'error', text: e.message }); }
 }
