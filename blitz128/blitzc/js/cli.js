@@ -46,6 +46,7 @@ if (plain.length || opt.d81) {
     if (x.c) writeFileSync(`${pos[1]}/${opt.overlay ? '' : 'c-'}${x.name.toLowerCase()}.prg`, x.c);
     if (x.z) writeFileSync(`${pos[1]}/z-${x.name.toLowerCase()}.prg`, x.z);
     console.log(`  ${x.name}: errors ${x.errors}  C/ ${x.c ? x.c.length : '-'} B  Z/ ${x.z ? x.z.length : '-'} B${x.error ? '  ' + x.error : ''}`);
+    if (x.converted) for (const k of x.converted.kept) console.log(`    line ${k.line}: ${k.command} stays with :: (interpreter)`);
     bad += x.errors;
   }
   if (res.some(x => x.vdcsys)) { writeFileSync(`${pos[1]}/vdcsys.prg`, res.find(x => x.vdcsys).vdcsys); console.log('  vdcsys.prg written (VDCSYS, load with BLOAD"VDCSYS",B0 - the converted programs do it)'); }
@@ -58,6 +59,7 @@ catch (e) { console.error(e.message); process.exit(2); }
 if (r.vdcsys) {
   writeFileSync(pos[1] + '/vdcsys.prg', r.vdcsys);
   console.log(`vdc2sys: ${r.converted.commands} VDC-BASIC commands as USR/SYS, init in line ${r.converted.initLine}; vdcsys.prg written`);
+  for (const k of r.converted.kept) console.log(`  line ${k.line}: ${k.command} stays with :: (interpreter)`);
 }
 if (r.c) writeFileSync(pos[1] + '/c.prg', r.c);
 if (r.z) writeFileSync(pos[1] + '/z.prg', r.z);

@@ -167,11 +167,18 @@ if (!only) {
   if (r.extensions) bad.push(`extensions left: ${r.extensions}`);
   const m = compileMany([{ src, name: 'V', runtime: true }], null, { vdcSys: true });
   if (!d81Of(m).length || !m[0].vdcsys) bad.push('compileMany: VDCSYS missing');
-  for (const [body, msg] of [[[0xfe, 0x2a, ...A(' 1,2')], 'VMW is not supported'], [[...A('YY'), 0xb2, ...A('1')], 'uses the variable YY']]) {
-    try { compile(prg([[10, body]]), null, { vdcSys: true }); bad.push('no error for: ' + msg); }
-    catch (e) { if (!e.message.includes(msg)) bad.push(`error "${e.message}" instead of "${msg}"`); }
-  }
-  if (bad.length) { fail++; console.log('FAIL vdc2sys', bad.join('; ')); } else console.log('ok   vdc2sys: VDL/RGD/IF THEN::SYN as USR/SYS, init line, VDCSYS file, errors for VMW and YY');
+  // VMW and VMC with 5 parameters become calls; VMP (string parameter) stays for the interpreter with :: (also after THEN)
+  const k = compile(prg([[10, [0xfe, 0x2a, ...A(' 1,2')]], [20, [0xfe, 0x2e, ...A(' 1,2,3,4,80')]], [30, [0x3a, 0x3a, 0xfe, 0x39, ...A(' 1,"A"')]],
+    [40, [0x8b, ...A(' A '), 0xa7, 0x3a, 0x3a, 0xfe, 0x39, ...A(' 1,"B"')]]]), null, { vdcSys: true });
+  const kl = programLines(k.converted.prg).lines.map(l => [l.num, l.body]);
+  const wantK = [[0, [0xfe, 0x11, ...A('"VDCSYS",B0:'), ...S(4864)]], [10, J([U('1'), U('2'), S(4907)])],
+    [20, J([U('1'), U('2'), U('3'), U('4'), U('80'), S(4870)])], [30, [0x3a, 0x3a, 0xfe, 0x39, ...A(' 1,"A"')]],
+    [40, [0x8b, ...A(' A '), 0xa7, 0x3a, 0x3a, 0xfe, 0x39, ...A(' 1,"B"')]]];
+  if (JSON.stringify(kl) !== JSON.stringify(wantK)) bad.push('kept/new commands: ' + JSON.stringify(kl));
+  if (JSON.stringify(k.converted.kept) !== JSON.stringify([{ line: 30, command: 'VMP' }, { line: 40, command: 'VMP' }])) bad.push('kept list: ' + JSON.stringify(k.converted.kept));
+  try { compile(prg([[10, [...A('YY'), 0xb2, ...A('1')]]]), null, { vdcSys: true }); bad.push('no error for YY'); }
+  catch (e) { if (!e.message.includes('uses the variable YY')) bad.push(`error "${e.message}" instead of YY`); }
+  if (bad.length) { fail++; console.log('FAIL vdc2sys', bad.join('; ')); } else console.log('ok   vdc2sys: VDL/RGD/VMW/VMC(5)/IF THEN::SYN as USR/SYS, VMP kept with ::, init line, VDCSYS file, error for YY');
 }
 function writeFileSyncIf(f, d) { if (f) writeFileSync(f, d); }
 process.exit(fail ? 1 : 0);

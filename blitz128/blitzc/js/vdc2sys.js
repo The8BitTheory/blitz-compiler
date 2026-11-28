@@ -3,23 +3,26 @@
 //
 //   VDL a,b,c,d,e  (with or without :: in front)  ->  YY=USR(a):YY=USR(b):YY=USR(c):YY=USR(d):YY=USR(e):SYS4867
 //   (each USR puts one parameter on the stack of VDCSYS, the SYS runs the command)
-//   supported: VDL VMC VMF SYN RGW RGO RGA RST DISP ATTR VDM VDR; VMC and VMF only in their three parameter form
-//   RGD(e) in an expression is computed in front of its statement: YY=USR(e):SYS4888:Y0=PEEK(4906), Y0 (Y1, ...) takes its place
+//   supported: VDL VMC (3, 5 or 6 parameters) VMF (3 or 5) SYN RGW RGO RGA RST DISP ATTR VDM VDR VMW VCL
+//   RGD(e) and VMD(e) in an expression are computed in front of their statement: YY=USR(e):SYS4888:Y0=PEEK(4906) (VMD: SYS4913),
+//   Y0 (Y1, ...) takes their place
+//   every other VDC-BASIC command (VMP VCS RXV VMS ...) and other forms stay as they are, with :: in front (the interpreter runs
+//   them as before); they are listed in r.kept
 //   IF ... THEN::cmd  ->  IF ... THEN <the converted statements>
 //   a new line BLOAD"VDCSYS",B0:SYS4864 loads and installs VDCSYS (behind the REM lines at the start, so that **NE and
 //   other directives stay first)
 // VDCSYS (vdcsys/vdcsys.s, embedded in vdcsysimg.js) needs VDC-BASIC v3 (vdcbasic3.bin at $1C00): VDL and VDM run its own code.
-// The names YY and Y0..Y9 must not be used by the program. Other VDC-BASIC keywords and other forms are errors with the line number.
+// The names YY and Y0..Y9 must not be used by the program. VDCSYS ends below $1700 (dbe-crypt keeps its VIEW buffer there).
 
-const CMD = {   // second token byte after $FE -> [SYS address, number of parameters (null = pairs)]
-  0x3e: ['VDL', 4867, 5], 0x2e: ['VMC', 4870, 3], 0x2d: ['VMF', 4873, 3], 0x34: ['SYN', 4876, null], 0x27: ['RGW', 4879, 2],
-  0x29: ['RGO', 4882, 2], 0x28: ['RGA', 4885, 2], 0x33: ['RST', 4891, 1], 0x35: ['DISP', 4894, 1], 0x36: ['ATTR', 4897, 1],
-  0x42: ['VDM', 4900, 3], 0x3f: ['VDR', 4903, 5],
+const CMD = {   // second token byte after $FE -> [name, SYS address, allowed numbers of parameters (null = pairs)]
+  0x3e: ['VDL', 4867, [5]], 0x2e: ['VMC', 4870, [3, 5, 6]], 0x2d: ['VMF', 4873, [3, 5]], 0x34: ['SYN', 4876, null],
+  0x27: ['RGW', 4879, [2]], 0x29: ['RGO', 4882, [2]], 0x28: ['RGA', 4885, [2]], 0x33: ['RST', 4891, [1]], 0x35: ['DISP', 4894, [1]],
+  0x36: ['ATTR', 4897, [1]], 0x42: ['VDM', 4900, [3]], 0x3f: ['VDR', 4903, [5]], 0x2a: ['VMW', 4907, [2]], 0x3b: ['VCL', 4910, [1]],
 };
-const OTHER = { 0x2a: 'VMW', 0x2b: 'VMA', 0x2c: 'VMO', 0x2f: 'RTV', 0x30: 'VTR', 0x31: 'VCC', 0x32: 'SWP', 0x37: 'CRSR', 0x38: 'VCS',
-  0x39: 'VMP', 0x3b: 'VCL', 0x3c: 'VMS', 0x3d: 'VMB', 0x40: 'VDB', 0x41: 'RXV' };
+const OTHER = { 0x2b: 'VMA', 0x2c: 'VMO', 0x2f: 'RTV', 0x30: 'VTR', 0x31: 'VCC', 0x32: 'SWP', 0x37: 'CRSR', 0x38: 'VCS',
+  0x39: 'VMP', 0x3c: 'VMS', 0x3d: 'VMB', 0x40: 'VDB', 0x41: 'RXV' };
 const T = { USR: 0xb7, SYS: 0x9e, PEEK: 0xc2, IF: 0x8b, THEN: 0xa7, REM: 0x8f, DATA: 0x83, EQ: 0xb2, EXT: 0xfe, FN: 0xce, BLOAD: 0x11 };
-const RGD = 0x0b, VMD = 0x0c, RGD_SYS = 4888, RES = 4906;
+const RGD = 0x0b, VMD = 0x0c, RGD_SYS = 4888, VMD_SYS = 4913, RES = 4906;
 const asc = s => [...s].map(c => c.charCodeAt(0));
 const DUMMY = asc('YY');
 
@@ -107,14 +110,16 @@ function findTop(s, byte, from = 0) {
 }
 
 const num = n => asc(String(n));
+// IF ... THEN followed by statements: no blank before a kept ::statement (THEN::VMP as before)
+const thenPart = (head, body) => [...head, ...(body.length && body[0][0] === 0x3a ? [] : [0x20]), ...body.flatMap((x, i) => i ? [0x3a, ...x] : x)];
 const usr = arg => [...DUMMY, T.EQ, T.USR, 0x28, ...arg, 0x29];
 const sys = addr => [T.SYS, ...num(addr)];
 
 class Line {
-  constructor(n) { this.n = n; this.tmp = 0; }
+  constructor(n, kept) { this.n = n; this.tmp = 0; this.kept = kept; }
   err(msg) { throw new ConvError(`line ${this.n}: ${msg}`); }
 
-  // RGD(e) -> Yk with the statements that compute it
+  // RGD(e), VMD(e) -> Yk with the statements that compute it
   hoist(s) {
     const pre = [];
     for (;;) {
@@ -122,21 +127,21 @@ class Line {
       for (let i = 0; i < s.length; i++) {
         if (s[i] === 0x22) q = !q;
         else if (!q && (s[i] === T.EXT || s[i] === T.FN)) {
-          if (s[i] === T.FN && s[i + 1] === VMD) this.err('VMD is not supported');
-          if (s[i] === T.FN && s[i + 1] === RGD) { at = i; break; }
+          if (s[i] === T.FN && (s[i + 1] === RGD || s[i + 1] === VMD)) { at = i; break; }
           i++;
         }
       }
       if (at < 0) return [pre, s];
       let j = at + 2;
       while (j < s.length && s[j] === 0x20) j++;
-      if (s[j] !== 0x28) this.err('RGD without (');
+      const fsys = s[at + 1] === RGD ? RGD_SYS : VMD_SYS, fname = s[at + 1] === RGD ? 'RGD' : 'VMD';
+      if (s[j] !== 0x28) this.err(fname + ' without (');
       let depth = 1, k = j + 1;
       for (; k < s.length && depth; k++) { if (s[k] === 0x28) depth++; else if (s[k] === 0x29) depth--; }
-      if (depth) this.err('RGD( without )');
-      if (this.tmp > 9) this.err('too many RGD in one line');
+      if (depth) this.err(fname + '( without )');
+      if (this.tmp > 9) this.err('too many RGD/VMD in one line');
       const v = asc('Y' + this.tmp++);
-      pre.push(usr(s.slice(j + 1, k - 1)), sys(RGD_SYS), [...v, T.EQ, T.PEEK, 0x28, ...num(RES), 0x29]);
+      pre.push(usr(s.slice(j + 1, k - 1)), sys(fsys), [...v, T.EQ, T.PEEK, 0x28, ...num(RES), 0x29]);
       s = [...s.slice(0, at), ...v, ...s.slice(k)];
     }
   }
@@ -151,19 +156,24 @@ class Line {
       const th = findTop(t, T.THEN);
       if (th >= 0) {
         const then = trim(t.slice(th + 1));
-        if (then.length && !(then[0] >= 0x30 && then[0] <= 0x39)) return [...pre, [...t.slice(0, th + 1), 0x20, ...this.stmt(then).flatMap((x, i) => i ? [0x3a, ...x] : x)]];
+        if (then.length && !(then[0] >= 0x30 && then[0] <= 0x39)) return [...pre, thenPart(t.slice(0, th + 1), this.stmt(then))];
       }
       return [...pre, t];
     }
     if (t[0] === T.EXT && CMD[t[1]]) {
-      const [name, addr, n] = CMD[t[1]];
+      const [name, addr, ns] = CMD[t[1]];
       const rest = trim(t.slice(2)), args = rest.length ? splitArgs(rest) : [];
-      if (n !== null && args.length !== n) this.err(`${name} with ${args.length} parameters (supported: ${n})`);
-      if (n === null && args.length % 2) this.err('SYN with an odd number of parameters');
-      return [...pre, ...args.map(usr), sys(addr)];
+      if (ns ? ns.includes(args.length) : args.length % 2 === 0) return [...pre, ...args.map(usr), sys(addr)];
+      return [...pre, this.keep(t, `${name} with ${args.length} parameters`)];
     }
-    if (t[0] === T.EXT && OTHER[t[1]]) this.err(`${OTHER[t[1]]} is not supported`);
+    if (t[0] === T.EXT && OTHER[t[1]]) return [...pre, this.keep(t, OTHER[t[1]])];
     return [...pre, t];
+  }
+
+  // a VDC-BASIC statement that stays for the interpreter: :: in front
+  keep(t, what) {
+    this.kept.push({ line: this.n, command: what });
+    return [0x3a, 0x3a, ...t];
   }
 }
 
@@ -190,7 +200,7 @@ function usedNames(lines) {
   return used;
 }
 
-// convert(prg, {initLine}) -> {prg, commands, initLine}; throws an Error with the line number for anything not supported
+// convert(prg, {initLine}) -> {prg, commands, initLine, kept: [{line, command}]} (kept = left to the interpreter)
 export function convert(prg, opts = {}) {
   const { la, lines } = programLines(prg);
   if (!lines.length) throw new Error('vdc2sys: empty program');
@@ -208,12 +218,12 @@ export function convert(prg, opts = {}) {
   }
   if (lines.some(l => l.num === init)) throw new Error(`vdc2sys: line ${init} exists already`);
   let commands = 0;
-  const out = [];
+  const out = [], kept = [];
   const initBody = [T.EXT, T.BLOAD, 0x22, ...asc('VDCSYS'), 0x22, 0x2c, 0x42, 0x30, 0x3a, ...sys(4864)];
   let placed = false;
   for (const { num: n, body } of lines) {
     if (!placed && n > init) { out.push({ num: init, body: initBody }); placed = true; }
-    const L = new Line(n), parts = statements(body), res = [];
+    const L = new Line(n, kept), parts = statements(body), res = [];
     try {
       for (let i = 0; i < parts.length; i++) {
         const p = trim(parts[i]);
@@ -222,7 +232,7 @@ export function convert(prg, opts = {}) {
           let j = i + 1; while (j < parts.length && !trim(parts[j]).length) j++;
           const body2 = parts.slice(j).flatMap(q => L.stmt(q));
           const [pre, cond] = L.hoist(p);
-          res.push(...pre, [...cond, 0x20, ...body2.flatMap((x, k) => k ? [0x3a, ...x] : x)]);
+          res.push(...pre, thenPart(cond, body2));
           break;
         }
         res.push(...L.stmt(parts[i]));
@@ -234,7 +244,7 @@ export function convert(prg, opts = {}) {
     out.push({ num: n, body: nb });
   }
   if (!placed) out.push({ num: init, body: initBody });
-  return { prg: linkProgram(la, out), commands, initLine: init };
+  return { prg: linkProgram(la, out), commands, initLine: init, kept };
 }
 
 export const vdc2sys = convert;   // the name blitzc.js uses (also in the bundled page, where the imports are gone)

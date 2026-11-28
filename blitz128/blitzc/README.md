@@ -48,8 +48,10 @@ them (`::` in front) to the interpreter at run time. With the option the VDC-BAS
 tokenized program): every parameter becomes `YY=USR(expression)`, the command one `SYS` into VDCSYS (`vdcsys/vdcsys.s`, embedded as
 `js/vdcsysimg.js` by `tools/embed_vdcsys.py`, load address `$1300`); `RGD(e)` is computed in front of its statement (USR, SYS, PEEK),
 `IF ... THEN::cmd` becomes `IF ... THEN <calls>`, and a line `BLOAD"VDCSYS",B0:SYS4864` is added behind the REM lines at the start.
-Supported: `VDL VMC VMF SYN RGW RGO RGA RGD RST DISP ATTR VDM VDR` (VMC/VMF in the three parameter form); other VDC-BASIC commands are an error
-with the line number; the program must not use YY and Y0-Y9. VDCSYS needs VDC-BASIC v3 (VDL and VDM run its code; SYS 4864 checks the version).
+Supported: `VDL VMC VMF SYN RGW RGO RGA RST DISP ATTR VDM VDR VMW VCL` and the functions `RGD VMD` (VMC with 3, 5 or 6 parameters, VMF with
+3 or 5); other VDC-BASIC commands (`VMP VCS RXV VMS` ...) stay with `::` in front for the interpreter and are listed (`r.converted.kept`, CLI,
+page); the program must not use YY and Y0-Y9. VDCSYS ends below `$1700`. dbe-crypt (crypt.bas) compiled this way plays through all levels:
+-17 % per fight turn, -1.5 % per step (the VCL and the VMP compass dominate there). VDCSYS needs VDC-BASIC v3 (VDL and VDM run its code; SYS 4864 checks the version).
 Measured with vertrot (vdc-basic, examples/vertrot, Improved runtime, VICE): 339.6 -> 272.5 ms per frame, 2.66 -> 3.28 fps, same pixels.
 ```
 node js/cli.js prog.prg out/ --vdcsys            # out/vdcsys.prg next to c.prg (and VDCSYS in --d81)
