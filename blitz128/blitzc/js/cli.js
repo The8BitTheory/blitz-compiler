@@ -8,13 +8,15 @@
 //   --runtime original|fixed|improved: Original runtime (Skyles 1986, untouched), Fixed original runtime (V261123: all bug fixes, no speed-ups)
 //              or Improved runtime (V261123 + speed-ups, default) (all programs of one run use the same)
 //   --fastmath auto|on|off: improved runtime only, fast multiplication + SQR/LOG/EXP/SIN/COS/TAN/ATN (auto = when the program uses them)
+//   --vdcsys: convert the VDC-BASIC commands into USR/SYS calls of VDCSYS first (js/vdc2sys.js), so that they are compiled instead of
+//              passed to the interpreter; writes <outdir>/vdcsys.prg (and VDCSYS into --d81), the converted program BLOADs it (needs VDC-BASIC v3)
 // Writes <outdir>/c.prg and z.prg (and screen.txt). --like takes keys and padding from a reference C/ file.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { compile, compileMany, compileOverlay, d81Of, keysOf, validKey } from './blitzc.js';
 import { basename } from 'node:path';
 
 const a = process.argv.slice(2); const opt = {}; const pos = [];
-const FLAGS = ['no-runtime', 'full', 'overlay'];
+const FLAGS = ['no-runtime', 'full', 'overlay', 'vdcsys'];
 const stem = f => basename(f).replace(/\.[^.]*$/, '').toUpperCase();
 for (let i = 0; i < a.length; i++) if (a[i].startsWith('--')) opt[a[i].slice(2)] = FLAGS.includes(a[i].slice(2)) ? true : a[++i]; else pos.push(a[i]);
 if (pos.length < 2) { console.error('usage: cli.js in.prg outdir [--no-runtime] [--full] [--blitz file] [--name N] [--like c.prg | --keys k0,..,k5 [--pad b,..]]'); process.exit(2); }
@@ -27,7 +29,7 @@ if (keys && !keys.every(validKey)) console.error('warning: original never produc
 if (opt.runtime && !['original', 'fixed', 'improved'].includes(opt.runtime)) { console.error('--runtime original|fixed|improved'); process.exit(2); }
 if (opt.fastmath && !['auto', 'on', 'off'].includes(opt.fastmath)) { console.error('--fastmath auto|on|off'); process.exit(2); }
 const common = { keys, pad, fullSyntax: !!opt.full, runtimeKind: opt.runtime || 'improved',
-  fastMath: opt.fastmath === 'on' ? true : opt.fastmath === 'off' ? false : 'auto' };
+  fastMath: opt.fastmath === 'on' ? true : opt.fastmath === 'off' ? false : 'auto', vdcSys: !!opt.vdcsys };
 const plain = (opt.plain || '').split(',').filter(Boolean);
 mkdirSync(pos[1], { recursive: true });
 if (plain.length || opt.d81) {
@@ -44,12 +46,21 @@ if (plain.length || opt.d81) {
     if (x.c) writeFileSync(`${pos[1]}/${opt.overlay ? '' : 'c-'}${x.name.toLowerCase()}.prg`, x.c);
     if (x.z) writeFileSync(`${pos[1]}/z-${x.name.toLowerCase()}.prg`, x.z);
     console.log(`  ${x.name}: errors ${x.errors}  C/ ${x.c ? x.c.length : '-'} B  Z/ ${x.z ? x.z.length : '-'} B${x.error ? '  ' + x.error : ''}`);
+    if (x.converted) for (const k of x.converted.kept) console.log(`    line ${k.line}: ${k.command} stays with :: (interpreter)`);
     bad += x.errors;
   }
+  if (res.some(x => x.vdcsys)) { writeFileSync(`${pos[1]}/vdcsys.prg`, res.find(x => x.vdcsys).vdcsys); console.log('  vdcsys.prg written (VDCSYS, load with BLOAD"VDCSYS",B0 - the converted programs do it)'); }
   if (opt.d81) writeFileSync(opt.d81, d81Of(res));
   process.exit(bad ? 1 : 0);
 }
-const r = compile(readFileSync(pos[0]), blitz, { name: opt.name || 'PROG', ...common, runtime: !opt['no-runtime'] });
+let r;
+try { r = compile(readFileSync(pos[0]), blitz, { name: opt.name || 'PROG', ...common, runtime: !opt['no-runtime'] }); }
+catch (e) { console.error(e.message); process.exit(2); }
+if (r.vdcsys) {
+  writeFileSync(pos[1] + '/vdcsys.prg', r.vdcsys);
+  console.log(`vdc2sys: ${r.converted.commands} VDC-BASIC commands as USR/SYS, init in line ${r.converted.initLine}; vdcsys.prg written`);
+  for (const k of r.converted.kept) console.log(`  line ${k.line}: ${k.command} stays with :: (interpreter)`);
+}
 if (r.c) writeFileSync(pos[1] + '/c.prg', r.c);
 if (r.z) writeFileSync(pos[1] + '/z.prg', r.z);
 writeFileSync(pos[1] + '/screen.txt', r.screen);

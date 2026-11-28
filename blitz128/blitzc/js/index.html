@@ -76,6 +76,15 @@ gets a 2-byte header that checks for pending collision events and holds the stat
 and NEXT (about 10&ndash;20&nbsp;% shorter run time), about 1.4&nbsp;KB longer; with <b>fast math</b> also a faster multiplication and SIN/COS/TAN/ATN/SQR/LOG/EXP/^
 (results bit-identical to the ROM, about 25&nbsp;% faster floating-point code, about 3.2&nbsp;KB longer, 2&nbsp;KB tables are built behind the program at start).
 The Improved runtime needs <code>$FC00-$FEFF</code> (common RAM): the program must end below <code>$FC00</code>, and the string space is 768 bytes smaller.</small>
+<label style="font-weight:normal"><input type="checkbox" id="vdcsys"> VDC-BASIC commands as USR/SYS calls (VDCSYS)</label>
+<small class="optnote">For programs with <a href="https://github.com/the8bittheory/vdc-basic">VDC-BASIC v3</a>: before compiling, every VDC-BASIC command
+(<code>VDL VMC VMF SYN RGW RGO RGA RST DISP ATTR VDM VDR VMW VCL</code> and the functions <code>RGD VMD</code>, with or without <code>::</code>) becomes
+<code>YY=USR(parameter)</code> for each parameter and one <code>SYS</code>, and a line <code>BLOAD"VDCSYS",B0:SYS4864</code> is added behind the
+REM lines at the start. Then the compiler compiles these commands too, instead of handing them to the interpreter: in the vertrot example
+about 20&nbsp;% shorter run time. You get the file <code>vdcsys.prg</code> (on the disk as <code>VDCSYS</code>, load address <code>$1300</code>; it also goes
+into the .d81, and must end below <code>$1700</code>) - VDC-BASIC v3 must be installed as before. Other VDC-BASIC commands (VMP, VCS, RXV, VMS, …)
+stay as they are, with <code>::</code> in front, and run in the interpreter as before (listed in the messages); the program must not use the
+variables YY and Y0&ndash;Y9.</small>
 <br><button id="go">Compile</button>
 <p id="status" aria-live="polite"></p>
 <div class="files" id="files"></div>
@@ -209,11 +218,15 @@ function finish(m) {
     if (r.errors) d.append(` (errors: ${r.errors})`);
     box.push(d);
   }
+  for (const r of m.results) if (r.converted) for (const k of r.converted.kept) { pend.push(`${r.name}: line ${k.line}: ${k.command} stays with :: (interpreter)`); total++; }
+  if (m.vdcsys) paint();
+  if (m.vdcsys) { const d = document.createElement('div'); d.append(link(m.vdcsys, 'vdcsys.prg')); d.append(' (VDCSYS: put it on the disk of the program, it is loaded with BLOAD"VDCSYS",B0)'); box.push(d); }
   if (m.d81) { const d = document.createElement('div'); d.append(link(m.d81, (m.results[0].name || 'blitzc').toLowerCase() + '.d81')); d.append(m.overlay ? ' (all modules under their program names, as the original writes them)' : ' (all files as C/ and Z/)'); box.push(d); }
   $('files').replaceChildren(...box);
   $('status').className = m.errors ? 'err' : '';
   $('status').textContent = `Done in ${sec} s – ${m.results.length} program${m.results.length > 1 ? 's' : ''}, errors: ${m.errors}, extensions: ${m.extensions}` +
-    (m.runtimeKind === 'improved' ? ` – Improved runtime${m.fastMath ? ' with fast math' : ''}` : m.runtimeKind === 'fixed' ? ' – Fixed original runtime' : ' – Original runtime');
+    (m.runtimeKind === 'improved' ? ` – Improved runtime${m.fastMath ? ' with fast math' : ''}` : m.runtimeKind === 'fixed' ? ' – Fixed original runtime' : ' – Original runtime') +
+    (m.vdcsys ? ' – VDC-BASIC as USR/SYS' : '');
 }
 
 $('go').onclick = async () => {
@@ -222,7 +235,7 @@ $('go').onclick = async () => {
   for (const p of plain) programs.push({ src: new Uint8Array(await p.file.arrayBuffer()), name: p.name, runtime: false });
   if (!programs.length) { $('status').className = 'err'; $('status').textContent = 'Choose a program with runtime or add programs to the list.'; return; }
   const job = { programs, blitz: null, like: await read('like'), fullSyntax: $('full').checked, runtimeKind: $('rtkind').value,
-    fastMath: { auto: 'auto', on: true, off: false }[$('fastmath').value], overlay: programs.length > 1 && !$('shared').disabled && $('shared').checked };
+    fastMath: { auto: 'auto', on: true, off: false }[$('fastmath').value], vdcSys: $('vdcsys').checked, overlay: programs.length > 1 && !$('shared').disabled && $('shared').checked };
   $('go').disabled = true; $('files').replaceChildren(); $('msgs').value = ''; $('msgcount').textContent = '';
   pend = []; total = 0; state = {}; resetRows(); $('status').className = ''; $('status').textContent = 'Compiling …'; t0 = performance.now();
   await runJob(job, onMsg);
